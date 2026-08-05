@@ -1,0 +1,11 @@
+# Skills tracked elsewhere / not part of this repo
+codebase-memory/
+omc-learned/
+omc-reference/
+
+# OMC runtime state (regenerated on every session; contains session UUIDs)
+.omc/
+
+# Python artifacts
+__pycache__/
+*.py[cod]

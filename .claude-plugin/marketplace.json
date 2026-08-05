@@ -1,0 +1,24 @@
+{
+  "name": "tc3oliver",
+  "owner": {
+    "name": "tc3oliver",
+    "url": "https://github.com/tc3oliver"
+  },
+  "description": "tc3oliver's Claude Code skills, as an installable plugin.",
+  "plugins": [
+    {
+      "name": "tc3oliver-skills",
+      "source": "./",
+      "description": "Task-driven development workflow (Backlog.md), a CLAUDE.md auditor, a bug-diagnosis loop, and a skill-writing reference.",
+      "category": "engineering",
+      "keywords": [
+        "backlog",
+        "workflow",
+        "task-management",
+        "claude-md",
+        "debugging",
+        "skill-authoring"
+      ]
+    }
+  ]
+}

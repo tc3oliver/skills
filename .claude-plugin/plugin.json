@@ -1,0 +1,27 @@
+{
+  "name": "tc3oliver-skills",
+  "description": "Task-driven development workflow (Backlog.md), a CLAUDE.md auditor, a rigorous bug-diagnosis loop, and a reference for writing skills and agent docs.",
+  "version": "1.0.0",
+  "author": {
+    "name": "tc3oliver",
+    "url": "https://github.com/tc3oliver"
+  },
+  "homepage": "https://github.com/tc3oliver/skills",
+  "repository": "https://github.com/tc3oliver/skills",
+  "license": "MIT",
+  "keywords": [
+    "backlog",
+    "workflow",
+    "task-management",
+    "claude-md",
+    "audit",
+    "debugging",
+    "skill-authoring"
+  ],
+  "skills": [
+    "./backlog-workflow",
+    "./audit-claude-md",
+    "./diagnosing-bugs",
+    "./writing-for-agents"
+  ]
+}

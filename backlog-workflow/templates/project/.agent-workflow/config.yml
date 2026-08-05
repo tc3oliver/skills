@@ -1,0 +1,14 @@
+# Managed by backlog-workflow 1.0.0
+workflow_version: 1.0.0
+default_mode: manual
+
+manual:
+  planning_skill: backlog-plan
+  execution_skill: backlog-run
+  require_explicit_task_id: true
+  stop_after_task: true
+
+automatic:
+  execution_skill: backlog-auto
+  require_explicit_invocation: true
+  continue_until_exhausted: true
