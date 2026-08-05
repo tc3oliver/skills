@@ -19,7 +19,7 @@ Read before acting:
 - `.agent-workflow/PROJECT.md`
 - applicable `CLAUDE.md` files
 
-Follow the automatic-execution section of `.agent-workflow/WORKFLOW.md`.
+Follow the automatic-execution section of `.agent-workflow/WORKFLOW.md`. Start the background board per "Background board" in that file before proceeding.
 
 Do not invoke `grilling`, ask interactive product questions, or guess missing product intent. Mark the affected task `Blocked`, record evidence, report, and stop when a product decision is missing.
 
@@ -29,7 +29,7 @@ When `$task_id` is present, execute only that task. Otherwise repeatedly choose 
 
 Attempt the repository delivery flow after validation when available. PR/MR, CI/review fixes, and merge do not add completion conditions beyond the four defined by the workflow.
 
-Report each completed or blocked task using exactly:
+Report each completed or blocked task using exactly this structure. Field labels may be localized to the user's language; the `Status` value always stays one of `Done`, `Blocked`, or `In Progress` in English, matching the Backlog.md CLI's status literals.
 
 ```text
 Execution report
@@ -37,4 +37,5 @@ Execution report
 - Status: <Done|Blocked|In Progress>
 - Changes: <major implementation and synchronized documents>
 - Validation: <AC and required command results plus evidence location>
+- Board: <background browser URL, or unavailable>
 ```

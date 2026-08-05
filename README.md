@@ -17,6 +17,7 @@ do one thing each, and are meant to be forked and adapted.
 | [audit-claude-md](audit-claude-md/) | Audits a project's `CLAUDE.md`, nested `CLAUDE.md`, and path-scoped rules. Gives every rule one disposition — keep, move to a narrower scope, extract into a skill, rewrite, or delete — and applies the changes rather than just reporting them. |
 | [diagnosing-bugs](diagnosing-bugs/) | A six-phase discipline for hard bugs: build a tight, red-capable feedback loop before hypothesising, rank falsifiable hypotheses, instrument one variable at a time, then fix with a regression test at a correct seam. |
 | [writing-for-agents](writing-for-agents/) | Reference for writing any document an agent consumes — skills, `AGENTS.md`, `CLAUDE.md`. Covers context pointers, the information hierarchy, completion criteria, and when a document is worth splitting. |
+| [resolving-merge-conflicts](resolving-merge-conflicts/) | Resolves an in-progress merge or rebase conflict: read the primary sources behind each side before touching a hunk, preserve both intents where possible, never invent new behavior, and never `--abort`. |
 
 ## Install
 
@@ -31,7 +32,7 @@ Installs all skills as a managed bundle that updates when you pull:
 
 Skills are namespaced: `/tc3oliver-skills:backlog-workflow`,
 `/tc3oliver-skills:audit-claude-md`, `/tc3oliver-skills:diagnosing-bugs`,
-`/tc3oliver-skills:writing-for-agents`.
+`/tc3oliver-skills:writing-for-agents`, `/tc3oliver-skills:resolving-merge-conflicts`.
 
 ### By copying the files
 
@@ -78,4 +79,4 @@ by Matt Pocock, used under the MIT License; each carries its own `LICENSE` and
 an attribution comment in its `SKILL.md`:
 
 - `backlog-workflow` bundles the `grilling` skill.
-- `diagnosing-bugs` and `writing-for-agents` are copied in full.
+- `diagnosing-bugs`, `writing-for-agents`, and `resolving-merge-conflicts` are copied in full.

@@ -9,7 +9,7 @@
     {
       "name": "tc3oliver-skills",
       "source": "./",
-      "description": "Task-driven development workflow (Backlog.md), a CLAUDE.md auditor, a bug-diagnosis loop, and a skill-writing reference.",
+      "description": "Task-driven development workflow (Backlog.md), a CLAUDE.md auditor, a bug-diagnosis loop, a skill-writing reference, and a merge-conflict resolution discipline.",
       "category": "engineering",
       "keywords": [
         "backlog",
@@ -17,7 +17,9 @@
         "task-management",
         "claude-md",
         "debugging",
-        "skill-authoring"
+        "skill-authoring",
+        "git",
+        "merge-conflicts"
       ]
     }
   ]

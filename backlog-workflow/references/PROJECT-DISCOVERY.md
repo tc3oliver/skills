@@ -38,6 +38,8 @@ Look for authoritative files whose names or locations indicate:
 
 Do not treat a Backlog task as a replacement product specification.
 
+Decisions reached through `grilling` during planning or execution are recorded as Backlog.md decision records, not detected here — see "Recording a grilled decision" in `.agent-workflow/WORKFLOW.md`.
+
 ## Validation commands
 
 Record only commands supported by repository evidence or successfully verified:

@@ -20,15 +20,17 @@ Read before acting:
 - applicable `CLAUDE.md` files
 - the specified task and its requirement sources
 
+Start the background board per "Background board" in `.agent-workflow/WORKFLOW.md` before proceeding, whether or not `$task_id` is given.
+
 When `$task_id` is empty, list dependency-ready tasks and stop without modifying task state or code.
 
 For a specified task, follow the manual-execution section of `.agent-workflow/WORKFLOW.md` completely. Use the Backlog.md command recorded in `.agent-workflow/PROJECT.md` for task reads and writes.
 
-Invoke the model-invoked `grilling` skill only for unresolved product decisions or irreversible choices defined by the workflow. Do not use it for ordinary engineering decisions.
+Invoke the model-invoked `grilling` skill only for unresolved product decisions or irreversible choices defined by the workflow. Do not use it for ordinary engineering decisions. Record the outcome per "Recording a grilled decision" in `.agent-workflow/WORKFLOW.md`.
 
 Attempt the repository delivery flow after validation when it is available: PR/MR, CI/review fixes, and merge. These steps do not add completion conditions beyond the four defined by the workflow.
 
-After one task, stop. End with exactly:
+After one task, stop. End with exactly this structure. Field labels may be localized to the user's language; the `Status` value always stays one of `Done`, `Blocked`, or `In Progress` in English, matching the Backlog.md CLI's status literals.
 
 ```text
 Execution report
@@ -36,4 +38,5 @@ Execution report
 - Status: <Done|Blocked|In Progress>
 - Changes: <major implementation and synchronized documents>
 - Validation: <AC and required command results plus evidence location>
+- Board: <background browser URL, or unavailable>
 ```
