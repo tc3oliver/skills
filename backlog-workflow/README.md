@@ -73,6 +73,12 @@ optional MCP server you configure yourself). This package never introduces a
 MCP is **not** required. Backlog.md supports an optional MCP server, but
 backlog-workflow runs entirely on the CLI and never installs or configures MCP.
 
+At install, the Backlog.md CLI is **verified**, not just detected: each
+candidate is probed read-only and accepted only if it is Backlog.md (a bare
+`npx backlog` otherwise resolves to an unrelated package). If no candidate
+verifies, `apply`/`upgrade` fail with a clear error rather than recording an
+unverified command.
+
 ## Install
 
 See [INSTALL.md](INSTALL.md).

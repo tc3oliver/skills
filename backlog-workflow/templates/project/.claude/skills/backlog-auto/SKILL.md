@@ -35,7 +35,12 @@ product intent. When a product decision is missing, record evidence in the task,
 report it as blocked, and stop.
 
 Use the Backlog.md CLI recorded in `.agent-workflow/PROJECT.md` for all task
-operations. Never select tasks by parsing Markdown task files directly.
+operations (`backlog` in examples is a placeholder for that command — see
+"Command convention" in `.agent-workflow/WORKFLOW.md`). Never select tasks by
+parsing Markdown task files directly. Before coding each selected task, append
+any missing canonical completion-policy DoD item with
+`backlog task edit <TASK-ID> --dod "<item>"` (see "Native Definition of Done
+binding" in `.agent-workflow/WORKFLOW.md`) so older tasks cannot bypass it.
 
 When `$task_id` is present, execute only that task and stop.
 

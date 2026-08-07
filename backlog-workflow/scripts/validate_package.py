@@ -149,6 +149,8 @@ def main() -> int:
         raise AssertionError("install.py VERSION constant must match VERSION file")
     if "LEGACY_TASK_TEMPLATE_HASH" not in install_py or "migrate_deprecated_task_template" not in install_py:
         raise AssertionError("install.py must implement the deprecated TASK-TEMPLATE migration")
+    if "verify_backlog_cli" not in install_py or "resolve_backlog_cli" not in install_py:
+        raise AssertionError("install.py must verify the Backlog.md CLI before accepting it")
 
     print("Package validation passed")
     return 0

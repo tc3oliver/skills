@@ -10,6 +10,11 @@ Use for both new and existing projects.
   `--agent-instructions none` is deliberate: this workflow owns its managed
   CLAUDE.md/AGENTS.md blocks, so Backlog.md must not emit competing agent
   instructions.
+- Verify the Backlog.md CLI: each candidate is probed read-only
+  (`<candidate> instructions overview`) and accepted only when it is Backlog.md.
+  If no candidate verifies, `apply`/`upgrade` fail with a clear "required
+  interface" error — `PROJECT.md` is never written with an unverified or
+  `not detected` CLI.
 - Install workflow version `1.1.0`.
 - Preserve all existing task files, Backlog.md configuration, requirement
   documents, source code, and non-managed instructions.

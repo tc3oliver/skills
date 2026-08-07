@@ -319,41 +319,83 @@ def detect_default_branch(root: Path) -> str:
     return "not detected"
 
 
-def detect_backlog_cli(root: Path) -> str:
-    # Verified executables first; a documented command is only trusted when it
-    # appears as a real command, not as prose that merely mentions "backlog".
-    local_candidates = [
-        root / "node_modules/.bin/backlog",
-        root / "node_modules/.bin/backlog.cmd",
-    ]
-    if any(path.exists() for path in local_candidates):
-        return "npx backlog"
-    if shutil.which("backlog"):
-        return "backlog"
+def backlog_cli_candidates(root: Path) -> list[str]:
+    """Ordered Backlog.md CLI command candidates to probe, deduped.
 
-    documented_files = [root / "CLAUDE.md", root / ".claude/CLAUDE.md", root / "AGENTS.md"]
-    for path in documented_files:
+    `npx backlog` is included only when backlog.md is installed locally
+    (`node_modules/.bin/backlog`); a bare `npx backlog` otherwise resolves to the
+    unrelated npm `backlog` package, so it is never assumed without a local bin.
+    Every candidate is still verified by `verify_backlog_cli` before use.
+    """
+    candidates: list[str] = []
+    local_bin = (root / "node_modules/.bin/backlog").exists() or (
+        root / "node_modules/.bin/backlog.cmd"
+    ).exists()
+    if local_bin:
+        candidates.append("npx backlog")
+    if shutil.which("backlog"):
+        candidates.append("backlog")
+    for path in (root / "CLAUDE.md", root / ".claude/CLAUDE.md", root / "AGENTS.md"):
         if not path.exists():
             continue
         text = read_text(path)
-        for candidate in ("npx backlog.md", "npx backlog"):
-            if re.search(rf"(?m)(?:^|[`$\s]){re.escape(candidate)}\s", text):
-                return candidate
-
+        for cand in ("npx backlog.md", "npx backlog"):
+            if re.search(rf"(?m)(?:^|[`$\s]){re.escape(cand)}\s", text):
+                candidates.append(cand)
     package_json = root / "package.json"
     if package_json.exists():
         data = parse_json(package_json)
-        deps = {}
+        deps: dict[str, object] = {}
         for key in ("dependencies", "devDependencies", "optionalDependencies"):
             value = data.get(key)
             if isinstance(value, dict):
                 deps.update(value)
         if "backlog.md" in deps:
-            return "npx backlog"
-
+            candidates.append("npx backlog.md")
     if shutil.which("npx"):
-        return "npx backlog.md"
-    return "not detected"
+        candidates.append("npx backlog.md")
+    seen: set[str] = set()
+    ordered: list[str] = []
+    for cand in candidates:
+        if cand not in seen:
+            seen.add(cand)
+            ordered.append(cand)
+    return ordered
+
+
+def verify_backlog_cli(command: str, root: Path) -> bool:
+    """Probe a candidate command read-only and confirm it is Backlog.md.
+
+    Rejects any `backlog` binary that is not Backlog.md (for example the
+    unrelated npm `backlog` package). A candidate is accepted only when
+    `instructions overview` exits 0 and emits the Backlog.md overview header.
+    """
+    parts = command.split()
+    if not parts or not shutil.which(parts[0]):
+        return False
+    try:
+        proc = subprocess.run(
+            parts + ["instructions", "overview"],
+            cwd=str(root),
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=False,
+            timeout=120,
+        )
+    except (subprocess.TimeoutExpired, OSError):
+        return False
+    if proc.returncode != 0:
+        return False
+    return "## backlog.md overview" in (proc.stdout or "").lower()
+
+
+def resolve_backlog_cli(root: Path) -> str | None:
+    """Return the first candidate that verifies as Backlog.md, else None."""
+    for candidate in backlog_cli_candidates(root):
+        if verify_backlog_cli(candidate, root):
+            return candidate
+    return None
 
 
 def detect_task_prefix(root: Path) -> str:
@@ -489,7 +531,7 @@ def detect_adoption_mode(root: Path) -> str:
     return "existing" if backlog_workspace_exists(root) else "new"
 
 
-def render_project_md(root: Path) -> str:
+def render_project_md(root: Path, backlog_cli: str) -> str:
     requirements = detect_requirement_sources(root)
     commands = detect_validation_commands(root)
     shown = requirements[:REQUIREMENT_LIST_LIMIT]
@@ -513,7 +555,7 @@ def render_project_md(root: Path) -> str:
 - Adoption mode: {detect_adoption_mode(root)}
 - Task prefix: {detect_task_prefix(root)}
 - Default branch: {detect_default_branch(root)}
-- Backlog CLI: `{detect_backlog_cli(root)}`
+- Backlog CLI: `{backlog_cli}`
 
 ## Requirement sources
 
@@ -546,17 +588,18 @@ def render_project_md(root: Path) -> str:
 """
 
 
-def stale_project_facts(root: Path, text: str) -> list[str]:
+def stale_project_facts(root: Path, text: str, backlog_cli: str | None) -> list[str]:
     """Report recorded PROJECT.md facts that no longer match repository evidence.
 
     PROJECT.md stays user-owned, so this only warns; it never rewrites the file.
     A recorded value is compared only when the generated line is still present and
-    the project has not deliberately replaced it with something else.
+    the project has not deliberately replaced it with something else. `backlog_cli`
+    is the verified command (None when no candidate verified); it is passed in so
+    audit does not probe twice.
     """
     findings: list[str] = []
     checks = (
         ("Default branch", detect_default_branch(root)),
-        ("Backlog CLI", detect_backlog_cli(root)),
         ("Task prefix", detect_task_prefix(root)),
     )
     for label, detected in checks:
@@ -570,6 +613,16 @@ def stale_project_facts(root: Path, text: str) -> list[str]:
             findings.append(f"PROJECT.md {label} is 'not detected' but {detected!r} is now detectable")
         elif recorded != detected:
             findings.append(f"PROJECT.md {label} records {recorded!r} but repository evidence shows {detected!r}")
+    if backlog_cli:
+        match = re.search(r"(?m)^- Backlog CLI:\s*`?([^`\n]+?)`?\s*$", text)
+        if match:
+            recorded = match.group(1).strip()
+            if recorded == "not detected":
+                findings.append(f"PROJECT.md Backlog CLI is 'not detected' but {backlog_cli!r} is now verified")
+            elif recorded != backlog_cli:
+                findings.append(
+                    f"PROJECT.md Backlog CLI records {recorded!r} but verified command is {backlog_cli!r}"
+                )
     return findings
 
 
@@ -633,6 +686,14 @@ def apply(root: Path, action: str) -> tuple[list[str], list[str]]:
     if not backlog_workspace_exists(root):
         changed.append(init_backlog_workspace(root))
 
+    backlog_cli = resolve_backlog_cli(root)
+    if backlog_cli is None:
+        raise InstallError(
+            "Backlog.md CLI is the required interface but no candidate verified as "
+            "Backlog.md (a `backlog` on PATH may be a different package). Install "
+            "Backlog.md so `npx backlog.md instructions overview` succeeds, then re-run."
+        )
+
     for relative in MANAGED_FILES:
         destination = root / relative
         expected = template_text(relative)
@@ -648,7 +709,7 @@ def apply(root: Path, action: str) -> tuple[list[str], list[str]]:
 
     project_md = root / ".agent-workflow/PROJECT.md"
     if not project_md.exists():
-        atomic_write(project_md, render_project_md(root))
+        atomic_write(project_md, render_project_md(root, backlog_cli))
         changed.append(".agent-workflow/PROJECT.md")
     else:
         preserved.append(".agent-workflow/PROJECT.md")
@@ -670,6 +731,10 @@ def audit(root: Path) -> list[str]:
     if not backlog_workspace_exists(root):
         drift.append("Backlog.md workspace not detected")
 
+    backlog_cli = resolve_backlog_cli(root)
+    if backlog_cli is None:
+        drift.append("Backlog.md CLI not verified (required interface unavailable)")
+
     for relative in MANAGED_FILES:
         destination = root / relative
         if not destination.exists():
@@ -686,7 +751,7 @@ def audit(root: Path) -> list[str]:
     if not project_md.exists():
         drift.append("missing: .agent-workflow/PROJECT.md")
     else:
-        drift.extend(stale_project_facts(root, read_text(project_md)))
+        drift.extend(stale_project_facts(root, read_text(project_md), backlog_cli))
 
     root_claude = root / "CLAUDE.md"
     nested_claude = root / ".claude/CLAUDE.md"

@@ -36,10 +36,14 @@ modifying task state or code.
 
 For a specified task, follow the manual-execution section of
 `.agent-workflow/WORKFLOW.md` completely. Use the Backlog.md CLI recorded in
-`.agent-workflow/PROJECT.md` for all task reads and writes. Research the current
-codebase/tests/config/history, then write the JIT Implementation Plan into the
-task (`backlog task edit <TASK-ID> --plan "..."`) **before** coding, set the task
-to the active status, implement, and validate.
+`.agent-workflow/PROJECT.md` for all task reads and writes (`backlog` in examples
+is a placeholder for that command — see "Command convention" in
+`.agent-workflow/WORKFLOW.md`). Before coding, read the task's Definition of
+Done and append any missing canonical completion-policy item with
+`backlog task edit <TASK-ID> --dod "<item>"` (see "Native Definition of Done
+binding"), then write the JIT Implementation Plan into the task
+(`backlog task edit <TASK-ID> --plan "..."`), set the task to the active status,
+implement, and validate.
 
 **Approval boundary.** Backlog.md canonical execution may recommend presenting
 the Implementation Plan for approval. `/backlog-run <TASK-ID>` already

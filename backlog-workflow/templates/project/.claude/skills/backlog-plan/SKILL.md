@@ -38,8 +38,13 @@ decision at a time and do not create tasks until the user confirms shared
 understanding. Record each grilled decision per "Recording a grilled decision"
 in `.agent-workflow/WORKFLOW.md` before creating any task that cites it.
 
-Create or edit tasks through the Backlog.md CLI. Preserve existing IDs and
-history. Establish explicit dependencies, Acceptance Criteria, and priority.
+Create or edit tasks through the Backlog.md CLI (the command recorded in
+`.agent-workflow/PROJECT.md`; see the "Command convention" note in
+`.agent-workflow/WORKFLOW.md`). Preserve existing IDs and history. Establish
+explicit dependencies, Acceptance Criteria, and priority. Bind the completion
+policy by adding the four Definition of Done items with one repeatable `--dod`
+flag per item (see "Native Definition of Done binding" in
+`.agent-workflow/WORKFLOW.md`).
 
 Planning stops at decomposition. Do not produce an Implementation Plan
 (Implementation Plans are JIT, created during execution). Do not implement

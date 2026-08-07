@@ -28,9 +28,15 @@ operations over directly editing task files (`backlog task ...`, `backlog doc ..
 `backlog decision ...`). MCP is supported by Backlog.md but is optional and
 user-managed; discovery records only the CLI and never registers an MCP server.
 
-Detect the Backlog.md CLI (not the unrelated `backlog` npm package). A local
-`node_modules/.bin/backlog` resolves to `npx backlog`; otherwise prefer
-`npx backlog.md` when `npx` is available.
+Detect **and verify** the Backlog.md CLI. Do not trust a `backlog` binary just
+because it is on PATH — a bare `npx backlog` without a local install resolves to
+the unrelated npm `backlog` package. Each candidate is probed read-only
+(`<candidate> instructions overview`) and accepted only when it exits 0 and emits
+the Backlog.md overview. If no candidate verifies, `apply`/`upgrade`/`audit` fail
+with a clear "required interface" error rather than recording `not detected`.
+
+A local `node_modules/.bin/backlog` resolves to `npx backlog`; otherwise the
+canonical safe form is `npx backlog.md` when `npx` is available.
 
 ## Requirement sources
 

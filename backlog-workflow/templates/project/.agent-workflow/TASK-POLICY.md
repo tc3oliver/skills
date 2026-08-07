@@ -48,6 +48,16 @@ silently introduce, remove, or reinterpret a requirement.
 - <Repository-supported constraints that any implementation must respect, e.g.
   supported runtimes, public API contracts, performance budgets.>
 
+### Validation
+
+- <How this task will be objectively validated: verified commands from
+  `.agent-workflow/PROJECT.md`, or a concrete manual validation method. Commands
+  marked `not detected` must not be invented.>
+
+### Test Requirements
+
+- <Required automated or manual test coverage, or "Not applicable" with reason.>
+
 ### Impacts
 
 - Security: <impact or None>

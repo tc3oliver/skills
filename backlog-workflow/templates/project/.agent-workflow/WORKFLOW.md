@@ -92,6 +92,14 @@ the Backlog.md CLI.
 Prefer Backlog.md CLI operations over direct task-file editing for all task
 mutation.
 
+### Command convention
+
+In all command examples in this workflow, `backlog` is a placeholder for the
+exact Backlog.md CLI command recorded in `.agent-workflow/PROJECT.md` (for
+example `backlog`, `npx backlog`, or `npx backlog.md`). Run the recorded
+command verbatim; do not assume a bare `backlog` exists when PROJECT.md records
+`npx backlog.md`.
+
 ## Task Ready Gate
 
 A task may enter the active status only when all applicable items are clear. Use
@@ -134,9 +142,12 @@ not blockers.
    update any other authoritative requirement documents the confirmed decisions
    require.
 7. Decompose work into small Backlog.md tasks with explicit dependencies,
-   Acceptance Criteria, and priority. Create tasks through the Backlog.md CLI
-   and preserve existing IDs and history. A task whose Requirement source is a
-   grilled decision cites the decision record created in step 6.
+   Acceptance Criteria, priority, and the workflow Definition of Done. Create
+   tasks through the Backlog.md CLI and preserve existing IDs and history. Bind
+   the completion policy by adding the four Definition of Done items (see
+   "Completion conditions") with one repeatable `--dod` flag per item. A task
+   whose Requirement source is a grilled decision cites the decision record
+   created in step 6.
 
 Planning stops at decomposition. It must not:
 
@@ -197,7 +208,10 @@ With a task ID, follow the manual-execution flow:
 
 1. Load `backlog instructions overview` and `backlog instructions task-execution`.
 2. Read the task and its requirement source; verify the task is executable
-   (Task Ready Gate clear).
+   (Task Ready Gate clear). Ensure the native Definition of Done contains the
+   canonical completion-policy items (see "Native Definition of Done binding");
+   append any missing item with `backlog task edit <TASK-ID> --dod "<item>"`
+   before proceeding.
 3. Research the **current** codebase, tests, configuration, and history. Do not
    rely on an approach proposed when the task was created.
 4. Write the JIT Implementation Plan into the Backlog.md native field
@@ -206,7 +220,9 @@ With a task ID, follow the manual-execution flow:
    status>"`).
 6. Implement the complete task.
 7. Run relevant validation, tests, lint, typecheck, and build.
-8. Verify every Acceptance Criterion with objective evidence.
+8. Verify every Acceptance Criterion with objective evidence, then check the
+   matching Definition of Done items (`backlog task edit <TASK-ID> --check-dod
+   <index>`).
 9. Synchronize documentation and the Requirement Matrix when applicable.
 10. Record Implementation Notes, validation evidence, and Final Summary in the
     task's native fields.
@@ -293,6 +309,23 @@ structures.
 
 PR/MR creation, CI review, review fixes, and merge remain the standard delivery
 flow when available, but they are not a fifth completion condition.
+
+### Native Definition of Done binding
+
+The four completion conditions are machine-enforceable, so every workflow task
+must carry them in the Backlog.md native Definition of Done. The canonical DoD
+items are:
+
+- `Acceptance Criteria all pass`
+- `Required applicable tests, lint, typecheck, and build pass`
+- `Documentation and Requirement Matrix are synchronized when applicable`
+- `Validation evidence is recorded in the task`
+
+`/backlog-plan` adds these with one repeatable `--dod` flag per item at task
+creation. Before starting work, `/backlog-run` and `/backlog-auto` read the task
+(`backlog task <TASK-ID> --json`, `definitionOfDone`) and append any missing
+canonical item with `backlog task edit <TASK-ID> --dod "<item>"`, so tasks
+created before this binding (or outside the workflow) cannot bypass it.
 
 ## True blockers
 
