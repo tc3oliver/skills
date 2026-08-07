@@ -1,6 +1,6 @@
 ---
 name: backlog-workflow
-description: Install, audit, or upgrade the versioned Backlog.md workflow in the current project. Supports new and existing projects and installs manual planning/execution plus explicit automatic execution skills.
+description: Install, audit, or upgrade the versioned Backlog.md workflow in the current project. Installs manual planning/execution plus explicit automatic execution skills as a policy/orchestration layer over Backlog.md.
 argument-hint: "[apply|audit|upgrade]"
 arguments: action
 disable-model-invocation: true
@@ -12,6 +12,23 @@ allowed-tools: Read Glob Grep Bash Edit Write Skill
 Action: `$action`
 
 Use `apply` when the action is empty. Accept only `apply`, `audit`, or `upgrade`.
+
+## Architecture
+
+This package is a **policy + orchestration layer** over Backlog.md:
+
+- **Backlog.md** = the task/workflow engine (task schema, lifecycle, Acceptance
+  Criteria, Definition of Done, Implementation Plan, Implementation Notes, Final
+  Summary, dependencies, CLI, JSON interface, canonical instructions).
+- **backlog-workflow** = development policy and orchestration on top of Backlog.md
+  (modes, requirement authority, task decomposition policy, approval boundaries,
+  grilling/decision policy, blocker policy, completion conditions, deterministic
+  automatic task selection).
+- **PROJECT.md** = repository-specific configuration.
+- **PRD/spec** = product truth.
+
+Backlog.md canonical instructions are the single source of truth for Backlog
+mechanics. This workflow does not duplicate them.
 
 ## Required reading
 
@@ -26,7 +43,9 @@ Read these before acting:
 2. Inspect `git status --short` and treat existing changes as user-owned.
 3. Do not initialize Backlog.md manually. The installer creates the workspace
    non-interactively when none exists, and blocks if initialization fails.
-   Do not create speculative product tasks.
+   Initialization passes `--agent-instructions none` because this workflow owns
+   its managed CLAUDE.md/AGENTS.md blocks. Do not create speculative product
+   tasks.
 4. Run the bundled installer:
 
 ```bash
@@ -51,4 +70,5 @@ python3 "${CLAUDE_SKILL_DIR}/scripts/install.py" audit --project "<project-root>
 - Do not rewrite PRDs, requirement matrices, ADRs, architecture files, or user-owned instructions.
 - Do not begin product implementation.
 - Do not silently overwrite unmanaged files at paths owned by this workflow. Report the conflict and stop.
-- `upgrade` updates only files marked as managed by this workflow.
+- `upgrade` updates only files marked as managed by this workflow, and migrates the deprecated managed `TASK-TEMPLATE.md` to `TASK-POLICY.md` (managed copy removed; unmanaged copy preserved).
+- Do not install or configure MCP. The Backlog.md CLI is the required interface; MCP is optional and user-managed.

@@ -6,7 +6,7 @@ disable-model-invocation: true
 allowed-tools: Read Glob Grep Bash Edit Write Skill
 ---
 
-<!-- Managed by backlog-workflow 1.0.0 -->
+<!-- Managed by backlog-workflow 1.1.0 -->
 
 # Plan Backlog Work
 
@@ -16,25 +16,43 @@ Read before acting:
 
 - `.agent-workflow/WORKFLOW.md`
 - `.agent-workflow/PROJECT.md`
-- `.agent-workflow/TASK-TEMPLATE.md`
-- applicable `CLAUDE.md` files
-- relevant requirement sources, code, tests, and existing Backlog.md tasks
+- `.agent-workflow/TASK-POLICY.md`
+- applicable `CLAUDE.md` and `AGENTS.md` files
+- authoritative requirement sources (PRD/spec/requirement matrix), decision
+  records, project instructions, and existing Backlog.md tasks
 
-Follow the manual-planning section of `.agent-workflow/WORKFLOW.md`. Start the background board per "Background board" in that file before proceeding.
+Load the Backlog.md canonical instructions for planning using the CLI recorded
+in `.agent-workflow/PROJECT.md`:
 
-Resolve facts through repository exploration. Invoke the model-invoked `grilling` skill when a user decision is required. Ask one decision at a time and do not create tasks until the user confirms shared understanding. Record each grilled decision per "Recording a grilled decision" in `.agent-workflow/WORKFLOW.md` before creating any task that cites it.
+```bash
+backlog instructions overview
+backlog instructions task-creation
+```
 
-Create or edit tasks through the Backlog.md command recorded in `.agent-workflow/PROJECT.md`. Preserve existing IDs and history. Establish explicit blocking dependencies.
+Follow the manual-planning section of `.agent-workflow/WORKFLOW.md`.
 
-Do not implement product code. Do not mark any task `In Progress`.
+Resolve facts through repository exploration. Invoke the model-invoked
+`grilling` skill only when product intent, scope, acceptance behavior, or an
+irreversible decision cannot be resolved from an authoritative source. Ask one
+decision at a time and do not create tasks until the user confirms shared
+understanding. Record each grilled decision per "Recording a grilled decision"
+in `.agent-workflow/WORKFLOW.md` before creating any task that cites it.
 
-End with exactly this structure. Field labels may be localized to the user's language; the `Status` value, where present, always stays one of `Done`, `Blocked`, or `In Progress` in English, matching the Backlog.md CLI's status literals.
+Create or edit tasks through the Backlog.md CLI. Preserve existing IDs and
+history. Establish explicit dependencies, Acceptance Criteria, and priority.
+
+Planning stops at decomposition. Do not produce an Implementation Plan
+(Implementation Plans are JIT, created during execution). Do not implement
+product code. Do not set any task to the active status.
+
+End with exactly this structure. Field labels may be localized to the user's
+language; the `Status` value, where present, always stays one of `Done`,
+`Blocked`, or `In Progress` in English.
 
 ```text
 Planning report
 - Scope: <confirmed requirement scope>
 - Tasks: <created or updated tasks>
 - Dependencies: <dependency summary and blockers>
-- Board: <background browser URL, or unavailable>
 - Next: </backlog-run TASK-ID>
 ```

@@ -1,13 +1,13 @@
 ---
 name: backlog-auto
-description: Explicitly run Backlog.md tasks automatically. With a task ID, execute only that task; without one, continue through dependency-ready tasks until exhausted or blocked.
+description: Explicitly run Backlog.md tasks automatically. With a task ID, execute only that task; without one, select dependency-ready tasks deterministically until exhausted or blocked.
 argument-hint: "[TASK-ID]"
 arguments: task_id
 disable-model-invocation: true
 allowed-tools: Read Glob Grep Bash Edit Write
 ---
 
-<!-- Managed by backlog-workflow 1.0.0 -->
+<!-- Managed by backlog-workflow 1.1.0 -->
 
 # Run Backlog Tasks Automatically
 
@@ -17,19 +17,52 @@ Read before acting:
 
 - `.agent-workflow/WORKFLOW.md`
 - `.agent-workflow/PROJECT.md`
-- applicable `CLAUDE.md` files
+- `.agent-workflow/TASK-POLICY.md`
+- applicable `CLAUDE.md` and `AGENTS.md` files
 
-Follow the automatic-execution section of `.agent-workflow/WORKFLOW.md`. Start the background board per "Background board" in that file before proceeding.
+Follow the automatic-execution section of `.agent-workflow/WORKFLOW.md`. Load the
+Backlog.md canonical instructions using the CLI recorded in
+`.agent-workflow/PROJECT.md`:
 
-Do not invoke `grilling`, ask interactive product questions, or guess missing product intent. Mark the affected task `Blocked`, record evidence, report, and stop when a product decision is missing.
+```bash
+backlog instructions overview
+backlog instructions task-execution
+backlog instructions task-finalization
+```
 
-Use the Backlog.md command recorded in `.agent-workflow/PROJECT.md` for all task operations.
+Do not invoke `grilling`, ask interactive product questions, or guess missing
+product intent. When a product decision is missing, record evidence in the task,
+report it as blocked, and stop.
 
-When `$task_id` is present, execute only that task. Otherwise repeatedly choose the highest-priority dependency-ready task. Each task must meet all four completion conditions before selecting the next one.
+Use the Backlog.md CLI recorded in `.agent-workflow/PROJECT.md` for all task
+operations. Never select tasks by parsing Markdown task files directly.
 
-Attempt the repository delivery flow after validation when available. PR/MR, CI/review fixes, and merge do not add completion conditions beyond the four defined by the workflow.
+When `$task_id` is present, execute only that task and stop.
 
-Report each completed or blocked task using exactly this structure. Field labels may be localized to the user's language; the `Status` value always stays one of `Done`, `Blocked`, or `In Progress` in English, matching the Backlog.md CLI's status literals.
+Otherwise, select tasks deterministically from structured Backlog.md data:
+
+1. Query `backlog task list --json`.
+2. Exclude tasks that are not executable (for example, terminal status).
+3. Exclude tasks whose blocking dependencies are incomplete. Read dependencies
+   from `backlog task <TASK-ID> --json` (`dependencies`) and the dependency
+   tasks' status from the list output.
+4. Apply Backlog.md/project priority.
+5. On equal priority, take the lowest numeric task ID.
+6. Execute exactly one selected task.
+7. Fully finalize it — all four completion conditions must pass.
+8. Re-query `backlog task list --json` and select again.
+
+Do not keep a stale in-memory queue across completed tasks. Each task must be
+fully finalized before selecting the next. Stop when no executable task remains
+or a true blocker occurs.
+
+Attempt the repository delivery flow after validation when available. PR/MR,
+CI/review fixes, and merge do not add completion conditions beyond the four
+defined by the workflow.
+
+Report each completed or blocked task using exactly this structure. Field labels
+may be localized to the user's language; the `Status` value always stays one of
+`Done`, `Blocked`, or `In Progress` in English.
 
 ```text
 Execution report
@@ -37,5 +70,4 @@ Execution report
 - Status: <Done|Blocked|In Progress>
 - Changes: <major implementation and synchronized documents>
 - Validation: <AC and required command results plus evidence location>
-- Board: <background browser URL, or unavailable>
 ```

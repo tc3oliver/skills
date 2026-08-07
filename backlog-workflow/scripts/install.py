@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import re
@@ -14,24 +15,25 @@ import tempfile
 from pathlib import Path
 from typing import Iterable
 
-VERSION = "1.0.0"
+VERSION = "1.1.0"
 MANAGED_BEGIN = f"<!-- backlog-workflow:begin version={VERSION} -->"
 MANAGED_END = "<!-- backlog-workflow:end -->"
 MANAGED_BLOCK = f"""{MANAGED_BEGIN}
 ## Backlog Task Execution
 
-- The default workflow mode is manual.
-- Plan: align requirements and create Backlog.md tasks without implementation.
-  In Claude Code use `/backlog-plan`; otherwise follow the manual-planning
-  section of `.agent-workflow/WORKFLOW.md`.
-- Execute: run exactly one task, then stop. In Claude Code use
-  `/backlog-run <TASK-ID>`; otherwise follow the manual-execution section.
-- Automatic execution runs only on explicit request (`/backlog-auto [TASK-ID]`
-  in Claude Code). Requests such as "continue development" do not enable it.
-- Product requirements remain authoritative in the files listed in `.agent-workflow/PROJECT.md`.
-- Backlog.md is authoritative for task decomposition, dependencies, priority, status, plans, and validation evidence.
-- Follow `.agent-workflow/WORKFLOW.md` and `.agent-workflow/PROJECT.md`.
-- Do not expose internal autonomous-development mechanics in public README or product documentation.
+- Default workflow mode is manual.
+- Planning: align requirements and decompose into Backlog.md tasks without
+  implementation. In Claude Code use `/backlog-plan`.
+- Execute one task: `/backlog-run <TASK-ID>`; automatic: `/backlog-auto [TASK-ID]`.
+- Read `.agent-workflow/WORKFLOW.md` for development policy and
+  `.agent-workflow/PROJECT.md` for repository configuration.
+- Backlog.md canonical instructions (`backlog instructions ...`) define how
+  Backlog.md is operated; do not duplicate their mechanics. Prefer the Backlog.md
+  CLI (`backlog task ...`) for task mutation; do not parse/rewrite
+  `backlog/tasks/*.md` for normal task operations.
+- Product requirements in the files listed in `.agent-workflow/PROJECT.md` remain
+  authoritative. Do not expose internal autonomous-development mechanics in
+  public README or product documentation.
 {MANAGED_END}"""
 
 REQUIREMENT_LIST_LIMIT = 30
@@ -43,13 +45,19 @@ MANAGED_FILES = (
     Path(".agent-workflow/VERSION"),
     Path(".agent-workflow/config.yml"),
     Path(".agent-workflow/WORKFLOW.md"),
-    Path(".agent-workflow/TASK-TEMPLATE.md"),
+    Path(".agent-workflow/TASK-POLICY.md"),
     Path(".claude/skills/backlog-plan/SKILL.md"),
     Path(".claude/skills/backlog-run/SKILL.md"),
     Path(".claude/skills/backlog-auto/SKILL.md"),
     Path(".claude/skills/grilling/SKILL.md"),
     Path(".claude/skills/grilling/LICENSE"),
 )
+
+# Exact SHA-256 of the managed `.agent-workflow/TASK-TEMPLATE.md` shipped by
+# backlog-workflow 1.0.x. Used only to prove an existing file is our deprecated
+# managed copy before removing it during upgrade; an unmanaged/user-owned file
+# never matches and is always preserved.
+LEGACY_TASK_TEMPLATE_HASH = "297584e59adb52f2d57897aea727c5664815e6302eeba2a05691ac79050f4046"
 
 EXCLUDED_DIRS = {
     ".git",
@@ -164,15 +172,12 @@ def choose_claude_file(root: Path) -> Path:
 def entry_files(root: Path) -> list[Path]:
     """Instruction files that receive the managed block.
 
-    `AGENTS.md` is the cross-agent convention (Codex, Cursor, and others read it),
-    so it is kept in sync whenever it exists. It is never created from nothing:
-    only projects that already opted into it get the block.
+    Always manages CLAUDE.md (or `.claude/CLAUDE.md` when that is the only one
+    present) and AGENTS.md. AGENTS.md is the cross-agent convention (Codex,
+    Cursor, and others read it), so it is created when absent so those tools
+    discover the workflow.
     """
-    targets = [choose_claude_file(root)]
-    agents_file = root / "AGENTS.md"
-    if agents_file.exists() or has_managed_block(agents_file):
-        targets.append(agents_file)
-    return targets
+    return [choose_claude_file(root), root / "AGENTS.md"]
 
 
 def inspect_managed_block(path: Path) -> tuple[str, str | None]:
@@ -189,7 +194,7 @@ def inspect_managed_block(path: Path) -> tuple[str, str | None]:
     return ("clean" if block == MANAGED_BLOCK else "drift"), text
 
 
-def render_claude_file(path: Path) -> str:
+def render_entry_file(path: Path) -> str:
     if not path.exists():
         return MANAGED_BLOCK + "\n"
     text = read_text(path)
@@ -593,6 +598,24 @@ def preflight_conflicts(root: Path) -> list[str]:
     return conflicts
 
 
+def migrate_deprecated_task_template(root: Path) -> str | None:
+    """Remove the obsolete managed `.agent-workflow/TASK-TEMPLATE.md`.
+
+    Removed only when the file is provably the backlog-workflow 1.0.x managed
+    copy (exact content hash match). An unmanaged or user-owned file, or one the
+    user edited after install, never matches and is left untouched.
+    """
+    path = root / ".agent-workflow/TASK-TEMPLATE.md"
+    if not path.exists():
+        return None
+    text = read_text(path)
+    digest = hashlib.sha256(text.encode("utf-8")).hexdigest()
+    if digest == LEGACY_TASK_TEMPLATE_HASH:
+        path.unlink()
+        return "removed deprecated managed file: .agent-workflow/TASK-TEMPLATE.md"
+    return None
+
+
 def apply(root: Path, action: str) -> tuple[list[str], list[str]]:
     current = installed_version(root)
     current_tuple = semver_tuple(current) if current else None
@@ -619,6 +642,10 @@ def apply(root: Path, action: str) -> tuple[list[str], list[str]]:
         atomic_write(destination, expected)
         changed.append(relative.as_posix())
 
+    migrated = migrate_deprecated_task_template(root)
+    if migrated:
+        changed.append(migrated)
+
     project_md = root / ".agent-workflow/PROJECT.md"
     if not project_md.exists():
         atomic_write(project_md, render_project_md(root))
@@ -627,7 +654,7 @@ def apply(root: Path, action: str) -> tuple[list[str], list[str]]:
         preserved.append(".agent-workflow/PROJECT.md")
 
     for entry in entry_files(root):
-        rendered = render_claude_file(entry)
+        rendered = render_entry_file(entry)
         relative = entry.relative_to(root).as_posix()
         if not entry.exists() or read_text(entry) != rendered:
             atomic_write(entry, rendered)

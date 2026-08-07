@@ -55,6 +55,12 @@ installs `.agent-workflow/WORKFLOW.md` and `.agent-workflow/PROJECT.md`, which a
 plain Markdown, and drives tasks through the Backlog.md CLI. Any agent that can
 read those files and run a shell command can follow the same workflow.
 
-If the project has an `AGENTS.md`, the managed block is kept in sync there too, so
-agents that read it pick up the workflow automatically. `AGENTS.md` is never
-created from nothing; create it yourself and re-run `apply` to opt in.
+`apply` manages one block in `CLAUDE.md` (or `.claude/CLAUDE.md`) and one block in
+`AGENTS.md`. `AGENTS.md` is created when absent, so agents that read it pick up
+the workflow automatically — no manual opt-in required.
+
+## Backlog interface
+
+backlog-workflow runs entirely on the Backlog.md CLI; MCP is not required and is
+never installed or configured by this workflow. If you want the optional Backlog.md
+MCP server, configure it yourself according to the Backlog.md documentation.
