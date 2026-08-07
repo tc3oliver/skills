@@ -26,6 +26,11 @@ if [ "$1" = "instructions" ] && [ "$2" = "overview" ]; then
   printf '## Backlog.md Overview (CLI)\\n\\nbacklog instructions task-creation\\n'
   exit 0
 fi
+if [ "$1" = "init" ]; then
+  mkdir -p backlog/tasks
+  printf 'project_name: %s\\n' "$2" > backlog/config.yml
+  exit 0
+fi
 exit 0
 """
 
@@ -41,6 +46,18 @@ echo "npx unavailable in sandbox" >&2
 exit 127
 """
 
+# A fake npx that emulates `npx [--yes] backlog.md instructions overview` so the
+# `npx backlog.md` candidate verifies hermetically (no network).
+GOOD_NPX_SCRIPT = """#!/bin/sh
+for a in "$@"; do
+  if [ "$a" = "overview" ]; then
+    printf '## Backlog.md Overview (CLI)\\n\\nbacklog instructions task-creation\\n'
+    exit 0
+  fi
+done
+exit 0
+"""
+
 
 def digest(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
@@ -54,12 +71,14 @@ class InstallerTests(unittest.TestCase):
     def fake_bin(self, *kinds: str) -> Path:
         d = Path(tempfile.mkdtemp(prefix="bw-bin-"))
         for kind in kinds:
-            if kind == "good":
+            if kind in ("good", "bad"):
                 target = d / "backlog"
-                target.write_text(GOOD_BACKLOG_SCRIPT, encoding="utf-8")
-            elif kind == "bad":
-                target = d / "backlog"
-                target.write_text(BAD_BACKLOG_SCRIPT, encoding="utf-8")
+                target.write_text(
+                    GOOD_BACKLOG_SCRIPT if kind == "good" else BAD_BACKLOG_SCRIPT, encoding="utf-8"
+                )
+            elif kind == "good-npx":
+                target = d / "npx"
+                target.write_text(GOOD_NPX_SCRIPT, encoding="utf-8")
             elif kind == "broken-npx":
                 target = d / "npx"
                 target.write_text(BROKEN_NPX_SCRIPT, encoding="utf-8")
@@ -83,31 +102,40 @@ class InstallerTests(unittest.TestCase):
                 dirs.append(d)
         return os.pathsep.join(dict.fromkeys(dirs))
 
-    def make_project(self, cli: str = "good") -> tuple[Path, dict]:
+    def env_with(self, *kinds: str) -> dict:
+        env = dict(os.environ)
+        env["PATH"] = self.minimal_path(str(self.fake_bin(*kinds)))
+        return env
+
+    def make_project(self, cli: str = "good", workspace: bool = True) -> tuple[Path, dict]:
         root = Path(tempfile.mkdtemp(prefix="backlog-workflow-test-"))
         subprocess.run(["git", "init", "-q", "-b", "main"], cwd=root, check=True)
-        (root / "backlog/tasks").mkdir(parents=True)
-        (root / "backlog/config.yml").write_text(
-            "project_name: demo\ntask_prefix: DEMO\n", encoding="utf-8"
-        )
+        if workspace:
+            (root / "backlog/tasks").mkdir(parents=True)
+            (root / "backlog/config.yml").write_text(
+                "project_name: demo\ntask_prefix: DEMO\n", encoding="utf-8"
+            )
         (root / "package.json").write_text(
             '{"name":"demo","scripts":{"lint":"eslint .","typecheck":"tsc --noEmit",'
             '"test":"vitest run","build":"vite build"}}',
             encoding="utf-8",
         )
-        env = dict(os.environ)
         if cli == "good":
             # Fake `backlog` verifies first, so npx (still on PATH) is never invoked.
+            env = dict(os.environ)
             env["PATH"] = f"{self.fake_bin('good')}{os.pathsep}{env.get('PATH', '')}"
-        elif cli == "bad":
-            # A present-but-fake `backlog` plus a shadowed (broken) npx: nothing verifies.
-            env["PATH"] = self.minimal_path(str(self.fake_bin("bad", "broken-npx")))
-        elif cli == "none":
-            # No `backlog` at all, and npx cannot run Backlog.md.
-            env["PATH"] = self.minimal_path(str(self.fake_bin("broken-npx")))
-        else:
-            raise ValueError(cli)
-        return root, env
+            return root, env
+        if cli == "bad":
+            return root, self.env_with("bad", "broken-npx")
+        if cli == "none":
+            return root, self.env_with("broken-npx")
+        if cli == "global":
+            # Verified global `backlog`, npx unavailable (broken) — init must not need npx.
+            return root, self.env_with("good", "broken-npx")
+        if cli == "npx-only":
+            # Only `npx backlog.md` verifies; no global `backlog`.
+            return root, self.env_with("good-npx")
+        raise ValueError(cli)
 
     def run_installer(
         self, root: Path, action: str, env: dict | None = None
@@ -430,6 +458,57 @@ class InstallerTests(unittest.TestCase):
         audit = self.run_installer(root, "audit", none_env)
         self.assertEqual(audit.returncode, 2)
         self.assertIn("Backlog.md CLI not verified", audit.stdout)
+
+    # P1.1: fresh project, no verified CLI => apply fails with the repo unchanged
+    # (no backlog/, .agent-workflow/, CLAUDE.md, or AGENTS.md created).
+    def test_fresh_apply_without_cli_leaves_repo_unchanged(self) -> None:
+        root, env = self.make_project(cli="none", workspace=False)
+        result = self.run_installer(root, "apply", env)
+        self.assertEqual(result.returncode, 2, result.stdout + result.stderr)
+        self.assertIn("required interface", result.stdout.lower())
+        self.assertFalse((root / "backlog").exists())
+        self.assertFalse((root / ".agent-workflow").exists())
+        self.assertFalse((root / "CLAUDE.md").exists())
+        self.assertFalse((root / "AGENTS.md").exists())
+
+    # P1.2 + P1.3: a verified global `backlog` (npx unavailable) initializes a
+    # fresh workspace, and PROJECT.md records that same verified command.
+    def test_fresh_apply_initializes_with_verified_global_backlog(self) -> None:
+        root, env = self.make_project(cli="global", workspace=False)
+        result = self.run_installer(root, "apply", env)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn("backlog workspace initialized", result.stdout)
+        # The verified global command created the workspace (no npx needed).
+        self.assertTrue((root / "backlog/config.yml").exists())
+        self.assertTrue((root / "backlog/tasks").exists())
+        # PROJECT.md records the same verified command used for initialization.
+        cli_line = next(
+            line for line in read(root / ".agent-workflow/PROJECT.md").splitlines()
+            if line.startswith("- Backlog CLI:")
+        )
+        self.assertIn("`backlog`", cli_line)
+        self.assertNotIn("npx", cli_line)
+
+    # P2: a recorded, still-valid CLI is preferred; a newly available valid CLI
+    # does not create false drift.
+    def test_audit_prefers_recorded_cli_over_new_candidate(self) -> None:
+        # Step 1: only `npx backlog.md` is available -> PROJECT.md records it.
+        root, apply_env = self.make_project(cli="npx-only", workspace=True)
+        self.apply(root, apply_env)
+        cli_line = next(
+            line for line in read(root / ".agent-workflow/PROJECT.md").splitlines()
+            if line.startswith("- Backlog CLI:")
+        )
+        self.assertIn("`npx backlog.md`", cli_line)
+
+        # Step 2: a valid global `backlog` later becomes available too.
+        audit_env = self.env_with("good", "good-npx")
+        self.assertTrue(shutil.which("backlog", path=audit_env["PATH"]), "global backlog is now present")
+
+        # Audit stays clean because the recorded `npx backlog.md` still verifies.
+        audit = self.run_installer(root, "audit", audit_env)
+        self.assertEqual(audit.returncode, 0, audit.stdout + audit.stderr)
+        self.assertIn("- Status: Clean", audit.stdout)
 
 
 if __name__ == "__main__":

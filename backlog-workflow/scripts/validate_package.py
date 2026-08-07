@@ -151,6 +151,10 @@ def main() -> int:
         raise AssertionError("install.py must implement the deprecated TASK-TEMPLATE migration")
     if "verify_backlog_cli" not in install_py or "resolve_backlog_cli" not in install_py:
         raise AssertionError("install.py must verify the Backlog.md CLI before accepting it")
+    if "effective_backlog_cli" not in install_py or "backlog_init_command" not in install_py:
+        raise AssertionError(
+            "install.py must prefer the recorded CLI and initialize via the verified command"
+        )
 
     print("Package validation passed")
     return 0

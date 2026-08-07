@@ -227,24 +227,14 @@ def inside_git_repo(root: Path) -> bool:
     return proc.returncode == 0 and proc.stdout.strip() == "true"
 
 
-def init_backlog_workspace(root: Path) -> str:
-    """Create a Backlog.md workspace non-interactively. Returns a status note."""
-    if not shutil.which("npx"):
-        raise InstallError("Backlog.md workspace missing and npx is unavailable to initialize it")
+def init_backlog_workspace(root: Path, backlog_cli: str) -> str:
+    """Create a Backlog.md workspace non-interactively using the verified CLI.
 
-    cmd = [
-        "npx",
-        "--yes",
-        "backlog.md",
-        "init",
-        detect_project_name(root),
-        "--defaults",
-        # This workflow owns its own CLAUDE.md block, so skip generated agent files.
-        "--agent-instructions",
-        "none",
-    ]
-    if not inside_git_repo(root):
-        cmd.append("--no-git")
+    Returns a status note. `backlog_cli` is the already-verified Backlog.md
+    command (for example `backlog`, `npx backlog`, or `npx backlog.md`); it is
+    used verbatim so initialization never depends on a hardcoded npx.
+    """
+    cmd = backlog_init_command(backlog_cli, detect_project_name(root), inside_git_repo(root))
 
     try:
         proc = subprocess.run(
@@ -396,6 +386,48 @@ def resolve_backlog_cli(root: Path) -> str | None:
         if verify_backlog_cli(candidate, root):
             return candidate
     return None
+
+
+def recorded_backlog_cli(project_md_text: str | None) -> str | None:
+    """Return the Backlog CLI command recorded in PROJECT.md, if any."""
+    if not project_md_text:
+        return None
+    match = re.search(r"(?m)^- Backlog CLI:\s*`?([^`\n]+?)`?\s*$", project_md_text)
+    if not match:
+        return None
+    value = match.group(1).strip()
+    return None if value == "not detected" else value
+
+
+def effective_backlog_cli(root: Path, project_md_text: str | None) -> str | None:
+    """The verified Backlog CLI to use for this project.
+
+    PROJECT.md is project-owned configuration: when it already records a Backlog
+    CLI command, verify that command first and keep using it as long as it still
+    works. Only fall back to candidate discovery when nothing is recorded or the
+    recorded command no longer verifies. This prevents installing a second valid
+    CLI later from creating false drift.
+    """
+    recorded = recorded_backlog_cli(project_md_text)
+    if recorded and verify_backlog_cli(recorded, root):
+        return recorded
+    return resolve_backlog_cli(root)
+
+
+def backlog_init_command(backlog_cli: str, project_name: str, in_git_repo: bool) -> list[str]:
+    """Build the `init` invocation from the verified Backlog CLI command.
+
+    Works for a global `backlog`, a local `npx backlog`, and one-off
+    `npx backlog.md`. `--yes` is inserted for npx invocations so a one-off run
+    does not prompt.
+    """
+    parts = backlog_cli.split()
+    if parts and parts[0] == "npx":
+        parts = ["npx", "--yes", *parts[1:]]
+    cmd = [*parts, "init", project_name, "--defaults", "--agent-instructions", "none"]
+    if not in_git_repo:
+        cmd.append("--no-git")
+    return cmd
 
 
 def detect_task_prefix(root: Path) -> str:
@@ -680,19 +712,24 @@ def apply(root: Path, action: str) -> tuple[list[str], list[str]]:
     if conflicts:
         raise InstallError("; ".join(conflicts))
 
-    changed: list[str] = []
-    preserved: list[str] = []
-
-    if not backlog_workspace_exists(root):
-        changed.append(init_backlog_workspace(root))
-
-    backlog_cli = resolve_backlog_cli(root)
+    # Resolve and verify the required Backlog.md CLI before any repository
+    # mutation. If it cannot be verified, fail with the repository unchanged.
+    # Prefer the CLI already recorded in PROJECT.md when it still verifies.
+    project_md = root / ".agent-workflow/PROJECT.md"
+    existing_project_md = read_text(project_md) if project_md.exists() else None
+    backlog_cli = effective_backlog_cli(root, existing_project_md)
     if backlog_cli is None:
         raise InstallError(
             "Backlog.md CLI is the required interface but no candidate verified as "
             "Backlog.md (a `backlog` on PATH may be a different package). Install "
             "Backlog.md so `npx backlog.md instructions overview` succeeds, then re-run."
         )
+
+    changed: list[str] = []
+    preserved: list[str] = []
+
+    if not backlog_workspace_exists(root):
+        changed.append(init_backlog_workspace(root, backlog_cli))
 
     for relative in MANAGED_FILES:
         destination = root / relative
@@ -707,7 +744,6 @@ def apply(root: Path, action: str) -> tuple[list[str], list[str]]:
     if migrated:
         changed.append(migrated)
 
-    project_md = root / ".agent-workflow/PROJECT.md"
     if not project_md.exists():
         atomic_write(project_md, render_project_md(root, backlog_cli))
         changed.append(".agent-workflow/PROJECT.md")
@@ -731,7 +767,11 @@ def audit(root: Path) -> list[str]:
     if not backlog_workspace_exists(root):
         drift.append("Backlog.md workspace not detected")
 
-    backlog_cli = resolve_backlog_cli(root)
+    project_md = root / ".agent-workflow/PROJECT.md"
+    project_md_text = read_text(project_md) if project_md.exists() else None
+    # Prefer the CLI already recorded in PROJECT.md when it still verifies, so
+    # installing a second valid CLI later does not create false drift.
+    backlog_cli = effective_backlog_cli(root, project_md_text)
     if backlog_cli is None:
         drift.append("Backlog.md CLI not verified (required interface unavailable)")
 
@@ -747,11 +787,10 @@ def audit(root: Path) -> list[str]:
         if read_text(destination) != expected:
             drift.append(f"content drift: {relative.as_posix()}")
 
-    project_md = root / ".agent-workflow/PROJECT.md"
     if not project_md.exists():
         drift.append("missing: .agent-workflow/PROJECT.md")
     else:
-        drift.extend(stale_project_facts(root, read_text(project_md), backlog_cli))
+        drift.extend(stale_project_facts(root, project_md_text, backlog_cli))
 
     root_claude = root / "CLAUDE.md"
     nested_claude = root / ".claude/CLAUDE.md"
