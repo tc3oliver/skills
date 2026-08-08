@@ -154,18 +154,18 @@ class InstallerTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         return result
 
-    # 1. fresh apply creates the 1.1.0 workflow
-    def test_fresh_apply_creates_1_1_0_workflow(self) -> None:
+    # 1. fresh apply creates the 1.2.0 workflow
+    def test_fresh_apply_creates_1_2_0_workflow(self) -> None:
         root, env = self.make_project()
         result = self.apply(root, env)
         self.assertIn("- Status: Installed", result.stdout)
-        self.assertEqual(read(root / ".agent-workflow/VERSION").strip(), "1.1.0")
-        self.assertIn("workflow_version: 1.1.0", read(root / ".agent-workflow/config.yml"))
+        self.assertEqual(read(root / ".agent-workflow/VERSION").strip(), "1.2.0")
+        self.assertIn("workflow_version: 1.2.0", read(root / ".agent-workflow/config.yml"))
         self.assertTrue((root / ".agent-workflow/TASK-POLICY.md").exists())
         self.assertFalse((root / ".agent-workflow/TASK-TEMPLATE.md").exists())
 
-    # 20. managed files contain version 1.1.0
-    def test_managed_files_contain_1_1_0(self) -> None:
+    # 20. managed files contain version 1.2.0
+    def test_managed_files_contain_1_2_0(self) -> None:
         root, env = self.make_project()
         self.apply(root, env)
         for rel in (
@@ -176,7 +176,38 @@ class InstallerTests(unittest.TestCase):
             ".claude/skills/backlog-run/SKILL.md",
             ".claude/skills/backlog-auto/SKILL.md",
         ):
-            self.assertIn("1.1.0", read(root / rel), f"missing 1.1.0 marker in {rel}")
+            self.assertIn("1.2.0", read(root / rel), f"missing 1.2.0 marker in {rel}")
+
+    # fresh apply defaults to sequential /backlog-auto (opt-in parallelism)
+    def test_fresh_apply_defaults_to_sequential_auto(self) -> None:
+        root, env = self.make_project()
+        self.apply(root, env)
+        config = read(root / ".agent-workflow/config.yml")
+        self.assertIn("max_parallel_tasks: 1", config)
+        workflow = read(root / ".agent-workflow/WORKFLOW.md")
+        self.assertIn("Parallel automatic execution", workflow)
+        auto_skill = read(root / ".claude/skills/backlog-auto/SKILL.md")
+        self.assertIn("max_parallel_tasks", auto_skill)
+
+    # upgrade preserves a project-raised max_parallel_tasks value
+    def test_upgrade_preserves_custom_max_parallel_tasks(self) -> None:
+        root, env = self.make_project()
+        self.apply(root, env)
+        config_path = root / ".agent-workflow/config.yml"
+        config_path.write_text(
+            read(config_path).replace("max_parallel_tasks: 1", "max_parallel_tasks: 3"),
+            encoding="utf-8",
+        )
+        result = self.run_installer(root, "upgrade", env)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn("max_parallel_tasks: 3", read(config_path))
+
+    # fresh apply prompts the user to reload skills since it wrote new
+    # .claude/skills/* files that Claude Code only loads at session start
+    def test_fresh_apply_prints_reload_next_step(self) -> None:
+        root, env = self.make_project()
+        result = self.apply(root, env)
+        self.assertIn("- Next step: run /reload-skills", result.stdout)
 
     # 2. apply is idempotent
     def test_apply_is_idempotent(self) -> None:
@@ -186,6 +217,8 @@ class InstallerTests(unittest.TestCase):
         self.assertEqual(second.returncode, 0, second.stdout + second.stderr)
         self.assertIn("- Status: Clean", second.stdout)
         self.assertIn("- Changes: none", second.stdout)
+        # nothing changed on the second apply, so no reload prompt is needed
+        self.assertNotIn("- Next step:", second.stdout)
 
     # 4. upgrade is idempotent
     def test_upgrade_is_idempotent(self) -> None:
@@ -209,6 +242,7 @@ class InstallerTests(unittest.TestCase):
         audit = self.run_installer(root, "audit", env)
         self.assertEqual(audit.returncode, 2)
         self.assertIn("content drift: .agent-workflow/WORKFLOW.md", audit.stdout)
+        self.assertNotIn("- Next step:", audit.stdout)  # audit never writes files
         self.assertEqual(digest(workflow), before)  # nothing repaired
 
         workflow.write_text(install.template_text(Path(".agent-workflow/WORKFLOW.md")), encoding="utf-8")

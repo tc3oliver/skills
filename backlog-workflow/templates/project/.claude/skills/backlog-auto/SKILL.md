@@ -4,10 +4,10 @@ description: Explicitly run Backlog.md tasks automatically. With a task ID, exec
 argument-hint: "[TASK-ID]"
 arguments: task_id
 disable-model-invocation: true
-allowed-tools: Read Glob Grep Bash Edit Write
+allowed-tools: Read Glob Grep Bash Edit Write Agent
 ---
 
-<!-- Managed by backlog-workflow 1.1.0 -->
+<!-- Managed by backlog-workflow 1.2.0 -->
 
 # Run Backlog Tasks Automatically
 
@@ -18,6 +18,7 @@ Read before acting:
 - `.agent-workflow/WORKFLOW.md`
 - `.agent-workflow/PROJECT.md`
 - `.agent-workflow/TASK-POLICY.md`
+- `.agent-workflow/config.yml` (`automatic.max_parallel_tasks`)
 - applicable `CLAUDE.md` and `AGENTS.md` files
 
 Follow the automatic-execution section of `.agent-workflow/WORKFLOW.md`. Load the
@@ -53,21 +54,42 @@ Otherwise, select tasks deterministically from structured Backlog.md data:
    tasks' status from the list output.
 4. Apply Backlog.md/project priority.
 5. On equal priority, take the lowest numeric task ID.
-6. Execute exactly one selected task.
-7. Fully finalize it — all four completion conditions must pass.
-8. Re-query `backlog task list --json` and select again.
+6. Read `automatic.max_parallel_tasks` from `.agent-workflow/config.yml` and
+   take up to that many tasks from the front of the ordered list as one batch
+   (default `1` — a batch of one is exactly the flow below).
+7. Claim every task in the batch by setting it to the active status, one at a
+   time, before executing any of them (see "Parallel automatic execution" in
+   `.agent-workflow/WORKFLOW.md` — this is what keeps selection race-free).
+8. Execute the batch:
+   - Batch of 1: execute the task directly, in the current worktree.
+   - Batch of more than 1: for each claimed task, create an isolated worktree
+     (`git worktree add <path> -b backlog/<TASK-ID> <base-branch>`) and spawn
+     one `Agent` per task, instructed to `cd` into its worktree and perform
+     the manual-execution flow (JIT plan, implement, validate, verify AC/DoD,
+     sync docs, record Implementation Notes/Final Summary) for that task only,
+     then report back `Done` or `Blocked`. Wait for every agent in the batch
+     to finish before merging.
+9. Fully finalize each task — all four completion conditions must pass.
+10. For a batch of more than 1, merge finished tasks back to the base branch
+    sequentially by ascending task ID; a merge conflict blocks only that task
+    (revert its status out of `Done`, record the conflict as blocker evidence,
+    keep its worktree for inspection) and does not stop the rest of the batch.
+    Remove worktrees/branches for cleanly merged tasks.
+11. Re-query `backlog task list --json` and select the next batch.
 
 Do not keep a stale in-memory queue across completed tasks. Each task must be
-fully finalized before selecting the next. Stop when no executable task remains
-or a true blocker occurs.
+fully finalized (and, in a batch, merged or recorded as a merge-conflict
+blocker) before its worktree is discarded. Stop when no executable task remains
+or a task hits a true blocker during its own execution.
 
 Attempt the repository delivery flow after validation when available. PR/MR,
 CI/review fixes, and merge do not add completion conditions beyond the four
 defined by the workflow.
 
-Report each completed or blocked task using exactly this structure. Field labels
-may be localized to the user's language; the `Status` value always stays one of
-`Done`, `Blocked`, or `In Progress` in English.
+Report each completed or blocked task using exactly this structure — one block
+per task, in the order they were selected. Field labels may be localized to the
+user's language; the `Status` value always stays one of `Done`, `Blocked`, or
+`In Progress` in English.
 
 ```text
 Execution report

@@ -15,7 +15,7 @@ import tempfile
 from pathlib import Path
 from typing import Iterable
 
-VERSION = "1.1.0"
+VERSION = "1.2.0"
 MANAGED_BEGIN = f"<!-- backlog-workflow:begin version={VERSION} -->"
 MANAGED_END = "<!-- backlog-workflow:end -->"
 MANAGED_BLOCK = f"""{MANAGED_BEGIN}
@@ -131,6 +131,31 @@ def atomic_write(path: Path, content: str) -> None:
 
 def template_text(relative: Path) -> str:
     return read_text(TEMPLATE_ROOT / relative)
+
+
+MAX_PARALLEL_TASKS_PATTERN = re.compile(r"(?m)^([ \t]*max_parallel_tasks:[ \t]*)(\d+)[ \t]*$")
+
+
+def render_config_yml(root: Path) -> str:
+    """Render `.agent-workflow/config.yml`, preserving a project's own
+    `automatic.max_parallel_tasks` value across upgrades. Every other line
+    always matches the current template — only this one user-tunable field
+    survives a template refresh.
+    """
+    template = template_text(Path(".agent-workflow/config.yml"))
+    destination = root / ".agent-workflow/config.yml"
+    if not destination.exists():
+        return template
+    match = MAX_PARALLEL_TASKS_PATTERN.search(read_text(destination))
+    if not match:
+        return template
+    return MAX_PARALLEL_TASKS_PATTERN.sub(rf"\g<1>{match.group(2)}", template, count=1)
+
+
+def expected_managed_text(root: Path, relative: Path) -> str:
+    if relative == Path(".agent-workflow/config.yml"):
+        return render_config_yml(root)
+    return template_text(relative)
 
 
 def workflow_managed(root: Path) -> bool:
@@ -733,7 +758,7 @@ def apply(root: Path, action: str) -> tuple[list[str], list[str]]:
 
     for relative in MANAGED_FILES:
         destination = root / relative
-        expected = template_text(relative)
+        expected = expected_managed_text(root, relative)
         if destination.exists() and read_text(destination) == expected:
             preserved.append(relative.as_posix())
             continue
@@ -783,7 +808,7 @@ def audit(root: Path) -> list[str]:
         if not is_owned_managed_file(root, relative):
             drift.append(f"unmanaged-path conflict: {relative.as_posix()}")
             continue
-        expected = template_text(relative)
+        expected = expected_managed_text(root, relative)
         if read_text(destination) != expected:
             drift.append(f"content drift: {relative.as_posix()}")
 
@@ -819,6 +844,12 @@ def print_report(action: str, status: str, root: Path, changes: list[str], valid
     print(f"- Version: {version}")
     print(f"- Changes: {', '.join(changes) if changes else 'none'}")
     print(f"- Validation: {'; '.join(validation) if validation else 'clean'}")
+    if status in ("Installed", "Upgraded") and any(c.startswith(".claude/skills/") for c in changes):
+        print(
+            "- Next step: run /reload-skills (or restart Claude Code / start a new "
+            "session) so it reloads project skills before using /backlog-plan, "
+            "/backlog-run, or /backlog-auto."
+        )
 
 
 def main() -> int:

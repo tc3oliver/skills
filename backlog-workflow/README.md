@@ -43,6 +43,27 @@ The command name `backlog` is reserved for the Backlog.md CLI (and for an
 optional MCP server you configure yourself). This package never introduces a
 `/backlog` skill.
 
+Task content — title, description, Acceptance Criteria, Implementation Plan,
+Implementation Notes, Final Summary — is written in the language you write
+requirements in, so the Backlog.md board doesn't need translation to read. Code,
+commands, and Backlog.md's own field names/status values stay as-is.
+
+### Parallel automatic execution
+
+`.agent-workflow/config.yml` sets `automatic.max_parallel_tasks: 1` by
+default — `/backlog-auto` runs one task at a time, exactly as described above.
+Raise it to run that many independent, dependency-ready tasks at once, each
+isolated in its own `git worktree` and merged back sequentially once the whole
+batch finishes.
+
+It's a good fit when a project has several small, genuinely independent ready
+tasks (different modules/files, no shared state) and you want to burn down the
+backlog faster. It's a poor fit for tightly coupled tasks likely to touch the
+same files — a merge conflict only blocks the one task involved, but you still
+pay for wasted work if batches routinely collide. Start at `2` and watch how
+often merges conflict before going higher. See "Parallel automatic execution"
+in `.agent-workflow/WORKFLOW.md` for the exact claim/execute/merge protocol.
+
 ## Core rules it enforces
 
 - **Backlog.md owns the mechanics; this workflow owns the policy.** Task mutation

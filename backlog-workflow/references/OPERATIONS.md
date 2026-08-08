@@ -15,7 +15,11 @@ Use for both new and existing projects.
   If no candidate verifies, `apply`/`upgrade` fail with a clear "required
   interface" error — `PROJECT.md` is never written with an unverified or
   `not detected` CLI.
-- Install workflow version `1.1.0`.
+- Install workflow version `1.2.0`.
+- `.agent-workflow/config.yml` sets `automatic.max_parallel_tasks: 1` by
+  default — `/backlog-auto` stays sequential unless the project raises it. See
+  "Parallel automatic execution" in `.agent-workflow/WORKFLOW.md` for what
+  changes, and when it's appropriate, at higher values.
 - Preserve all existing task files, Backlog.md configuration, requirement
   documents, source code, and non-managed instructions.
 - Insert or update exactly one managed block in `CLAUDE.md` (or
@@ -67,7 +71,10 @@ Return nonzero when drift, missing files, or conflicts exist. Do not repair anyt
 ## upgrade
 
 - Refuse to downgrade a project with a newer workflow version.
-- Replace older managed templates with version `1.1.0`.
+- Replace older managed templates with version `1.2.0`.
+- Preserve an existing `automatic.max_parallel_tasks` value in
+  `.agent-workflow/config.yml` if the project already set one; only add it with
+  the default `1` when absent.
 - Migrate the deprecated managed `TASK-TEMPLATE.md` to `TASK-POLICY.md` (managed
   copy removed; unmanaged copy preserved).
 - Preserve `.agent-workflow/PROJECT.md`.
@@ -86,4 +93,7 @@ Backlog workflow
 - Version: <version or not installed>
 - Changes: <compact file-level summary or none>
 - Validation: <audit result and conflicts/blockers>
+- Next step: <present only when apply/upgrade wrote or changed a `.claude/skills/*`
+  file — run /reload-skills (or restart Claude Code / start a new session) so it
+  reloads project skills before using /backlog-plan, /backlog-run, or /backlog-auto>
 ```

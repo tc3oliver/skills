@@ -1,4 +1,4 @@
-<!-- Managed by backlog-workflow 1.1.0 -->
+<!-- Managed by backlog-workflow 1.2.0 -->
 
 # Backlog Development Workflow
 
@@ -289,6 +289,59 @@ Automatic mode:
 When a product decision is missing, record evidence in the task, report the task
 as blocked, and stop.
 
+### Parallel automatic execution
+
+`automatic.max_parallel_tasks` in `.agent-workflow/config.yml` controls how many
+dependency-ready tasks a round may execute at once. The default, `1`, is exactly
+the sequential flow above. A value greater than `1` opts into isolated parallel
+execution for that round; it changes nothing else about the completion policy —
+every task in a batch still meets all four completion conditions individually.
+
+Selection and claiming stay single-threaded to avoid any race on which task an
+agent works on:
+
+1. Query `backlog task list --json`, filter to executable, dependency-ready
+   tasks, and order them by priority then lowest task ID (same rule as above).
+2. Take up to `max_parallel_tasks` tasks from the front of that ordering as one
+   batch.
+3. Claim every task in the batch by setting it to the active status
+   (`backlog task edit <TASK-ID> -s "<active status>"`), one at a time, in the
+   main worktree, **before** any parallel work starts. Because claiming happens
+   sequentially and before execution, two tasks can never be claimed twice.
+
+For each claimed task, run the work isolated from the others:
+
+4. Create an isolated worktree and branch from the batch's starting commit:
+   `git worktree add <path> -b backlog/<TASK-ID> <base-branch>`.
+5. Inside that worktree, execute the task exactly as manual execution defines
+   it above (JIT plan, implement, validate, verify AC/DoD, sync docs, record
+   Implementation Notes/Final Summary) — this is isolation only, not a
+   different execution policy.
+6. A task's own work never merges or pushes to the shared base branch; that
+   happens only in the batch-merge step below, after every task in the batch
+   has finished.
+
+Batch merge, after all tasks in the batch finish:
+
+7. Sort the batch's finished tasks by task ID ascending — the same
+   deterministic tie-break used for selection — so merge order is reproducible.
+8. For each `Done` task in that order, merge `backlog/<TASK-ID>` into the base
+   branch.
+   - Clean merge: the task stays `Done`; remove its worktree and branch.
+   - Conflict: abort the merge, move the task back out of `Done` into a
+     blocked state, and record the conflict as blocker evidence in its
+     Implementation Notes — this is the "existing changes overlapping the task
+     in a way that cannot be safely isolated" true blocker. Leave the worktree
+     in place for inspection. Continue merging the rest of the batch; a
+     conflict on one task does not affect tasks that already merged cleanly.
+9. Re-query `backlog task list --json` before selecting the next batch — the
+   dependency-ready set may have changed now that the base branch moved.
+
+A merge conflict blocks only the task it happened on. It does not stop the rest
+of the batch or subsequent rounds — automatic execution keeps going until no
+executable task remains or a task hits a true blocker during its own execution
+(as in sequential mode).
+
 ## Completion conditions
 
 A task may be marked `Done` only when all four conditions are satisfied:
@@ -354,6 +407,24 @@ and reversible engineering choices are not blockers.
 - Do not add placeholders or knowingly incomplete behavior and mark it complete.
 - Do not expose internal autonomous-development mechanics in public README or
   product documentation unless explicitly required.
+
+## Language
+
+Write Backlog.md task content — title, description, Acceptance Criteria,
+Implementation Plan, Implementation Notes, Final Summary, and decision records
+— in the language the user writes requirements and instructions in for this
+project. The Backlog.md board is a working artifact for the user; it should not
+require translation to read.
+
+- Code, identifiers, file paths, commands, and quoted command/log output stay
+  as-is — never translate code or literal evidence.
+- Backlog.md CLI flags, native field names, and enumerated field values
+  (status, priority) always stay in their canonical English form; only the
+  free-text content fields are written in the user's language.
+- When an authoritative requirement source is in a different language, quote it
+  directly where traceability requires the exact wording, but write new task
+  content in the user's language.
+- Chat report field labels follow the same rule — see "Reports" below.
 
 ## Reports
 

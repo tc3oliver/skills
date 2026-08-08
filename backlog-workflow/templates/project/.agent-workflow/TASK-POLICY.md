@@ -1,4 +1,4 @@
-<!-- Managed by backlog-workflow 1.1.0 -->
+<!-- Managed by backlog-workflow 1.2.0 -->
 
 # Backlog Task Policy
 

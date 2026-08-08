@@ -6,7 +6,7 @@ disable-model-invocation: true
 allowed-tools: Read Glob Grep Bash Edit Write Skill
 ---
 
-<!-- Managed by backlog-workflow 1.1.0 -->
+<!-- Managed by backlog-workflow 1.2.0 -->
 
 # Plan Backlog Work
 
@@ -44,7 +44,8 @@ Create or edit tasks through the Backlog.md CLI (the command recorded in
 explicit dependencies, Acceptance Criteria, and priority. Bind the completion
 policy by adding the four Definition of Done items with one repeatable `--dod`
 flag per item (see "Native Definition of Done binding" in
-`.agent-workflow/WORKFLOW.md`).
+`.agent-workflow/WORKFLOW.md`). Write task title, description, and Acceptance
+Criteria in the user's language (see "Language" in `.agent-workflow/WORKFLOW.md`).
 
 Planning stops at decomposition. Do not produce an Implementation Plan
 (Implementation Plans are JIT, created during execution). Do not implement
