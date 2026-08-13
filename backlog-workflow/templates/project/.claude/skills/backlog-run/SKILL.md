@@ -45,14 +45,11 @@ binding"), then write the JIT Implementation Plan into the task
 (`backlog task edit <TASK-ID> --plan "..."`), set the task to the active status,
 implement, and validate.
 
-**Approval boundary.** Backlog.md canonical execution may recommend presenting
-the Implementation Plan for approval. `/backlog-run <TASK-ID>` already
-authorizes this task through JIT planning, implementation, and validation.
-Record the plan, then proceed — do **not** pause only for another
-implementation-plan approval. Stop only on a true blocker or unresolved decision
-covered by the blocker policy. This does not weaken `grilling`: still invoke it
-for unresolved product decisions or irreversible choices, and record the outcome
-per "Recording a grilled decision" in `.agent-workflow/WORKFLOW.md`.
+**Approval boundary.** `/backlog-run <TASK-ID>` already authorizes this task
+through JIT planning, implementation, and validation — do **not** pause only
+for another implementation-plan approval. See "Important approval override" in
+`.agent-workflow/WORKFLOW.md` for the full boundary and its blocker/grilling
+exceptions.
 
 Finalize with `backlog instructions task-finalization`: verify each Acceptance
 Criterion with objective evidence, check Definition of Done, record validation
