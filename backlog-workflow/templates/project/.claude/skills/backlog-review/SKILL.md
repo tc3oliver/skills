@@ -27,27 +27,14 @@ Load the Backlog.md canonical instructions using the CLI recorded in
 backlog instructions overview
 ```
 
-Follow the "Decomposition review" section of `.agent-workflow/WORKFLOW.md`.
-
-Read tasks through the Backlog.md structured interface (`backlog task list
---json`, then `backlog task <TASK-ID> --json` for Acceptance Criteria and
-dependency detail). `backlog` is a placeholder for the recorded CLI — see
-"Command convention" in `.agent-workflow/WORKFLOW.md`.
-
-This review answers exactly one question: **if every task in scope were completed
-to its Acceptance Criteria, would the requirement source be satisfied?** Run the
-four checks the workflow defines — requirement coverage, Acceptance Criteria
-sufficiency, scope traceability, and dependency integrity.
-
-Judge only against authoritative sources. Do not invent a requirement the source
-does not state. Do not count a requirement as covered because a task title sounds
-related — cite the Acceptance Criteria that would demonstrate it. Where the
-requirement source is itself too ambiguous to judge, quote the exact wording and
-record it as undetermined; do not guess, and do not invoke `grilling` here —
-resolving product intent belongs to `/backlog-plan`.
-
-The review is read-only until the user says otherwise: do not create or edit
-tasks, decision records, requirement documents, or product code while reviewing.
+Follow the "Decomposition review" section of `.agent-workflow/WORKFLOW.md`
+completely — the one question it answers, the four checks (requirement coverage,
+Acceptance Criteria sufficiency, scope traceability, dependency integrity), the
+evidence rules, and the read-only-then-confirm flow all live there. Read tasks
+through the Backlog.md structured interface (`backlog task list --json`, then
+`backlog task <TASK-ID> --json` for Acceptance Criteria and dependency detail);
+`backlog` is a placeholder for the recorded CLI — see "Command convention" in
+`.agent-workflow/WORKFLOW.md`.
 
 End with exactly this structure. Field labels may be localized to the user's
 language; the `Verdict` value always stays one of `Satisfied`, `Gaps found`, or
@@ -64,14 +51,3 @@ Decomposition review
 - Proposed fix: <tasks to create or edit, or None>
 - Next: <apply the proposed fix, or /backlog-run TASK-ID>
 ```
-
-When the verdict is not `Satisfied`, ask the user whether to apply the proposed
-fix, and wait for the answer. Change nothing before that answer.
-
-- Confirmed — apply only the confirmed items, following manual-planning rules
-  (Backlog.md CLI, preserved IDs and history, Acceptance Criteria, dependencies,
-  the four Definition of Done items, the user's language). Then re-run the four
-  checks and report again.
-- Declined, or the fix needs product intent that no source settles — stop with
-  every task unchanged and say what is still open. Missing product intent is
-  resolved by `/backlog-plan`, not here.
