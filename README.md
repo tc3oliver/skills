@@ -14,6 +14,7 @@ The goal is to make coding agents more predictable: clarify requirements before 
 | [`audit-claude-md`](audit-claude-md/)                     | Audits `CLAUDE.md` and related rules for stale, duplicated, misplaced, or overly broad instructions.                                                           |
 | [`diagnosing-bugs`](diagnosing-bugs/)                     | A structured debugging workflow based on reproduction, falsifiable hypotheses, evidence, and regression tests.                                                 |
 | [`writing-for-agents`](writing-for-agents/)               | Guidelines for writing effective `SKILL.md`, `CLAUDE.md`, `AGENTS.md`, and other agent-facing documentation.                                                   |
+| [`skill-optimizer`](skill-optimizer/)                     | Reviews and refactors an existing Skill for routing accuracy, context efficiency, execution reliability, and maintainability.                                  |
 | [`resolving-merge-conflicts`](resolving-merge-conflicts/) | Resolves merge and rebase conflicts by understanding the intent of both sides before modifying the conflict.                                                   |
 
 ## Install
@@ -44,6 +45,7 @@ Plugin skills use the namespace:
 /tc3oliver-skills:audit-claude-md
 /tc3oliver-skills:diagnosing-bugs
 /tc3oliver-skills:writing-for-agents
+/tc3oliver-skills:skill-optimizer
 /tc3oliver-skills:resolving-merge-conflicts
 ```
 
@@ -409,6 +411,10 @@ Reproduce
 ### writing-for-agents
 
 Guidance for writing documents consumed by coding agents, including skills, `CLAUDE.md`, and `AGENTS.md`.
+
+### skill-optimizer
+
+Reviews an existing Skill and improves it along four axes: routing accuracy, context efficiency, execution reliability, and maintainability. Prunes instructions that don't change model behavior, pushes conditional detail behind pointers instead of inlining it, and checks that important steps have observable completion conditions.
 
 ### resolving-merge-conflicts
 
