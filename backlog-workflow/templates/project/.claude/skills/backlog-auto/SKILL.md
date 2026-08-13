@@ -7,7 +7,7 @@ disable-model-invocation: true
 allowed-tools: Read Glob Grep Bash Edit Write Agent
 ---
 
-<!-- Managed by backlog-workflow 1.2.0 -->
+<!-- Managed by backlog-workflow 1.3.0 -->
 
 # Run Backlog Tasks Automatically
 

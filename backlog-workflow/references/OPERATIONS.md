@@ -15,7 +15,11 @@ Use for both new and existing projects.
   If no candidate verifies, `apply`/`upgrade` fail with a clear "required
   interface" error — `PROJECT.md` is never written with an unverified or
   `not detected` CLI.
-- Install workflow version `1.2.0`.
+- Install workflow version `1.3.0`.
+- Install the project skills `/backlog-plan`, `/backlog-review`, `/backlog-run`,
+  and `/backlog-auto`. `/backlog-review` is the separate decomposition-review
+  pass: it checks whether completing the planned tasks would satisfy the
+  requirement source, and is read-only until the user approves a fix.
 - `.agent-workflow/config.yml` sets `automatic.max_parallel_tasks: 1` by
   default — `/backlog-auto` stays sequential unless the project raises it. See
   "Parallel automatic execution" in `.agent-workflow/WORKFLOW.md` for what
@@ -71,7 +75,7 @@ Return nonzero when drift, missing files, or conflicts exist. Do not repair anyt
 ## upgrade
 
 - Refuse to downgrade a project with a newer workflow version.
-- Replace older managed templates with version `1.2.0`.
+- Replace older managed templates with version `1.3.0`.
 - Preserve an existing `automatic.max_parallel_tasks` value in
   `.agent-workflow/config.yml` if the project already set one; only add it with
   the default `1` when absent.
@@ -95,5 +99,6 @@ Backlog workflow
 - Validation: <audit result and conflicts/blockers>
 - Next step: <present only when apply/upgrade wrote or changed a `.claude/skills/*`
   file — run /reload-skills (or restart Claude Code / start a new session) so it
-  reloads project skills before using /backlog-plan, /backlog-run, or /backlog-auto>
+  reloads project skills before using /backlog-plan, /backlog-review,
+  /backlog-run, or /backlog-auto>
 ```

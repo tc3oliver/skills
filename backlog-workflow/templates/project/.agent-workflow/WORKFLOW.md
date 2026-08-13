@@ -1,4 +1,4 @@
-<!-- Managed by backlog-workflow 1.2.0 -->
+<!-- Managed by backlog-workflow 1.3.0 -->
 
 # Backlog Development Workflow
 
@@ -39,6 +39,7 @@ interface (`backlog task list --json`, `backlog task <TASK-ID> --json`).
 The default mode is **manual**.
 
 - Manual planning: `/backlog-plan <requirement, topic, or document path>`
+- Decomposition review: `/backlog-review [requirement source or scope]`
 - Manual execution: `/backlog-run <TASK-ID>`
 - Automatic execution: `/backlog-auto [TASK-ID]`
 
@@ -158,7 +159,9 @@ Planning stops at decomposition. It must not:
 - start product implementation, or
 - set any task to the active status.
 
-Report the plan and stop.
+Report the plan and stop. Decomposition is not self-approving: the plan is
+checked against the requirement source by "Decomposition review" below, in a
+separate user-triggered pass.
 
 ### Recording a grilled decision
 
@@ -191,6 +194,65 @@ calls for it:
 If a grilled decision requires updating or extending an existing specification,
 requirement matrix, or other authoritative doc, do both: create the decision
 record for what was decided and why, and update the doc for the resulting content.
+
+## Decomposition review
+
+`/backlog-review [requirement source or scope]` answers one question: **if every
+task in scope were completed to its Acceptance Criteria, would the requirement
+source be satisfied?**
+
+It is a separate pass from planning on purpose. The decomposition is not reviewed
+by the same context that produced it, and the review can be re-run whenever tasks
+or requirements change — not only right after `/backlog-plan`.
+
+Scope defaults to the requirement sources recorded in
+`.agent-workflow/PROJECT.md` and every non-archived task citing them; an argument
+narrows it to one requirement source, document, or feature area. Tasks already
+`Done` count as covering their requirements — the question is about the whole
+decomposition, not about remaining work.
+
+Read tasks through the structured interface (`backlog task list --json`, then
+`backlog task <TASK-ID> --json` for Acceptance Criteria and dependency detail).
+
+Run four checks:
+
+1. **Requirement coverage** — enumerate the discrete, checkable requirements in
+   the source and map each to the tasks that deliver it. A requirement with no
+   task is a gap.
+2. **Acceptance Criteria sufficiency** — for each covered requirement, judge
+   whether the mapped tasks' Acceptance Criteria, all passing, would actually
+   demonstrate it. Criteria that are vague, unverifiable, or that cover only part
+   of the requirement are a gap even though a task exists.
+3. **Scope traceability** — every task's Requirement source must cite an
+   authoritative source or a decision record. A task that traces to neither is
+   unsourced work, not a covered requirement.
+4. **Dependency integrity** — dependency cycles, dependencies on missing or
+   archived tasks, and tasks that no valid order can reach are gaps in the plan
+   itself.
+
+Evidence rules:
+
+- Judge only against authoritative sources. Never introduce a requirement the
+  source does not state.
+- A task counts as covering a requirement only when specific Acceptance Criteria
+  are cited for it. Title similarity is not coverage.
+- When the requirement source is itself too ambiguous to judge, quote the exact
+  wording and record it as undetermined. Do not guess, and do not invoke
+  `grilling` during review — unresolved product intent goes back to
+  `/backlog-plan`.
+- Report `Undetermined` when any in-scope requirement is undecidable, even if
+  everything else is covered.
+
+The review is read-only until the user says otherwise. It must not create or edit
+tasks, decision records, requirement documents, or product code while reviewing.
+When the verdict is not `Satisfied`, report the proposed fix, ask the user
+whether to apply it, and wait. On confirmation, apply only the confirmed items
+under the manual-planning rules above, then re-run the four checks and report
+again. On refusal, or when the fix needs product intent no source settles, stop
+with every task unchanged.
+
+Automatic execution never invokes this review: it is a user-triggered manual
+gate, and its question-and-wait step has no place in the `/backlog-auto` loop.
 
 ## Manual execution
 
@@ -430,7 +492,8 @@ require translation to read.
 
 Report field labels may be localized to match the user's language; field values
 keep their defined vocabulary — in particular, the `Status` value is always one
-of `Done`, `Blocked`, or `In Progress`, in English, regardless of report
+of `Done`, `Blocked`, or `In Progress`, and the `Verdict` value always one of
+`Satisfied`, `Gaps found`, or `Undetermined`, in English, regardless of report
 language.
 
 Planning report:
@@ -440,7 +503,21 @@ Planning report
 - Scope: <confirmed requirement scope>
 - Tasks: <created or updated tasks>
 - Dependencies: <dependency summary and blockers>
-- Next: </backlog-run TASK-ID>
+- Next: </backlog-review>
+```
+
+Decomposition review report:
+
+```text
+Decomposition review
+- Requirement source: <sources and task set reviewed>
+- Verdict: <Satisfied|Gaps found|Undetermined>
+- Coverage: <covered/total, and every uncovered requirement>
+- Criteria gaps: <requirements whose Acceptance Criteria would not demonstrate them, or None>
+- Unsourced tasks: <tasks citing no authoritative requirement source, or None>
+- Dependencies: <cycles, missing prerequisites, unreachable tasks, or None>
+- Proposed fix: <tasks to create or edit, or None>
+- Next: <apply the proposed fix, or /backlog-run TASK-ID>
 ```
 
 Execution report:

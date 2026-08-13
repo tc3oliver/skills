@@ -6,7 +6,7 @@ disable-model-invocation: true
 allowed-tools: Read Glob Grep Bash Edit Write Skill
 ---
 
-<!-- Managed by backlog-workflow 1.2.0 -->
+<!-- Managed by backlog-workflow 1.3.0 -->
 
 # Plan Backlog Work
 
@@ -51,6 +51,10 @@ Planning stops at decomposition. Do not produce an Implementation Plan
 (Implementation Plans are JIT, created during execution). Do not implement
 product code. Do not set any task to the active status.
 
+Do not review your own decomposition here. Checking whether the created tasks
+would satisfy the requirement source is a separate pass — end by pointing the
+user at `/backlog-review`.
+
 End with exactly this structure. Field labels may be localized to the user's
 language; the `Status` value, where present, always stays one of `Done`,
 `Blocked`, or `In Progress` in English.
@@ -60,5 +64,5 @@ Planning report
 - Scope: <confirmed requirement scope>
 - Tasks: <created or updated tasks>
 - Dependencies: <dependency summary and blockers>
-- Next: </backlog-run TASK-ID>
+- Next: </backlog-review>
 ```

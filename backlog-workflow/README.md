@@ -28,16 +28,36 @@ stopped to ask. This workflow puts those boundaries in files the agent must read
 
 ## What you get
 
-`/backlog-workflow apply` installs three project skills and a workflow spec:
+`/backlog-workflow apply` installs four project skills and a workflow spec:
 
 | Command | What it does |
 |---|---|
 | `/backlog-plan <requirement or PRD path>` | Aligns the requirement and decomposes it into Backlog.md tasks. Writes no product code, no Implementation Plan. |
+| `/backlog-review [requirement source]` | Checks whether completing every planned task would actually satisfy the requirement source. Read-only; asks before changing anything. |
 | `/backlog-run <TASK-ID>` | Executes exactly one named task with a JIT Implementation Plan, then stops. |
 | `/backlog-auto [TASK-ID]` | Automatic execution. Selects dependency-ready tasks deterministically. Only runs when you explicitly ask for it. |
 
 The default mode is manual. "Continue development" does not start automatic
 execution — only an explicit `/backlog-auto` does.
+
+### Reviewing the decomposition
+
+Decomposition is the step where requirements quietly go missing: a PRD clause
+maps to no task, an acceptance criterion is too vague to prove the thing it is
+supposed to prove, or a task shows up that no requirement asked for.
+
+`/backlog-review` is a separate pass that answers one question — *if every task
+were completed to its acceptance criteria, would the requirement source be
+satisfied?* It runs four checks: requirement coverage, acceptance-criteria
+sufficiency, scope traceability (every task cites an authoritative source or a
+decision record), and dependency integrity.
+
+It is deliberately not part of `/backlog-plan`: the context that produced a
+decomposition is the worst one to audit it, and the review is worth re-running
+whenever tasks or requirements change. It never guesses — a requirement too
+ambiguous to judge is reported as `Undetermined` and goes back to
+`/backlog-plan`, not resolved on the spot. Nothing is created or edited until
+you approve the proposed fix. `/backlog-auto` never runs it.
 
 The command name `backlog` is reserved for the Backlog.md CLI (and for an
 optional MCP server you configure yourself). This package never introduces a
@@ -75,6 +95,10 @@ in `.agent-workflow/WORKFLOW.md` for the exact claim/execute/merge protocol.
 - **Planning stops at decomposition; implementation plans are JIT.** `/backlog-plan`
   creates tasks without an Implementation Plan. `/backlog-run` researches the
   current codebase and records the plan before coding.
+- **The decomposition is reviewed by a separate pass.** `/backlog-review` checks
+  coverage, acceptance-criteria sufficiency, scope traceability, and dependency
+  integrity against the requirement source — planning never approves its own
+  output.
 - **A task is Done only when four conditions hold:** acceptance criteria pass,
   required checks pass, documentation is synchronized, and the task record
   contains validation evidence.
@@ -109,6 +133,7 @@ See [INSTALL.md](INSTALL.md).
 ```text
 /backlog-workflow apply          # install into the current project
 /backlog-plan docs/PRD.md        # align requirements, create tasks (no impl plan)
+/backlog-review docs/PRD.md      # do those tasks actually cover the PRD?
 /backlog-run TASK-1              # JIT-plan, execute one task, then stop
 ```
 
@@ -122,7 +147,7 @@ Managed by this workflow, replaced on `upgrade`:
 
 ```
 .agent-workflow/{VERSION,config.yml,WORKFLOW.md,TASK-POLICY.md}
-.claude/skills/{backlog-plan,backlog-run,backlog-auto,grilling}/
+.claude/skills/{backlog-plan,backlog-review,backlog-run,backlog-auto,grilling}/
 ```
 
 Created once, then yours to maintain:

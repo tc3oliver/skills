@@ -10,6 +10,7 @@ TEMPLATE_ROOT = ROOT / "templates" / "project"
 SKILLS = [
     ROOT / "SKILL.md",
     TEMPLATE_ROOT / ".claude/skills/backlog-plan/SKILL.md",
+    TEMPLATE_ROOT / ".claude/skills/backlog-review/SKILL.md",
     TEMPLATE_ROOT / ".claude/skills/backlog-run/SKILL.md",
     TEMPLATE_ROOT / ".claude/skills/backlog-auto/SKILL.md",
     TEMPLATE_ROOT / ".claude/skills/grilling/SKILL.md",
@@ -86,7 +87,7 @@ def main() -> int:
         if len(path.read_text(encoding="utf-8").splitlines()) > 500:
             raise AssertionError(f"SKILL.md exceeds 500 lines: {path}")
 
-    for name in ("backlog-workflow", "backlog-plan", "backlog-run", "backlog-auto"):
+    for name in ("backlog-workflow", "backlog-plan", "backlog-review", "backlog-run", "backlog-auto"):
         path = next(path for path in SKILLS if frontmatter(path).get("name") == name)
         if frontmatter(path).get("disable-model-invocation") is not True:
             raise AssertionError(f"{name} must be user-triggered only")
@@ -110,6 +111,7 @@ def main() -> int:
         TEMPLATE_ROOT / ".agent-workflow/config.yml",
         TEMPLATE_ROOT / ".agent-workflow/TASK-POLICY.md",
         TEMPLATE_ROOT / ".claude/skills/backlog-plan/SKILL.md",
+        TEMPLATE_ROOT / ".claude/skills/backlog-review/SKILL.md",
         TEMPLATE_ROOT / ".claude/skills/backlog-run/SKILL.md",
         TEMPLATE_ROOT / ".claude/skills/backlog-auto/SKILL.md",
     ):

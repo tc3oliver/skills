@@ -10,7 +10,7 @@ The goal is to make coding agents more predictable: clarify requirements before 
 
 | Skill                                                     | Description                                                                                                                                                    |
 | --------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [`backlog-workflow`](backlog-workflow/)                   | My task-driven development workflow built on Backlog.md. Supports requirement planning, single-task execution, autonomous execution, validation, and delivery. |
+| [`backlog-workflow`](backlog-workflow/)                   | My task-driven development workflow built on Backlog.md. Supports requirement planning, decomposition review, single-task execution, autonomous execution, validation, and delivery. |
 | [`audit-claude-md`](audit-claude-md/)                     | Audits `CLAUDE.md` and related rules for stale, duplicated, misplaced, or overly broad instructions.                                                           |
 | [`diagnosing-bugs`](diagnosing-bugs/)                     | A structured debugging workflow based on reproduction, falsifiable hypotheses, evidence, and regression tests.                                                 |
 | [`writing-for-agents`](writing-for-agents/)               | Guidelines for writing effective `SKILL.md`, `CLAUDE.md`, `AGENTS.md`, and other agent-facing documentation.                                                   |
@@ -103,6 +103,8 @@ Requirement
     ↓
 Task decomposition
     ↓
+Decomposition review
+    ↓
 Task selection
     ↓
 Just-in-time implementation planning
@@ -137,6 +139,7 @@ It then installs the project workflow:
 
 ```text
 /backlog-plan
+/backlog-review
 /backlog-run
 /backlog-auto
 ```
@@ -192,7 +195,33 @@ research the current codebase
 decide HOW to implement it
 ```
 
-### 2. Execute One Task
+### 2. Review the Decomposition
+
+```text
+/backlog-review docs/PRD.md
+```
+
+Decomposition is where requirements quietly go missing. `/backlog-review` is a
+separate pass that answers one question: **if every task were completed to its
+Acceptance Criteria, would the requirement be satisfied?**
+
+```text
+Requirement coverage       every requirement maps to a task
+Acceptance Criteria        the criteria would actually demonstrate it
+Scope traceability         every task cites an authoritative source
+Dependency integrity       no cycles, no unreachable tasks
+```
+
+It is deliberately not part of `/backlog-plan` — the context that produced a
+decomposition is the worst one to audit it — and it can be re-run whenever tasks
+or requirements change.
+
+The review is read-only: it reports gaps and a proposed fix, then asks before
+creating or editing anything. A requirement too ambiguous to judge is reported
+as `Undetermined` and goes back to `/backlog-plan` rather than being guessed at.
+`/backlog-auto` never runs it.
+
+### 3. Execute One Task
 
 ```text
 /backlog-run TASK-42
@@ -326,6 +355,7 @@ A project using `backlog-workflow` receives:
 .claude/
 └── skills/
     ├── backlog-plan/
+    ├── backlog-review/
     ├── backlog-run/
     ├── backlog-auto/
     └── grilling/

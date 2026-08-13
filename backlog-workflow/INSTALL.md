@@ -38,6 +38,7 @@ Default manual flow:
 
 ```text
 /backlog-plan <requirement or PRD path>
+/backlog-review [requirement or PRD path]
 /backlog-run <TASK-ID>
 ```
 

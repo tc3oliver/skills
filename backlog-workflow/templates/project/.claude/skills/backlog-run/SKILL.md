@@ -7,7 +7,7 @@ disable-model-invocation: true
 allowed-tools: Read Glob Grep Bash Edit Write Skill
 ---
 
-<!-- Managed by backlog-workflow 1.2.0 -->
+<!-- Managed by backlog-workflow 1.3.0 -->
 
 # Run One Backlog Task
 

@@ -15,7 +15,7 @@ import tempfile
 from pathlib import Path
 from typing import Iterable
 
-VERSION = "1.2.0"
+VERSION = "1.3.0"
 MANAGED_BEGIN = f"<!-- backlog-workflow:begin version={VERSION} -->"
 MANAGED_END = "<!-- backlog-workflow:end -->"
 MANAGED_BLOCK = f"""{MANAGED_BEGIN}
@@ -24,6 +24,9 @@ MANAGED_BLOCK = f"""{MANAGED_BEGIN}
 - Default workflow mode is manual.
 - Planning: align requirements and decompose into Backlog.md tasks without
   implementation. In Claude Code use `/backlog-plan`.
+- Review the decomposition against its requirement source before executing:
+  `/backlog-review [requirement source or scope]`. It is read-only and asks
+  before changing any task.
 - Execute one task: `/backlog-run <TASK-ID>`; automatic: `/backlog-auto [TASK-ID]`.
 - Read `.agent-workflow/WORKFLOW.md` for development policy and
   `.agent-workflow/PROJECT.md` for repository configuration.
@@ -47,6 +50,7 @@ MANAGED_FILES = (
     Path(".agent-workflow/WORKFLOW.md"),
     Path(".agent-workflow/TASK-POLICY.md"),
     Path(".claude/skills/backlog-plan/SKILL.md"),
+    Path(".claude/skills/backlog-review/SKILL.md"),
     Path(".claude/skills/backlog-run/SKILL.md"),
     Path(".claude/skills/backlog-auto/SKILL.md"),
     Path(".claude/skills/grilling/SKILL.md"),
@@ -848,7 +852,7 @@ def print_report(action: str, status: str, root: Path, changes: list[str], valid
         print(
             "- Next step: run /reload-skills (or restart Claude Code / start a new "
             "session) so it reloads project skills before using /backlog-plan, "
-            "/backlog-run, or /backlog-auto."
+            "/backlog-review, /backlog-run, or /backlog-auto."
         )
 
 

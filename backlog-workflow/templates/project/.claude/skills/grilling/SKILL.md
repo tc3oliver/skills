@@ -5,7 +5,7 @@ user-invocable: false
 ---
 
 <!--
-Bundled by backlog-workflow 1.2.0.
+Bundled by backlog-workflow 1.3.0.
 Based on the `grilling` skill by Matt Pocock, used under the MIT License.
 The full license text ships alongside this file as LICENSE.
 -->

@@ -154,18 +154,18 @@ class InstallerTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         return result
 
-    # 1. fresh apply creates the 1.2.0 workflow
-    def test_fresh_apply_creates_1_2_0_workflow(self) -> None:
+    # 1. fresh apply creates the 1.3.0 workflow
+    def test_fresh_apply_creates_1_3_0_workflow(self) -> None:
         root, env = self.make_project()
         result = self.apply(root, env)
         self.assertIn("- Status: Installed", result.stdout)
-        self.assertEqual(read(root / ".agent-workflow/VERSION").strip(), "1.2.0")
-        self.assertIn("workflow_version: 1.2.0", read(root / ".agent-workflow/config.yml"))
+        self.assertEqual(read(root / ".agent-workflow/VERSION").strip(), "1.3.0")
+        self.assertIn("workflow_version: 1.3.0", read(root / ".agent-workflow/config.yml"))
         self.assertTrue((root / ".agent-workflow/TASK-POLICY.md").exists())
         self.assertFalse((root / ".agent-workflow/TASK-TEMPLATE.md").exists())
 
-    # 20. managed files contain version 1.2.0
-    def test_managed_files_contain_1_2_0(self) -> None:
+    # 20. managed files contain version 1.3.0
+    def test_managed_files_contain_1_3_0(self) -> None:
         root, env = self.make_project()
         self.apply(root, env)
         for rel in (
@@ -173,10 +173,48 @@ class InstallerTests(unittest.TestCase):
             ".agent-workflow/config.yml",
             ".agent-workflow/TASK-POLICY.md",
             ".claude/skills/backlog-plan/SKILL.md",
+            ".claude/skills/backlog-review/SKILL.md",
             ".claude/skills/backlog-run/SKILL.md",
             ".claude/skills/backlog-auto/SKILL.md",
         ):
-            self.assertIn("1.2.0", read(root / rel), f"missing 1.2.0 marker in {rel}")
+            self.assertIn("1.3.0", read(root / rel), f"missing 1.3.0 marker in {rel}")
+
+    # the decomposition review is a separate, user-triggered pass after planning
+    def test_decomposition_review_is_a_separate_pass(self) -> None:
+        root, env = self.make_project()
+        self.apply(root, env)
+        workflow = read(root / ".agent-workflow/WORKFLOW.md")
+        self.assertIn("## Decomposition review", workflow)
+        self.assertIn("review_skill: backlog-review", read(root / ".agent-workflow/config.yml"))
+
+        # planning hands off to the review instead of reviewing its own output
+        plan = read(root / ".claude/skills/backlog-plan/SKILL.md")
+        self.assertIn("/backlog-review", plan)
+        self.assertNotIn("- Next: </backlog-run TASK-ID>", plan)
+
+        # the review itself is read-only until the user confirms a fix
+        review = read(root / ".claude/skills/backlog-review/SKILL.md")
+        self.assertIn("read-only", review)
+        self.assertIn("Verdict", review)
+
+        # automatic execution never runs the interactive review
+        self.assertNotIn("/backlog-review", read(root / ".claude/skills/backlog-auto/SKILL.md"))
+
+    # upgrading an older install adds a newly managed skill that it never had
+    def test_upgrade_installs_newly_managed_skill(self) -> None:
+        root, env = self.make_project()
+        self.apply(root, env)
+
+        # Model a pre-1.3.0 install: the review skill did not exist yet.
+        shutil.rmtree(root / ".claude/skills/backlog-review")
+        (root / ".agent-workflow/VERSION").write_text("1.2.0\n", encoding="utf-8")
+        self.assertEqual(self.run_installer(root, "audit", env).returncode, 2)
+
+        result = self.run_installer(root, "upgrade", env)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn(".claude/skills/backlog-review/SKILL.md", result.stdout)
+        self.assertTrue((root / ".claude/skills/backlog-review/SKILL.md").exists())
+        self.assertEqual(self.run_installer(root, "audit", env).returncode, 0)
 
     # fresh apply defaults to sequential /backlog-auto (opt-in parallelism)
     def test_fresh_apply_defaults_to_sequential_auto(self) -> None:
@@ -400,7 +438,7 @@ class InstallerTests(unittest.TestCase):
     def test_workflow_skills_remain_installed(self) -> None:
         root, env = self.make_project()
         self.apply(root, env)
-        for name in ("backlog-plan", "backlog-run", "backlog-auto", "grilling"):
+        for name in ("backlog-plan", "backlog-review", "backlog-run", "backlog-auto", "grilling"):
             self.assertTrue((root / f".claude/skills/{name}/SKILL.md").exists(), name)
 
     # 19. no /backlog skill is generated
@@ -415,6 +453,7 @@ class InstallerTests(unittest.TestCase):
                     break
         self.assertNotIn("backlog", names)
         self.assertIn("backlog-plan", names)
+        self.assertIn("backlog-review", names)
         self.assertIn("backlog-run", names)
         self.assertIn("backlog-auto", names)
 
@@ -427,6 +466,7 @@ class InstallerTests(unittest.TestCase):
             root / ".agent-workflow/WORKFLOW.md",
             root / ".agent-workflow/TASK-POLICY.md",
             root / ".claude/skills/backlog-plan/SKILL.md",
+            root / ".claude/skills/backlog-review/SKILL.md",
             root / ".claude/skills/backlog-run/SKILL.md",
             root / ".claude/skills/backlog-auto/SKILL.md",
             root / ".claude/skills/grilling/SKILL.md",
