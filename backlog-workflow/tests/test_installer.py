@@ -184,17 +184,17 @@ class InstallerTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         return result
 
-    # 1. fresh apply creates the 1.5.0 workflow
+    # 1. fresh apply creates the current workflow version
     def test_fresh_apply_creates_current_workflow(self) -> None:
         root, env = self.make_project()
         result = self.apply(root, env)
         self.assertIn("- Status: Installed", result.stdout)
-        self.assertEqual(read(root / ".agent-workflow/VERSION").strip(), "1.5.0")
-        self.assertIn("workflow_version: 1.5.0", read(root / ".agent-workflow/config.yml"))
+        self.assertEqual(read(root / ".agent-workflow/VERSION").strip(), install.VERSION)
+        self.assertIn(f"workflow_version: {install.VERSION}", read(root / ".agent-workflow/config.yml"))
         self.assertTrue((root / ".agent-workflow/TASK-POLICY.md").exists())
         self.assertFalse((root / ".agent-workflow/TASK-TEMPLATE.md").exists())
 
-    # 20. managed files contain version 1.5.0
+    # 20. managed files contain the current version marker
     def test_managed_files_carry_current_version(self) -> None:
         root, env = self.make_project()
         self.apply(root, env)
@@ -211,7 +211,7 @@ class InstallerTests(unittest.TestCase):
             ".claude/skills/backlog-run/SKILL.md",
             ".claude/skills/backlog-auto/SKILL.md",
         ):
-            self.assertIn("1.5.0", read(root / rel), f"missing version marker in {rel}")
+            self.assertIn(install.VERSION, read(root / rel), f"missing version marker in {rel}")
 
     # Progressive disclosure: WORKFLOW.md holds only the shared invariants, and
     # each skill loads exactly the phase reference it needs.
@@ -1119,10 +1119,38 @@ class InstallerTests(unittest.TestCase):
         self.assertEqual(read(root / "backlog/tasks/task-1.md"), "status: Done\n")
         self.assertTrue((root / "impl.py").exists())
 
+    def test_autocommit_claim_is_already_the_checkpoint(self) -> None:
+        """With `autoCommit` on, Backlog.md commits the `-s` edit itself, so the
+        claim-checkpoint commit finds nothing staged. That must not be treated as
+        a run blocker or attempted as a commit -- HEAD is already the checkpoint."""
+        root = self.parallel_batch_repo()
+        (root / "backlog/tasks/task-1.md").write_text("status: In Progress\n", encoding="utf-8")
+        self.git(root, "add", "backlog/tasks/task-1.md")
+        self.git(root, "commit", "-q", "-m", "backlog: claim TASK-1")  # simulates autoCommit
+
+        staged = self.git(root, "add", "--", "backlog/tasks/task-1.md")
+        self.assertEqual(staged.returncode, 0, staged.stdout)
+        status = self.git(
+            root, "status", "--porcelain", "--", "backlog/tasks/task-1.md"
+        ).stdout.strip()
+        self.assertEqual(status, "", "autoCommit already committed the claim; nothing should stage")
+
+        # Committing here would fail -- the doc must not attempt this.
+        empty_commit = self.git(root, "commit", "-m", "backlog: claim TASK-1")
+        self.assertNotEqual(empty_commit.returncode, 0)
+        self.assertIn("nothing to commit", empty_commit.stdout.lower())
+
+        # HEAD already carries the claim, so a worktree branched from it merges.
+        worktree = Path(tempfile.mkdtemp(prefix="bw-wt-")) / "w"
+        self.run_worker(root, worktree)
+        merge = self.git(root, "merge", "backlog/TASK-1")
+        self.assertEqual(merge.returncode, 0, merge.stdout)
+
     # Workers branch from a commit, so uncommitted work in the base tree is
-    # invisible to them. The claim checkpoint deliberately commits only
-    # `backlog/`, which leaves the user's own source changes behind — hence the
-    # clean-source-tree precondition.
+    # invisible to them. The claim checkpoint stages only the exact claimed task
+    # paths, which leaves any other uncommitted work — Backlog.md's own directory
+    # included — behind. That is why the precondition below covers the whole
+    # working tree rather than just the paths outside Backlog.md.
 
     def parallel_repo_with_source(self) -> Path:
         root = self.parallel_batch_repo()
@@ -1132,22 +1160,21 @@ class InstallerTests(unittest.TestCase):
         self.git(root, "commit", "-q", "-m", "source")
         return root
 
-    def dirty_source_check(self, root: Path) -> str:
-        """The precondition query AUTO.md specifies."""
-        return self.git(
-            root, "status", "--porcelain", "--untracked-files=normal", "--", ".", ":(exclude)backlog"
-        ).stdout.strip()
+    def dirty_tree_check(self, root: Path) -> str:
+        """The precondition query PARALLEL.md specifies: the whole tree, nothing excluded."""
+        return self.git(root, "status", "--porcelain", "--untracked-files=normal").stdout.strip()
 
     def test_precondition_detects_source_changes_the_claim_commit_leaves(self) -> None:
         root = self.parallel_repo_with_source()
         (root / "src/app.py").write_text("def f():\n    return 2  # user WIP\n", encoding="utf-8")
         (root / "backlog/tasks/task-1.md").write_text("status: In Progress\n", encoding="utf-8")
 
-        # Committing the claim clears `backlog/` but not the user's source work.
-        self.git(root, "add", "backlog")
+        # Committing the claim stages only the claimed task path, not the user's
+        # own source work.
+        self.git(root, "add", "backlog/tasks/task-1.md")
         self.git(root, "commit", "-q", "-m", "backlog: claim TASK-1")
         self.assertEqual(self.git(root, "status", "--short", "--", "backlog").stdout.strip(), "")
-        self.assertIn("src/app.py", self.dirty_source_check(root))
+        self.assertIn("src/app.py", self.dirty_tree_check(root))
 
     def test_dirty_base_hides_user_work_from_the_worker(self) -> None:
         """The quiet failure: no error, wrong codebase."""
@@ -1177,7 +1204,7 @@ class InstallerTests(unittest.TestCase):
         (root / "src/app.py").write_text("def f():\n    return 2  # committed\n", encoding="utf-8")
         self.git(root, "add", "-A")
         self.git(root, "commit", "-q", "-m", "user work committed")
-        self.assertEqual(self.dirty_source_check(root), "")
+        self.assertEqual(self.dirty_tree_check(root), "")
 
         worktree = Path(tempfile.mkdtemp(prefix="bw-wt-")) / "w"
         self.git(root, "worktree", "add", "-q", str(worktree), "-b", "backlog/TASK-1", "HEAD")
@@ -1197,9 +1224,9 @@ class InstallerTests(unittest.TestCase):
     # just as invisible to a worker as an uncommitted edit — so it blocks too.
     def test_untracked_user_source_blocks_parallel_execution(self) -> None:
         root = self.parallel_repo_with_source()
-        self.assertEqual(self.dirty_source_check(root), "")
+        self.assertEqual(self.dirty_tree_check(root), "")
         (root / "src/new_feature.py").write_text("def new(): ...\n", encoding="utf-8")
-        self.assertIn("?? src/new_feature.py", self.dirty_source_check(root))
+        self.assertIn("?? src/new_feature.py", self.dirty_tree_check(root))
 
     def test_untracked_user_source_is_missing_from_worker(self) -> None:
         """Why untracked has to block: HEAD does not contain the file at all."""
@@ -1220,15 +1247,15 @@ class InstallerTests(unittest.TestCase):
         (root / ".gitignore").write_text("build/\n*.tmp\n", encoding="utf-8")
         self.git(root, "add", "-A")
         self.git(root, "commit", "-q", "-m", "gitignore")
-        self.assertEqual(self.dirty_source_check(root), "")
+        self.assertEqual(self.dirty_tree_check(root), "")
 
         (root / "build").mkdir()
         (root / "build/output.bin").write_text("binary\n", encoding="utf-8")
         (root / "scratch.tmp").write_text("scratch\n", encoding="utf-8")
-        self.assertEqual(self.dirty_source_check(root), "", "ignored paths must not block")
+        self.assertEqual(self.dirty_tree_check(root), "", "ignored paths must not block")
 
         # They only appear when explicitly asked for, which AUTO.md forbids.
-        ignored = self.git(root, "status", "--porcelain", "--ignored", "--", ".", ":(exclude)backlog")
+        ignored = self.git(root, "status", "--porcelain", "--ignored")
         self.assertIn("!! build/", ignored.stdout)
 
     # Staged and deleted paths are project state HEAD does not carry either.
@@ -1236,19 +1263,20 @@ class InstallerTests(unittest.TestCase):
         root = self.parallel_repo_with_source()
         (root / "src/staged.py").write_text("x = 1\n", encoding="utf-8")
         self.git(root, "add", "src/staged.py")
-        self.assertIn("A  src/staged.py", self.dirty_source_check(root))
+        self.assertIn("A  src/staged.py", self.dirty_tree_check(root))
 
         self.git(root, "reset", "-q")
         (root / "src/staged.py").unlink()
         (root / "src/app.py").unlink()
-        self.assertIn("src/app.py", self.dirty_source_check(root))
+        self.assertIn("src/app.py", self.dirty_tree_check(root))
 
-    # Changes under backlog/ are excluded: the claim checkpoint owns those.
-    def test_backlog_changes_are_excluded_from_the_precondition(self) -> None:
+    # 1.5.x policy: the whole tree is checked, Backlog.md's own directory
+    # included — the 1.4.x behavior of excluding `backlog/` from this precondition
+    # is gone (see test_dirty_working_tree_blocks_parallel_execution_including_backlog).
+    def test_backlog_changes_block_the_precondition(self) -> None:
         root = self.parallel_repo_with_source()
         (root / "backlog/tasks/task-1.md").write_text("status: In Progress\n", encoding="utf-8")
-        self.assertEqual(self.dirty_source_check(root), "")
-        self.assertIn("task-1.md", self.git(root, "status", "--short", "--", "backlog").stdout)
+        self.assertIn("task-1.md", self.dirty_tree_check(root))
 
     def test_parallel_documents_the_clean_tree_precondition(self) -> None:
         root, env = self.make_project()
@@ -1306,6 +1334,37 @@ class InstallerTests(unittest.TestCase):
         self.assertNotIn("autoCommit: true`.", parallel)
         self.assertNotIn("set autoCommit", parallel)
 
+    def test_parallel_documents_the_ready_gate_before_claim(self) -> None:
+        """`--ready` is dependency-only; the Task Ready Gate is a separate,
+        stricter check that must run before a candidate is claimed active."""
+        root, env = self.make_project()
+        self.apply(root, env)
+        parallel = read(root / ".agent-workflow/PARALLEL.md")
+        flat = re.sub(r"\s+", " ", parallel)
+        self.assertIn("Task Ready Gate", parallel)
+        self.assertIn("is not the Ready Gate", flat)
+        self.assertIn("must not enter the active status", flat)
+        # The gate check must be ordered before any claim, not after.
+        self.assertLess(
+            flat.index("Task Ready Gate"),
+            flat.index('backlog task edit <TASK-ID> -s "<active'),
+            "the Ready Gate must be checked before any candidate is claimed",
+        )
+        # A gate failure is a task blocker, not silent exclusion.
+        self.assertIn("task blocker", flat)
+
+    def test_parallel_documents_the_autocommit_claim_checkpoint(self) -> None:
+        """`autoCommit` on already committed the `-s` edit; the doc must skip the
+        commit rather than run one that fails, and must not call that a run
+        blocker."""
+        root, env = self.make_project()
+        self.apply(root, env)
+        parallel = read(root / ".agent-workflow/PARALLEL.md")
+        flat = re.sub(r"\s+", " ", parallel)
+        self.assertIn("nothing to commit", flat)
+        self.assertIn("do not treat the empty staging area as a run blocker", flat)
+        self.assertIn("Treat the current `HEAD` as the claim checkpoint", flat)
+
     def test_parallel_defines_the_worker_outcome_contract(self) -> None:
         root, env = self.make_project()
         self.apply(root, env)
@@ -1348,6 +1407,30 @@ class InstallerTests(unittest.TestCase):
         # The ambiguous vocabulary it replaced must be gone everywhere.
         for name in ("WORKFLOW.md", "PLAN.md", "EXECUTION.md", "AUTO.md", "PARALLEL.md"):
             self.assertNotIn("true blocker", read(root / ".agent-workflow" / name).lower(), name)
+
+    # `/backlog-auto <TASK-ID>` always executes exactly one task and stops --
+    # including when that task hits a task blocker. Only the no-ID continuous
+    # loop keeps going with the other executable tasks.
+    def test_auto_task_blocker_stops_only_with_explicit_task_id(self) -> None:
+        root, env = self.make_project()
+        self.apply(root, env)
+        auto = read(root / ".agent-workflow/AUTO.md")
+        flat = re.sub(r"\s+", " ", auto)
+        self.assertIn("`/backlog-auto <TASK-ID>`** — stop", flat)
+        self.assertIn("`/backlog-auto` with no task id** — continue with the other executable tasks".lower(), flat.lower())
+        skill = read(root / ".claude/skills/backlog-auto/SKILL.md")
+        self.assertIn("stop there", skill)
+        self.assertIn("Without `$task_id`, continue with the other executable tasks", skill)
+
+    def test_readme_documents_task_vs_run_blocker_semantics(self) -> None:
+        """Automatic mode does not stop the whole run on a task blocker -- only a
+        run blocker stops the run itself."""
+        readme = read(ROOT / "README.md")
+        flat = re.sub(r"\s+", " ", readme)
+        self.assertIn("it is a task blocker", flat)
+        self.assertIn("the run continues with the other executable tasks", flat)
+        self.assertIn("only a run blocker stops the run itself", flat)
+        self.assertNotIn("in automatic mode it records evidence and stops", flat.lower())
 
     # One traceability rule for planning, review, and execution: the authority
     # lives in native `documentation`, and task-local rationale never stands in.

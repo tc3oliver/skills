@@ -6,7 +6,7 @@ disable-model-invocation: true
 allowed-tools: Read Glob Grep Bash Edit Write
 ---
 
-<!-- Managed by backlog-workflow 1.5.0 -->
+<!-- Managed by backlog-workflow 1.5.1 -->
 
 # Review Backlog Decomposition
 

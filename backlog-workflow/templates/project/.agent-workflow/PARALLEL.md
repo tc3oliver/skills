@@ -1,4 +1,4 @@
-<!-- Managed by backlog-workflow 1.5.0 -->
+<!-- Managed by backlog-workflow 1.5.1 -->
 
 # Parallel Autonomous Execution
 
@@ -52,10 +52,22 @@ Selection and claiming stay single-threaded, which is what makes double-claiming
 impossible.
 
 1. Run the selection query (`.agent-workflow/AUTO.md`) and take up to
-   `max_parallel_tasks` tasks from the front of the ordering as one batch.
-2. Claim them one at a time, in the main worktree, before any parallel work
-   starts: `backlog task edit <TASK-ID> -s "<active status>"`.
-3. Read back the exact file each claim wrote:
+   `max_parallel_tasks` candidates from the front of the ordering as one batch.
+2. Before claiming any candidate, check it against the Task Ready Gate
+   (`.agent-workflow/WORKFLOW.md`): non-empty `documentation`, settled scope,
+   objectively verifiable Acceptance Criteria, satisfied dependencies, a defined
+   validation method. `--ready` in the selection query means only that a
+   candidate's dependencies are complete — it says nothing about documentation,
+   scope, Acceptance Criteria, or validation, so it is not the Ready Gate and does
+   not substitute for it.
+
+   A candidate that fails the gate must not enter the active status. Record it as
+   a task blocker instead — the same way "Task blocker" in `.agent-workflow/AUTO.md`
+   does — and select the next ready candidate in its place so the batch still
+   fills up to `max_parallel_tasks` where the ready set allows.
+3. Claim the surviving candidates one at a time, in the main worktree, before any
+   parallel work starts: `backlog task edit <TASK-ID> -s "<active status>"`.
+4. Read back the exact file each claim, and each gate-failure block, wrote:
 
    ```bash
    backlog task <TASK-ID> --json     # .task.path, project-relative
@@ -64,7 +76,7 @@ impossible.
    The Backlog.md directory is per-project — `backlog/`, `.backlog/`, or a custom
    project-relative path — so take the path from this JSON. Never assume a
    directory name, and never stage the Backlog.md directory as a whole.
-4. Stage exactly those paths and commit them:
+5. Stage exactly those paths — claimed and blocked alike — and commit them:
 
    ```bash
    git add -- "<path of TASK-A>" "<path of TASK-B>"
@@ -77,11 +89,23 @@ impossible.
    claim only edits the task file in the working tree — the same file its worker
    will change. An uncommitted claim makes the batch merge abort with *"Your local
    changes would be overwritten by merge"*, for every task in the batch rather
-   than one. With `autoCommit` on the claim is already committed and there is
-   nothing to stage. Read the working tree rather than assuming either setting,
-   and do not change the project's Backlog.md configuration.
-5. Create each worktree from **that** commit — the one carrying the claims, not
-   the commit the batch was selected at:
+   than one.
+
+   With `autoCommit` on, Backlog.md already committed each `-s`/`--append-notes`
+   edit itself, so `git add -- <paths>` stages nothing. Check what actually
+   staged (`git status --porcelain -- <paths>`, after the `git add`) rather than
+   assuming either setting from config alone: empty output means those paths
+   already match `HEAD`. When nothing staged, do not run `git commit`
+   — it would fail with *"nothing to commit"* — and do not treat the empty
+   staging area as a run blocker; it is the expected result of `autoCommit`
+   already having committed the claims. Treat the current `HEAD` as the claim
+   checkpoint and continue directly to worktree creation. When something did
+   stage (`autoCommit` off, or a mix), commit it as above and that new commit is
+   the checkpoint. Do not change the project's Backlog.md configuration either
+   way.
+6. Create each worktree from **that** checkpoint — the commit carrying the
+   claims, whether newly created or already `HEAD` — not the commit the batch was
+   selected at:
 
    ```bash
    git worktree add <path> -b backlog/<TASK-ID> HEAD

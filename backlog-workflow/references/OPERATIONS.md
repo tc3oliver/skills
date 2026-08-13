@@ -15,7 +15,7 @@ Use for both new and existing projects.
   If no candidate verifies, `apply`/`upgrade` fail with a clear "required
   interface" error — `PROJECT.md` is never written with an unverified or
   `not detected` CLI.
-- Install workflow version `1.5.0`.
+- Install workflow version `1.5.1`.
 - Install the project skills `/backlog-plan`, `/backlog-review`, `/backlog-run`,
   and `/backlog-auto`. `/backlog-review` is the separate decomposition-review
   pass: it checks whether completing the planned tasks would satisfy the
@@ -109,7 +109,7 @@ Return nonzero when drift, missing files, or conflicts exist. Do not repair anyt
 ## upgrade
 
 - Refuse to downgrade a project with a newer workflow version.
-- Replace older managed templates with version `1.5.0`, adding
+- Replace older managed templates with version `1.5.1`, adding
   `.agent-workflow/PLAN.md`, `EXECUTION.md`, `AUTO.md`, and `PARALLEL.md` to
   installs that predate them. No file is removed: the phase content moves out of
   `WORKFLOW.md` and `AUTO.md`, both managed templates rewritten in place.

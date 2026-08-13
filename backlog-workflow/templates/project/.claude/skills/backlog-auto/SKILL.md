@@ -7,7 +7,7 @@ disable-model-invocation: true
 allowed-tools: Read Glob Grep Bash Edit Write Agent
 ---
 
-<!-- Managed by backlog-workflow 1.5.0 -->
+<!-- Managed by backlog-workflow 1.5.1 -->
 
 # Run Backlog Tasks Automatically
 
@@ -42,8 +42,10 @@ selecting again. `AUTO.md` routes to the concurrency protocol when
 Do not invoke `grilling`, ask interactive product questions, or guess missing
 product intent. When a product decision is missing, put the task in the
 configured blocked status with its evidence — that status, not memory, is what
-keeps it out of the next selection round — and continue with the other executable
-tasks. Stop the whole run only for a run blocker, as `AUTO.md` defines it.
+keeps it out of the next selection round. With `$task_id` given, stop there: an
+explicit task ID always executes exactly that task and stops, blocked or not.
+Without `$task_id`, continue with the other executable tasks. Stop the whole run
+only for a run blocker, as `AUTO.md` defines it.
 
 Report each completed or blocked task using exactly this structure — one block
 per task, in the order they were selected. Field labels may be localized to the

@@ -1,4 +1,4 @@
-<!-- Managed by backlog-workflow 1.5.0 -->
+<!-- Managed by backlog-workflow 1.5.1 -->
 
 # Autonomous Execution
 
@@ -56,15 +56,21 @@ to the task in hand: an unresolved product decision, a missing task-specific
 credential or external service, an environment limit specific to that task, an
 incomplete dependency.
 
-Write the blocked status with its evidence, then continue with the other
-executable tasks:
+Write the blocked status with its evidence:
 
 ```bash
 backlog task edit <TASK-ID> -s "<blocked status>" --append-notes "Blocked: <evidence>"
 ```
 
-That status is what keeps the task out of the next round — selection filters on
-the not-started status, so nothing has to be remembered.
+What happens next depends on how this run was invoked:
+
+- **`/backlog-auto <TASK-ID>`** — stop. An explicit task ID always executes
+  exactly that task and stops, whether it finished `Done` or `Blocked`; there is
+  no "other executable tasks" to continue to.
+- **`/backlog-auto` with no task ID** — continue with the other executable tasks.
+  That status is what keeps this task out of the next round — selection filters
+  on the not-started status, so nothing has to be remembered — and the loop
+  re-queries as usual.
 
 ### Run blocker
 

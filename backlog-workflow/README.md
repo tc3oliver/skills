@@ -123,7 +123,10 @@ records the blocked status.
   linter, `.agent-workflow/PROJECT.md` records `not detected` and the agent must
   say so rather than run a made-up command.
 - **Missing product intent is a blocker, not a guess.** In manual mode the agent
-  asks; in automatic mode it records evidence and stops.
+  asks. In automatic mode it is a task blocker: the task is parked in the
+  blocked status with its evidence, and the run continues with the other
+  executable tasks — only a run blocker stops the run itself
+  (`.agent-workflow/AUTO.md` defines both).
 
 ## Requirements
 
