@@ -57,19 +57,13 @@ Plugin skills use the namespace:
 
 It is built on top of **Backlog.md**, but does not replace or reimplement it.
 
-```text
-PRD / Specification
-        ↓
-backlog-workflow
-Development policy & orchestration
-        ↓
-Backlog.md
-Tasks, status, dependencies & evidence
-        ↓
-Coding Agent
-        ↓
-Implementation → Validation → PR/MR → CI → Review → Merge
-```
+<p align="center">
+  <img
+    src="backlog-workflow/assets/backlog-workflow-flow.png"
+    alt="Backlog Workflow User Flowchart"
+    width="1000"
+  >
+</p>
 
 The responsibility is intentionally separated:
 
