@@ -1,7 +1,7 @@
 {
   "name": "tc3oliver-skills",
   "description": "Task-driven development workflow (Backlog.md), a CLAUDE.md auditor, a rigorous bug-diagnosis loop, a reference for writing skills and agent docs, a skill optimizer, and a merge-conflict resolution discipline.",
-  "version": "1.5.0",
+  "version": "1.5.1",
   "author": {
     "name": "tc3oliver",
     "url": "https://github.com/tc3oliver"
