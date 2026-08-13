@@ -12,10 +12,10 @@ import shutil
 import subprocess
 import sys
 import tempfile
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Iterable
 
-VERSION = "1.3.0"
+VERSION = "1.4.0"
 MANAGED_BEGIN = f"<!-- backlog-workflow:begin version={VERSION} -->"
 MANAGED_END = "<!-- backlog-workflow:end -->"
 MANAGED_BLOCK = f"""{MANAGED_BEGIN}
@@ -28,8 +28,9 @@ MANAGED_BLOCK = f"""{MANAGED_BEGIN}
   `/backlog-review [requirement source or scope]`. It is read-only and asks
   before changing any task.
 - Execute one task: `/backlog-run <TASK-ID>`; automatic: `/backlog-auto [TASK-ID]`.
-- Read `.agent-workflow/WORKFLOW.md` for development policy and
-  `.agent-workflow/PROJECT.md` for repository configuration.
+- Read `.agent-workflow/WORKFLOW.md` for the shared development policy; it routes
+  to the one reference for the stage you are in (`PLAN.md`, `EXECUTION.md`, or
+  `AUTO.md`). `.agent-workflow/PROJECT.md` holds repository configuration.
 - Backlog.md canonical instructions (`backlog instructions ...`) define how
   Backlog.md is operated; do not duplicate their mechanics. Prefer the Backlog.md
   CLI (`backlog task ...`) for task mutation; do not parse/rewrite
@@ -48,6 +49,9 @@ MANAGED_FILES = (
     Path(".agent-workflow/VERSION"),
     Path(".agent-workflow/config.yml"),
     Path(".agent-workflow/WORKFLOW.md"),
+    Path(".agent-workflow/PLAN.md"),
+    Path(".agent-workflow/EXECUTION.md"),
+    Path(".agent-workflow/AUTO.md"),
     Path(".agent-workflow/TASK-POLICY.md"),
     Path(".claude/skills/backlog-plan/SKILL.md"),
     Path(".claude/skills/backlog-review/SKILL.md"),
@@ -139,21 +143,174 @@ def template_text(relative: Path) -> str:
 
 MAX_PARALLEL_TASKS_PATTERN = re.compile(r"(?m)^([ \t]*max_parallel_tasks:[ \t]*)(\d+)[ \t]*$")
 
+STATUS_ROLES = ("not_started", "active", "blocked", "done")
+
+# Role -> patterns matched case-insensitively against the project's configured
+# Backlog.md statuses. A project that renames its columns still maps cleanly.
+STATUS_ROLE_HINTS = {
+    "done": ("done", "complete", "shipped", "closed", "released"),
+    "blocked": ("blocked", "block", "on hold", "hold", "stalled"),
+    "active": ("in progress", "progress", "doing", "wip", "active", "started"),
+    "not_started": ("to do", "todo", "backlog", "ready", "open", "new"),
+}
+
+BACKLOG_CONFIG_PATHS = ("backlog/config.yml", ".backlog/config.yml", "backlog.config.yml")
+
+# Matches the inline list form Backlog.md writes: `statuses: ["To Do", "Done"]`.
+BACKLOG_STATUSES_PATTERN = re.compile(r"(?m)^(statuses:[ \t]*)\[(.*)\][ \t]*$")
+
+DEFAULT_BLOCKED_STATUS = "Blocked"
+
+
+def backlog_config_path(root: Path) -> Path | None:
+    for relative in BACKLOG_CONFIG_PATHS:
+        path = root / relative
+        if path.exists():
+            return path
+    return None
+
+
+def parse_backlog_statuses(text: str) -> list[str] | None:
+    """Configured Backlog.md statuses, or None when the list is not in the
+    inline form this installer can safely rewrite."""
+    match = BACKLOG_STATUSES_PATTERN.search(text)
+    if not match:
+        return None
+    values = [item.strip().strip("\"'").strip() for item in match.group(2).split(",")]
+    values = [value for value in values if value]
+    return values or None
+
+
+def backlog_statuses(root: Path) -> list[str] | None:
+    path = backlog_config_path(root)
+    return parse_backlog_statuses(read_text(path)) if path else None
+
+
+def cli_backlog_statuses(root: Path, backlog_cli: str) -> list[str] | None:
+    """Statuses as the CLI reports them, for a config that relies on defaults."""
+    proc = run([*backlog_cli.split(), "config", "get", "statuses"], root)
+    if proc.returncode != 0:
+        return None
+    values = [item.strip() for item in (proc.stdout or "").strip().split(",")]
+    values = [value for value in values if value]
+    return values or None
+
+
+def ensure_blocked_status(root: Path, backlog_cli: str) -> str | None:
+    """Guarantee the Backlog.md project has a status, distinct from the
+    not-started one, to park blocked tasks in.
+
+    `/backlog-auto` selects on the not-started status, so what keeps a blocked
+    task out of the next round is its status — not the agent remembering it.
+    That only works if such a status exists. Existing statuses and their order
+    are preserved; the new one is inserted before the terminal status. Returns a
+    change note, or None when a blocked status was already configured.
+
+    `backlog config set statuses` is refused by the CLI, which directs callers to
+    edit the project config file; this is that edit, and it touches no other key.
+    """
+    path = backlog_config_path(root)
+    if path is None:
+        raise InstallError("Backlog.md configuration not found; cannot verify a blocked status")
+    text = read_text(path)
+    statuses = parse_backlog_statuses(text)
+    listed = statuses if statuses is not None else cli_backlog_statuses(root, backlog_cli)
+    if listed is None:
+        raise InstallError(
+            f"cannot read the configured statuses for {path.relative_to(root).as_posix()}; "
+            f"add a blocked status (for example {DEFAULT_BLOCKED_STATUS!r}) manually, then re-run"
+        )
+    if match_status_role(listed, "blocked"):
+        return None
+
+    done = match_status_role(listed, "done")
+    insert_at = listed.index(done) if done else len(listed)
+    updated = [*listed[:insert_at], DEFAULT_BLOCKED_STATUS, *listed[insert_at:]]
+    rendered = ", ".join(f'"{status}"' for status in updated)
+    if statuses is None:
+        # No `statuses:` line at all: the project was relying on defaults, so
+        # write the resolved list rather than rewriting a line that is not there.
+        separator = "" if not text or text.endswith("\n") else "\n"
+        atomic_write(path, f"{text}{separator}statuses: [{rendered}]\n")
+    else:
+        atomic_write(path, BACKLOG_STATUSES_PATTERN.sub(rf"\g<1>[{rendered}]", text, count=1))
+    return f"added {DEFAULT_BLOCKED_STATUS!r} status to {path.relative_to(root).as_posix()}"
+
+
+def match_status_role(statuses: Iterable[str], role: str) -> str | None:
+    """The configured status that plays `role`, or None when none matches."""
+    lowered = [(status, status.strip().lower()) for status in statuses]
+    for hint in STATUS_ROLE_HINTS[role]:
+        for status, name in lowered:
+            if name == hint:
+                return status
+    for hint in STATUS_ROLE_HINTS[role]:
+        for status, name in lowered:
+            if hint in name:
+                return status
+    return None
+
+
+def detect_status_roles(root: Path) -> dict[str, str]:
+    """Map each workflow role onto a configured Backlog.md status.
+
+    Falls back to positional guesses only for roles no name matched, so an
+    unconventional board still produces a complete mapping that `audit` can
+    check against the real status list.
+    """
+    statuses = backlog_statuses(root) or []
+    roles: dict[str, str] = {}
+    for role in STATUS_ROLES:
+        matched = match_status_role(statuses, role)
+        if matched:
+            roles[role] = matched
+    if statuses:
+        roles.setdefault("not_started", statuses[0])
+        roles.setdefault("done", statuses[-1])
+        roles.setdefault("active", statuses[1] if len(statuses) > 1 else statuses[0])
+        roles.setdefault("blocked", DEFAULT_BLOCKED_STATUS)
+    return roles
+
+
+def status_role_pattern(role: str) -> re.Pattern[str]:
+    return re.compile(rf"(?m)^([ \t]*{re.escape(role)}:[ \t]*)(.+?)[ \t]*$")
+
+
+def recorded_status_roles(text: str) -> dict[str, str]:
+    roles: dict[str, str] = {}
+    for role in STATUS_ROLES:
+        match = status_role_pattern(role).search(text)
+        if match:
+            roles[role] = match.group(2).strip().strip("\"'")
+    return roles
+
 
 def render_config_yml(root: Path) -> str:
-    """Render `.agent-workflow/config.yml`, preserving a project's own
-    `automatic.max_parallel_tasks` value across upgrades. Every other line
-    always matches the current template — only this one user-tunable field
-    survives a template refresh.
+    """Render `.agent-workflow/config.yml`.
+
+    Two kinds of project-owned value survive a template refresh: the
+    `automatic.max_parallel_tasks` tuning knob, and the `statuses:` role mapping
+    (a project that renamed its Backlog.md columns must keep those names). Every
+    other line always matches the current template. On a first install the role
+    mapping is detected from the Backlog.md configuration instead.
     """
-    template = template_text(Path(".agent-workflow/config.yml"))
+    rendered = template_text(Path(".agent-workflow/config.yml"))
     destination = root / ".agent-workflow/config.yml"
-    if not destination.exists():
-        return template
-    match = MAX_PARALLEL_TASKS_PATTERN.search(read_text(destination))
-    if not match:
-        return template
-    return MAX_PARALLEL_TASKS_PATTERN.sub(rf"\g<1>{match.group(2)}", template, count=1)
+    existing = read_text(destination) if destination.exists() else ""
+
+    match = MAX_PARALLEL_TASKS_PATTERN.search(existing)
+    if match:
+        rendered = MAX_PARALLEL_TASKS_PATTERN.sub(rf"\g<1>{match.group(2)}", rendered, count=1)
+
+    recorded = recorded_status_roles(existing)
+    detected = detect_status_roles(root)
+    for role in STATUS_ROLES:
+        value = recorded.get(role) or detected.get(role)
+        if value:
+            rendered = status_role_pattern(role).sub(
+                lambda m, value=value: f"{m.group(1)}{value}", rendered, count=1
+            )
+    return rendered
 
 
 def expected_managed_text(root: Path, relative: Path) -> str:
@@ -687,6 +844,85 @@ def stale_project_facts(root: Path, text: str, backlog_cli: str | None) -> list[
     return findings
 
 
+REMOTE_REFERENCE_PATTERN = re.compile(r"(?i)^([a-z][a-z0-9+.\-]*:|//|www\.)")
+
+
+def local_documentation_path(reference: str) -> str | None:
+    """The project-relative file a `documentation` entry points at, or None when
+    the entry is not a local path this check can verify.
+
+    Not verified: remote references (any `scheme:` prefix, protocol-relative, or
+    `www.`), machine-absolute and home-relative paths, paths escaping the
+    project, and opaque identifiers such as `decision-3` that name no file.
+    A `#fragment` is stripped — resolving anchors would need a Markdown parser
+    and is out of scope for an existence check.
+    """
+    value = reference.strip()
+    if not value or REMOTE_REFERENCE_PATTERN.match(value):
+        return None
+    if value.startswith(("/", "~", "\\")):
+        return None
+    path = value.split("#", 1)[0].strip()
+    if not path:
+        return None
+    # An identifier with neither a directory separator nor a file extension
+    # names no file; treating it as a missing path would be a false positive.
+    if "/" not in path and not PurePosixPath(path).suffix:
+        return None
+    parts = PurePosixPath(path).parts
+    if ".." in parts:
+        return None
+    return path
+
+
+def task_documentation(root: Path, backlog_cli: str) -> list[tuple[str, list[str]]]:
+    """(task id, documentation entries) for every task, read through the CLI."""
+    proc = run([*backlog_cli.split(), "task", "list", "--json"], root)
+    if proc.returncode != 0:
+        raise InstallError("could not list tasks through the Backlog.md CLI")
+    try:
+        listed = json.loads(proc.stdout or "{}").get("tasks") or []
+    except json.JSONDecodeError:
+        raise InstallError("Backlog.md task list did not return valid JSON") from None
+
+    results: list[tuple[str, list[str]]] = []
+    for entry in listed:
+        task_id = entry.get("id")
+        if not isinstance(task_id, str):
+            continue
+        detail = run([*backlog_cli.split(), "task", task_id, "--json"], root)
+        if detail.returncode != 0:
+            continue
+        try:
+            task = json.loads(detail.stdout or "{}").get("task") or {}
+        except json.JSONDecodeError:
+            continue
+        documentation = task.get("documentation")
+        results.append((task_id, [d for d in documentation if isinstance(d, str)] if isinstance(documentation, list) else []))
+    return results
+
+
+def documentation_findings(root: Path, backlog_cli: str) -> list[str]:
+    """Report `documentation` entries that point at a local file which is gone.
+
+    Requirement traceability now rides on the native `documentation` field, so a
+    reference that no longer resolves is a silently broken link between a task
+    and its authority.
+    """
+    findings: list[str] = []
+    for task_id, references in task_documentation(root, backlog_cli):
+        for reference in references:
+            relative = local_documentation_path(reference)
+            if relative is None:
+                continue
+            if not (root / relative).exists():
+                findings.append(
+                    f"documentation reference not found: {task_id} -> {relative}"
+                    + (f" (from {reference!r})" if relative != reference.strip() else "")
+                )
+    return findings
+
+
 def installed_version(root: Path) -> str | None:
     path = root / ".agent-workflow/VERSION"
     if not path.exists():
@@ -760,6 +996,12 @@ def apply(root: Path, action: str) -> tuple[list[str], list[str]]:
     if not backlog_workspace_exists(root):
         changed.append(init_backlog_workspace(root, backlog_cli))
 
+    # Before rendering config.yml: its `statuses:` mapping is detected from the
+    # Backlog.md configuration, which this may have just added a status to.
+    blocked_added = ensure_blocked_status(root, backlog_cli)
+    if blocked_added:
+        changed.append(blocked_added)
+
     for relative in MANAGED_FILES:
         destination = root / relative
         expected = expected_managed_text(root, relative)
@@ -791,7 +1033,38 @@ def apply(root: Path, action: str) -> tuple[list[str], list[str]]:
     return changed, preserved
 
 
-def audit(root: Path) -> list[str]:
+def status_role_drift(root: Path) -> list[str]:
+    """Check the recorded role mapping against the real Backlog.md statuses.
+
+    A role naming a status the project does not have would make every
+    `backlog task edit -s ...` fail, and a `blocked` equal to `not_started`
+    would silently put blocked tasks back into the `/backlog-auto` selection.
+    """
+    config = root / ".agent-workflow/config.yml"
+    if not config.exists():
+        return []
+    recorded = recorded_status_roles(read_text(config))
+    drift: list[str] = []
+    for role in STATUS_ROLES:
+        if role not in recorded:
+            drift.append(f"config.yml is missing the `{role}` status role")
+    statuses = backlog_statuses(root)
+    if statuses is not None:
+        for role, value in recorded.items():
+            if value not in statuses:
+                drift.append(
+                    f"config.yml `{role}` status {value!r} is not a configured "
+                    f"Backlog.md status ({', '.join(statuses)})"
+                )
+    if recorded.get("blocked") and recorded.get("blocked") == recorded.get("not_started"):
+        drift.append(
+            "config.yml `blocked` and `not_started` are the same status; a blocked "
+            "task would be selected again by /backlog-auto"
+        )
+    return drift
+
+
+def audit(root: Path, check_documentation: bool = False) -> list[str]:
     drift: list[str] = []
     if not backlog_workspace_exists(root):
         drift.append("Backlog.md workspace not detected")
@@ -837,6 +1110,13 @@ def audit(root: Path) -> list[str]:
         if not re.search(r"(?m)^default_mode:\s*manual\s*$", text):
             drift.append("default mode is not manual")
 
+    drift.extend(status_role_drift(root))
+
+    # Only the explicit `audit` action walks task content: it costs one CLI call
+    # per task, and it checks project data rather than managed-file integrity.
+    if check_documentation and backlog_cli:
+        drift.extend(documentation_findings(root, backlog_cli))
+
     return drift
 
 
@@ -869,7 +1149,7 @@ def main() -> int:
 
     try:
         if args.action == "audit":
-            drift = audit(root)
+            drift = audit(root, check_documentation=True)
             print_report("audit", "Clean" if not drift else "Drift detected", root, [], drift)
             return 0 if not drift else 2
 

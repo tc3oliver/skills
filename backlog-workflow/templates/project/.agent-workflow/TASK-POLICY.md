@@ -1,82 +1,59 @@
-<!-- Managed by backlog-workflow 1.3.0 -->
+<!-- Managed by backlog-workflow 1.4.0 -->
 
 # Backlog Task Policy
 
-This file defines the **additional project task semantics** layered on top of
-Backlog.md. It is policy, not a task schema.
+What this project puts in a task beyond what Backlog.md already models.
 
-Backlog.md owns the task schema and these native fields — use them, do not
-duplicate them:
+Backlog.md owns these native fields. Set them through the CLI, never by editing
+`backlog/tasks/*.md`, and do not restate them in the description:
 
-- Acceptance Criteria
-- Definition of Done
-- Dependencies
-- Implementation Plan
-- Implementation Notes
-- Final Summary
+| Content | CLI flag | JSON key |
+|---|---|---|
+| Authoritative requirement source | `--doc` | `documentation` |
+| Supporting material | `--ref` | `references` |
+| Dependencies | `--dep` | `dependencies` |
+| Acceptance Criteria | `--ac` | `acceptanceCriteria` |
+| Definition of Done | `--dod` | `definitionOfDone` |
+| Implementation Plan | `--plan` | `implementationPlan` |
+| Implementation Notes | `--notes` | `implementationNotes` |
+| Final Summary | `--final-summary` | `finalSummary` |
 
-Create and edit tasks through the Backlog.md CLI (`backlog task create`,
-`backlog task edit`). Do not hand-author these native fields by editing
-`backlog/tasks/*.md`.
+## Description
 
-## Additional task policy fields
-
-Capture the following in the task description or body. Omit sections that are
-genuinely not applicable; do not invent content merely to fill the policy.
-
-### Requirement Source
-
-- `<PRD/spec/requirement-matrix path, or decision-<id> (<decision title>)>`
-
-The authoritative source for this task's product intent. A task must not
-silently introduce, remove, or reinterpret a requirement.
+The description carries what Backlog.md has no field for. Omit a heading that is
+genuinely not applicable; do not invent content to fill it.
 
 ### Goal
 
-- <One observable outcome.>
+One observable outcome.
 
-### Scope
+### Scope / Out of scope
 
-- <Included work.>
+What this task changes, and the adjacent work it explicitly does not. Out of
+scope is what keeps a task from growing during execution — state it even when it
+looks obvious.
 
-### Out of Scope
+### Constraints
 
-- <Explicit exclusions.>
-
-### Stable implementation constraints
-
-- <Repository-supported constraints that any implementation must respect, e.g.
-  supported runtimes, public API contracts, performance budgets.>
+Repository-supported constraints any implementation must respect: supported
+runtimes, public API contracts, performance budgets, and project conventions that
+are not discoverable from the code being changed.
 
 ### Validation
 
-- <How this task will be objectively validated: verified commands from
-  `.agent-workflow/PROJECT.md`, or a concrete manual validation method. Commands
-  marked `not detected` must not be invented.>
-
-### Test Requirements
-
-- <Required automated or manual test coverage, or "Not applicable" with reason.>
+How this task will be objectively validated: the verified commands from
+`.agent-workflow/PROJECT.md`, plus the automated or manual test coverage this
+task requires. A command recorded as `not detected` must not be invented. When
+the task needs no new tests, say so with the reason.
 
 ### Impacts
 
-- Security: <impact or None>
-- Data / Schema: <impact or None>
-- API / Compatibility: <impact or None>
-- Documentation: <files or None>
-- Migration / Rollback: <requirements or None>
+List only the ones that apply: security, data/schema, API/compatibility,
+documentation, migration/rollback.
 
-## Completion policy
+## Completion
 
-A task may be marked `Done` only when all four conditions hold (see
-`.agent-workflow/WORKFLOW.md`):
-
-1. Acceptance Criteria all pass.
-2. Required applicable tests, lint, typecheck, and build pass.
-3. Documentation and Requirement Matrix are synchronized.
-4. The task record contains validation evidence.
-
-Record checks that do not exist or do not apply as unavailable or not
-applicable rather than inventing them. PR/MR, CI, review, and merge are the
-standard delivery flow when available; they are not a fifth completion
-condition.
+The Canonical Completion Gate in `.agent-workflow/WORKFLOW.md` defines when a
+task is `Done`, and is bound to every task as Definition of Done items. Record
+task-specific completion requirements as further `--dod` items rather than as
+description prose.

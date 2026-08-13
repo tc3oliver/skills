@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import re
+import subprocess
 import sys
 from pathlib import Path
 
@@ -108,6 +109,9 @@ def main() -> int:
     managed_marker = f"Managed by backlog-workflow {VERSION}"
     for marker_path in (
         TEMPLATE_ROOT / ".agent-workflow/WORKFLOW.md",
+        TEMPLATE_ROOT / ".agent-workflow/PLAN.md",
+        TEMPLATE_ROOT / ".agent-workflow/EXECUTION.md",
+        TEMPLATE_ROOT / ".agent-workflow/AUTO.md",
         TEMPLATE_ROOT / ".agent-workflow/config.yml",
         TEMPLATE_ROOT / ".agent-workflow/TASK-POLICY.md",
         TEMPLATE_ROOT / ".claude/skills/backlog-plan/SKILL.md",
@@ -138,12 +142,82 @@ def main() -> int:
     if "backlog instructions" not in workflow:
         raise AssertionError("WORKFLOW.md must reference Backlog.md canonical instructions")
 
+    # The Canonical Completion Gate is defined once. Every other workflow file
+    # references it by name; restating a condition is the duplication this
+    # structure exists to prevent.
+    for path in iter_template_files():
+        if path.suffix != ".md" or path.name == "WORKFLOW.md":
+            continue
+        text = path.read_text(encoding="utf-8")
+        for item in required:
+            if item in text:
+                raise AssertionError(
+                    f"completion condition restated outside WORKFLOW.md: "
+                    f"{path.relative_to(TEMPLATE_ROOT)} — reference the Canonical "
+                    f"Completion Gate instead"
+                )
+
+    # Progressive disclosure: each mode reference is loaded only by the skills
+    # whose phase needs it. A skill pointing at another phase's reference would
+    # put that phase's context back into every run.
+    phase_references = {
+        "PLAN.md": {"backlog-plan", "backlog-review"},
+        "EXECUTION.md": {"backlog-run", "backlog-auto"},
+        "AUTO.md": {"backlog-auto"},
+    }
+    for skill_name in ("backlog-plan", "backlog-review", "backlog-run", "backlog-auto"):
+        text = (TEMPLATE_ROOT / f".claude/skills/{skill_name}/SKILL.md").read_text(encoding="utf-8")
+        if ".agent-workflow/WORKFLOW.md" not in text:
+            raise AssertionError(f"{skill_name} must read the shared WORKFLOW.md")
+        for reference, allowed in phase_references.items():
+            mentioned = f".agent-workflow/{reference}" in text
+            if skill_name in allowed and not mentioned:
+                raise AssertionError(f"{skill_name} must read .agent-workflow/{reference}")
+            if skill_name not in allowed and mentioned:
+                raise AssertionError(
+                    f"{skill_name} must not load .agent-workflow/{reference} "
+                    f"(out-of-phase context)"
+                )
+
     # No installed template may carry removed 1.0 behavior.
     for path in iter_template_files():
         assert_no_forbidden(path.read_text(encoding="utf-8"), f"template {path.relative_to(TEMPLATE_ROOT)}")
 
     if (TEMPLATE_ROOT / "README.md").exists():
         raise AssertionError("target template must not include README.md")
+
+    # The workflow's blocked state is a real Backlog.md status, recorded as a role
+    # so a project can rename it. Selection filters on `not_started`, which is
+    # what keeps a blocked task out of the next /backlog-auto round.
+    config = (TEMPLATE_ROOT / ".agent-workflow/config.yml").read_text(encoding="utf-8")
+    roles = dict(re.findall(r"(?m)^  (not_started|active|blocked|done):\s*(.+?)\s*$", config))
+    if len(roles) != 4:
+        raise AssertionError(f"config.yml must define all four status roles, got {sorted(roles)}")
+    if len(set(roles.values())) != 4:
+        raise AssertionError(f"status roles must be distinct statuses: {roles}")
+    auto = (TEMPLATE_ROOT / ".agent-workflow/AUTO.md").read_text(encoding="utf-8")
+    if "not-started status" not in auto:
+        raise AssertionError("AUTO.md selection must filter on the not-started status")
+    if "blocked" not in workflow.lower() or "<blocked status>" not in workflow:
+        raise AssertionError("WORKFLOW.md must define how a true blocker is written to a status")
+
+    # Installation must go through a manifest, never a recursive copy of the
+    # working tree: that is how untracked runtime state gets installed.
+    install_md = (ROOT / "INSTALL.md").read_text(encoding="utf-8")
+    for banned in ("cp -R backlog-workflow", "cp -r backlog-workflow", "Copy-Item -Recurse"):
+        if banned in install_md:
+            raise AssertionError(f"INSTALL.md must not teach a recursive working-tree copy: {banned!r}")
+    if "git archive" not in install_md or "npx skills add" not in install_md:
+        raise AssertionError("INSTALL.md must install through the packaged installers or git archive")
+
+    tracked = subprocess.run(
+        ["git", "ls-files", "--", str(ROOT.name)],
+        cwd=ROOT.parent, text=True, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, check=False,
+    )
+    if tracked.returncode == 0 and tracked.stdout.strip():
+        for line in tracked.stdout.splitlines():
+            if re.search(r"(^|/)(\.omc|__pycache__|node_modules)(/|$)|\.pyc$", line):
+                raise AssertionError(f"runtime state is tracked in the package: {line}")
 
     # install.py must agree on the version and define the legacy migration proof.
     install_py = (ROOT / "scripts/install.py").read_text(encoding="utf-8")

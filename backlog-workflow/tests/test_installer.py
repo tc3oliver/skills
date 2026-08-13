@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import hashlib
+import json
+import re
 import os
 import shutil
 import subprocess
@@ -21,6 +23,10 @@ import install  # noqa: E402
 MANAGED_BEGIN = "<!-- backlog-workflow:begin"
 MANAGED_END = "<!-- backlog-workflow:end -->"
 
+# Stands in for the Backlog.md CLI. Mirrors the real 1.50 surface the installer
+# touches: `instructions overview` (verification), `init`, `config get statuses`,
+# and the two JSON task reads the documentation audit uses. Task data comes from
+# BACKLOG_FAKE_TASKS, a JSON map of task id -> documentation list.
 GOOD_BACKLOG_SCRIPT = """#!/bin/sh
 if [ "$1" = "instructions" ] && [ "$2" = "overview" ]; then
   printf '## Backlog.md Overview (CLI)\\n\\nbacklog instructions task-creation\\n'
@@ -28,7 +34,25 @@ if [ "$1" = "instructions" ] && [ "$2" = "overview" ]; then
 fi
 if [ "$1" = "init" ]; then
   mkdir -p backlog/tasks
-  printf 'project_name: %s\\n' "$2" > backlog/config.yml
+  printf 'project_name: %s\\nstatuses: ["To Do", "In Progress", "Done"]\\n' "$2" > backlog/config.yml
+  exit 0
+fi
+if [ "$1" = "config" ] && [ "$2" = "get" ] && [ "$3" = "statuses" ]; then
+  printf 'To Do, In Progress, Done\\n'
+  exit 0
+fi
+if [ "$1" = "task" ]; then
+  python3 - "$2" <<'PYEOF'
+import json, os, sys
+tasks = json.loads(os.environ.get("BACKLOG_FAKE_TASKS", "{}"))
+arg = sys.argv[1] if len(sys.argv) > 1 else "list"
+if arg == "list":
+    print(json.dumps({"schemaVersion": 1, "kind": "task-list",
+                      "tasks": [{"id": t} for t in sorted(tasks)]}))
+else:
+    print(json.dumps({"schemaVersion": 1, "kind": "task-view",
+                      "task": {"id": arg, "documentation": tasks.get(arg, [])}}))
+PYEOF
   exit 0
 fi
 exit 0
@@ -113,7 +137,9 @@ class InstallerTests(unittest.TestCase):
         if workspace:
             (root / "backlog/tasks").mkdir(parents=True)
             (root / "backlog/config.yml").write_text(
-                "project_name: demo\ntask_prefix: DEMO\n", encoding="utf-8"
+                'project_name: demo\ntask_prefix: DEMO\n'
+                'statuses: ["To Do", "In Progress", "Done"]\n',
+                encoding="utf-8",
             )
         (root / "package.json").write_text(
             '{"name":"demo","scripts":{"lint":"eslint .","typecheck":"tsc --noEmit",'
@@ -154,22 +180,25 @@ class InstallerTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         return result
 
-    # 1. fresh apply creates the 1.3.0 workflow
-    def test_fresh_apply_creates_1_3_0_workflow(self) -> None:
+    # 1. fresh apply creates the 1.4.0 workflow
+    def test_fresh_apply_creates_1_4_0_workflow(self) -> None:
         root, env = self.make_project()
         result = self.apply(root, env)
         self.assertIn("- Status: Installed", result.stdout)
-        self.assertEqual(read(root / ".agent-workflow/VERSION").strip(), "1.3.0")
-        self.assertIn("workflow_version: 1.3.0", read(root / ".agent-workflow/config.yml"))
+        self.assertEqual(read(root / ".agent-workflow/VERSION").strip(), "1.4.0")
+        self.assertIn("workflow_version: 1.4.0", read(root / ".agent-workflow/config.yml"))
         self.assertTrue((root / ".agent-workflow/TASK-POLICY.md").exists())
         self.assertFalse((root / ".agent-workflow/TASK-TEMPLATE.md").exists())
 
-    # 20. managed files contain version 1.3.0
-    def test_managed_files_contain_1_3_0(self) -> None:
+    # 20. managed files contain version 1.4.0
+    def test_managed_files_contain_1_4_0(self) -> None:
         root, env = self.make_project()
         self.apply(root, env)
         for rel in (
             ".agent-workflow/WORKFLOW.md",
+            ".agent-workflow/PLAN.md",
+            ".agent-workflow/EXECUTION.md",
+            ".agent-workflow/AUTO.md",
             ".agent-workflow/config.yml",
             ".agent-workflow/TASK-POLICY.md",
             ".claude/skills/backlog-plan/SKILL.md",
@@ -177,14 +206,99 @@ class InstallerTests(unittest.TestCase):
             ".claude/skills/backlog-run/SKILL.md",
             ".claude/skills/backlog-auto/SKILL.md",
         ):
-            self.assertIn("1.3.0", read(root / rel), f"missing 1.3.0 marker in {rel}")
+            self.assertIn("1.4.0", read(root / rel), f"missing 1.4.0 marker in {rel}")
+
+    # Progressive disclosure: WORKFLOW.md holds only the shared invariants, and
+    # each skill loads exactly the phase reference it needs.
+    def test_phase_references_are_installed_and_scoped(self) -> None:
+        root, env = self.make_project()
+        self.apply(root, env)
+
+        workflow = read(root / ".agent-workflow/WORKFLOW.md")
+        self.assertIn("## Canonical Completion Gate", workflow)
+        self.assertIn("## Mode routing", workflow)
+        # Phase detail lives in the phase files, not in the shared file.
+        self.assertNotIn("## Decomposition review", workflow)
+        self.assertNotIn("## Parallel automatic execution", workflow)
+
+        self.assertIn("## Decomposition review", read(root / ".agent-workflow/PLAN.md"))
+        self.assertIn("## Approval boundary", read(root / ".agent-workflow/EXECUTION.md"))
+        self.assertIn("## Batch merge", read(root / ".agent-workflow/AUTO.md"))
+
+        expected = {
+            "backlog-plan": {"PLAN.md"},
+            "backlog-review": {"PLAN.md"},
+            "backlog-run": {"EXECUTION.md"},
+            "backlog-auto": {"AUTO.md", "EXECUTION.md"},
+        }
+        for skill, wanted in expected.items():
+            text = read(root / f".claude/skills/{skill}/SKILL.md")
+            self.assertIn(".agent-workflow/WORKFLOW.md", text, skill)
+            for reference in ("PLAN.md", "EXECUTION.md", "AUTO.md"):
+                mentioned = f".agent-workflow/{reference}" in text
+                self.assertEqual(mentioned, reference in wanted, f"{skill} -> {reference}")
+
+    # The four completion conditions are stated once; everything else points at
+    # the Canonical Completion Gate by name.
+    def test_completion_gate_is_defined_once(self) -> None:
+        root, env = self.make_project()
+        self.apply(root, env)
+        condition = "The task record contains validation evidence."
+        self.assertIn(condition, read(root / ".agent-workflow/WORKFLOW.md"))
+        for rel in (
+            ".agent-workflow/PLAN.md",
+            ".agent-workflow/EXECUTION.md",
+            ".agent-workflow/AUTO.md",
+            ".agent-workflow/TASK-POLICY.md",
+            ".claude/skills/backlog-run/SKILL.md",
+            ".claude/skills/backlog-auto/SKILL.md",
+        ):
+            self.assertNotIn(condition, read(root / rel), rel)
+        self.assertIn("Canonical Completion Gate", read(root / ".agent-workflow/TASK-POLICY.md"))
+
+    # Dependency-ready selection uses the Backlog.md native query rather than a
+    # hand-rebuilt dependency graph.
+    def test_selection_uses_native_ready_query(self) -> None:
+        root, env = self.make_project()
+        self.apply(root, env)
+        auto = read(root / ".agent-workflow/AUTO.md")
+        self.assertIn("--ready", auto)
+        self.assertIn("--sort priority", auto)
+        self.assertIn("--ready", read(root / ".agent-workflow/EXECUTION.md"))
+
+    # Requirement traceability rides on the native documentation field.
+    def test_requirement_source_uses_native_documentation_field(self) -> None:
+        root, env = self.make_project()
+        self.apply(root, env)
+        self.assertIn("--doc", read(root / ".agent-workflow/WORKFLOW.md"))
+        policy = read(root / ".agent-workflow/TASK-POLICY.md")
+        self.assertIn("documentation", policy)
+        # The custom Markdown pseudo-field it replaced must be gone.
+        self.assertNotIn("### Requirement Source", policy)
+
+    # upgrading a 1.3.0 install adds the phase references it never had
+    def test_upgrade_installs_phase_references(self) -> None:
+        root, env = self.make_project()
+        self.apply(root, env)
+
+        # Model a 1.3.0 install: WORKFLOW.md carried every phase, alone.
+        for name in ("PLAN.md", "EXECUTION.md", "AUTO.md"):
+            (root / ".agent-workflow" / name).unlink()
+        (root / ".agent-workflow/VERSION").write_text("1.3.0\n", encoding="utf-8")
+        self.assertEqual(self.run_installer(root, "audit", env).returncode, 2)
+
+        result = self.run_installer(root, "upgrade", env)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        for name in ("PLAN.md", "EXECUTION.md", "AUTO.md"):
+            self.assertIn(f".agent-workflow/{name}", result.stdout)
+            self.assertTrue((root / ".agent-workflow" / name).exists(), name)
+        self.assertEqual(self.run_installer(root, "audit", env).returncode, 0)
 
     # the decomposition review is a separate, user-triggered pass after planning
     def test_decomposition_review_is_a_separate_pass(self) -> None:
         root, env = self.make_project()
         self.apply(root, env)
-        workflow = read(root / ".agent-workflow/WORKFLOW.md")
-        self.assertIn("## Decomposition review", workflow)
+        self.assertIn("## Decomposition review", read(root / ".agent-workflow/PLAN.md"))
         self.assertIn("review_skill: backlog-review", read(root / ".agent-workflow/config.yml"))
 
         # planning hands off to the review instead of reviewing its own output
@@ -222,8 +336,7 @@ class InstallerTests(unittest.TestCase):
         self.apply(root, env)
         config = read(root / ".agent-workflow/config.yml")
         self.assertIn("max_parallel_tasks: 1", config)
-        workflow = read(root / ".agent-workflow/WORKFLOW.md")
-        self.assertIn("Parallel automatic execution", workflow)
+        self.assertIn("max_parallel_tasks", read(root / ".agent-workflow/AUTO.md"))
         auto_skill = read(root / ".claude/skills/backlog-auto/SKILL.md")
         self.assertIn("max_parallel_tasks", auto_skill)
 
@@ -300,14 +413,125 @@ class InstallerTests(unittest.TestCase):
         self.assertEqual(digest(readme), before_readme)
         self.assertEqual(digest(task), before_task)
 
-    # 7. existing Backlog configuration is preserved
-    def test_backlog_config_preserved(self) -> None:
+    # 7. existing Backlog configuration is preserved apart from the one additive
+    # change the workflow needs: a status to park blocked tasks in.
+    def test_backlog_config_preserved_except_blocked_status(self) -> None:
         root, env = self.make_project()
         config = root / "backlog/config.yml"
-        config.write_text("project_name: kept\ntask_prefix: KEPT\n", encoding="utf-8")
+        config.write_text(
+            'project_name: kept\ntask_prefix: KEPT\n'
+            'statuses: ["To Do", "In Progress", "Done"]\ndefault_editor: "vim"\n',
+            encoding="utf-8",
+        )
+        result = self.apply(root, env)
+        self.assertIn("added 'Blocked' status", result.stdout)
+
+        after = read(config)
+        self.assertIn('statuses: ["To Do", "In Progress", "Blocked", "Done"]', after)
+        # Existing statuses keep their order; every other key is untouched.
+        for line in ("project_name: kept", "task_prefix: KEPT", 'default_editor: "vim"'):
+            self.assertIn(line, after)
+
+    # A project that already parks blocked work somewhere keeps its own status
+    # instead of gaining a second one.
+    def test_existing_blocked_status_is_reused(self) -> None:
+        root, env = self.make_project()
+        config = root / "backlog/config.yml"
+        config.write_text(
+            'project_name: demo\nstatuses: ["Backlog", "WIP", "On Hold", "Shipped"]\n',
+            encoding="utf-8",
+        )
         before = digest(config)
-        self.apply(root, env)
+        result = self.apply(root, env)
+        self.assertNotIn("added 'Blocked' status", result.stdout)
         self.assertEqual(digest(config), before)
+
+        # The recorded roles follow the project's own vocabulary.
+        workflow_config = read(root / ".agent-workflow/config.yml")
+        self.assertIn("not_started: Backlog", workflow_config)
+        self.assertIn("active: WIP", workflow_config)
+        self.assertIn("blocked: On Hold", workflow_config)
+        self.assertIn("done: Shipped", workflow_config)
+        self.assertEqual(self.run_installer(root, "audit", env).returncode, 0)
+
+    # blocked must never collapse into not_started: /backlog-auto selects on
+    # not_started, so equal values would re-select every blocked task.
+    def test_blocked_status_differs_from_not_started(self) -> None:
+        root, env = self.make_project()
+        self.apply(root, env)
+        config = read(root / ".agent-workflow/config.yml")
+        roles = dict(
+            line.strip().split(": ", 1)
+            for line in config.splitlines()
+            if line.startswith("  ") and line.strip().split(":")[0] in
+            ("not_started", "active", "blocked", "done")
+        )
+        self.assertEqual(len(set(roles.values())), 4, roles)
+        self.assertNotEqual(roles["blocked"], roles["not_started"])
+        # Every role names a real Backlog.md status.
+        statuses = read(root / "backlog/config.yml")
+        for value in roles.values():
+            self.assertIn(f'"{value}"', statuses)
+
+        # Collapsing the two is drift, not a silent misconfiguration.
+        path = root / ".agent-workflow/config.yml"
+        path.write_text(config.replace("blocked: Blocked", "blocked: To Do"), encoding="utf-8")
+        audit = self.run_installer(root, "audit", env)
+        self.assertEqual(audit.returncode, 2)
+        self.assertIn("would be selected again", audit.stdout)
+
+    # a role naming a status the project does not have is drift
+    def test_unknown_status_role_is_drift(self) -> None:
+        root, env = self.make_project()
+        self.apply(root, env)
+        path = root / ".agent-workflow/config.yml"
+        path.write_text(read(path).replace("active: In Progress", "active: Doing"), encoding="utf-8")
+        audit = self.run_installer(root, "audit", env)
+        self.assertEqual(audit.returncode, 2)
+        self.assertIn("is not a configured", audit.stdout)
+
+    # upgrade keeps a project's own status vocabulary
+    def test_upgrade_preserves_custom_status_roles(self) -> None:
+        root, env = self.make_project()
+        self.apply(root, env)
+        path = root / ".agent-workflow/config.yml"
+        (root / "backlog/config.yml").write_text(
+            'project_name: demo\nstatuses: ["Backlog", "WIP", "On Hold", "Shipped"]\n',
+            encoding="utf-8",
+        )
+        path.write_text(
+            read(path)
+            .replace("not_started: To Do", "not_started: Backlog")
+            .replace("active: In Progress", "active: WIP")
+            .replace("blocked: Blocked", "blocked: On Hold")
+            .replace("done: Done", "done: Shipped"),
+            encoding="utf-8",
+        )
+        result = self.run_installer(root, "upgrade", env)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        after = read(path)
+        self.assertIn("not_started: Backlog", after)
+        self.assertIn("blocked: On Hold", after)
+        self.assertIn("done: Shipped", after)
+
+    # a 1.3.0 install predates the status roles; upgrade fills them in from the
+    # project's real Backlog.md configuration
+    def test_upgrade_adds_status_roles_to_older_install(self) -> None:
+        root, env = self.make_project()
+        self.apply(root, env)
+        path = root / ".agent-workflow/config.yml"
+        without_roles = re.sub(
+            r"(?ms)^# Which Backlog\.md status.*?^statuses:\n(?:  \w+: .*\n)+\n", "", read(path)
+        )
+        self.assertNotIn("not_started:", without_roles)
+        path.write_text(without_roles, encoding="utf-8")
+        (root / ".agent-workflow/VERSION").write_text("1.3.0\n", encoding="utf-8")
+        self.assertEqual(self.run_installer(root, "audit", env).returncode, 2)
+
+        result = self.run_installer(root, "upgrade", env)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn("blocked: Blocked", read(path))
+        self.assertEqual(self.run_installer(root, "audit", env).returncode, 0)
 
     # 8. existing PROJECT.md is preserved
     def test_existing_project_md_preserved(self) -> None:
@@ -464,6 +688,9 @@ class InstallerTests(unittest.TestCase):
         installed = []
         for path in (
             root / ".agent-workflow/WORKFLOW.md",
+            root / ".agent-workflow/PLAN.md",
+            root / ".agent-workflow/EXECUTION.md",
+            root / ".agent-workflow/AUTO.md",
             root / ".agent-workflow/TASK-POLICY.md",
             root / ".claude/skills/backlog-plan/SKILL.md",
             root / ".claude/skills/backlog-review/SKILL.md",
@@ -488,6 +715,99 @@ class InstallerTests(unittest.TestCase):
         workflow = read(root / ".agent-workflow/WORKFLOW.md")
         self.assertIn("optional", workflow.lower())
         self.assertIn("does not install", workflow.lower())
+
+    # Requirement traceability rides on the native `documentation` field, so a
+    # local reference that no longer resolves is a broken link between a task and
+    # its authority. Remote and opaque references are not filesystem-checkable and
+    # must never be reported as missing.
+    def audit_with_tasks(self, root: Path, env: dict, tasks: dict) -> subprocess.CompletedProcess[str]:
+        env = dict(env)
+        env["BACKLOG_FAKE_TASKS"] = json.dumps(tasks)
+        return self.run_installer(root, "audit", env)
+
+    def test_documentation_audit_accepts_resolvable_references(self) -> None:
+        root, env = self.make_project()
+        self.apply(root, env)
+        (root / "docs").mkdir()
+        (root / "docs/PRD.md").write_text("# PRD\n", encoding="utf-8")
+        (root / "SPEC.md").write_text("# Spec\n", encoding="utf-8")
+
+        audit = self.audit_with_tasks(root, env, {
+            "TASK-1": ["docs/PRD.md"],                        # existing local doc
+            "TASK-2": ["docs/PRD.md#requirement-x"],          # local doc + fragment
+            "TASK-3": ["SPEC.md"],                            # local doc at the root
+            "TASK-4": ["https://example.com/spec#section"],   # remote URL
+            "TASK-5": ["decision-3"],                         # opaque reference
+            "TASK-6": [],                                     # no documentation
+        })
+        self.assertEqual(audit.returncode, 0, audit.stdout + audit.stderr)
+        self.assertIn("- Status: Clean", audit.stdout)
+
+    def test_documentation_audit_reports_missing_local_reference(self) -> None:
+        root, env = self.make_project()
+        self.apply(root, env)
+        audit = self.audit_with_tasks(root, env, {"TASK-7": ["docs/GONE.md"]})
+        self.assertEqual(audit.returncode, 2)
+        self.assertIn("documentation reference not found", audit.stdout)
+        self.assertIn("TASK-7", audit.stdout)
+        self.assertIn("docs/GONE.md", audit.stdout)
+
+    def test_documentation_audit_strips_fragment_before_checking(self) -> None:
+        root, env = self.make_project()
+        self.apply(root, env)
+        audit = self.audit_with_tasks(root, env, {"TASK-8": ["docs/GONE.md#anchor"]})
+        self.assertEqual(audit.returncode, 2)
+        # The report names the resolved path and the original reference.
+        self.assertIn("TASK-8 -> docs/GONE.md", audit.stdout)
+        self.assertIn("docs/GONE.md#anchor", audit.stdout)
+
+    def test_documentation_audit_ignores_remote_and_opaque_references(self) -> None:
+        root, env = self.make_project()
+        self.apply(root, env)
+        audit = self.audit_with_tasks(root, env, {
+            "TASK-9": [
+                "https://example.com/prd.md",
+                "http://internal/spec",
+                "//cdn.example.com/spec.md",
+                "www.example.com/spec.md",
+                "mailto:owner@example.com",
+                "decision-3",
+                "RFC 2119",
+                "/etc/absolute/spec.md",
+                "~/notes/spec.md",
+                "../outside/spec.md",
+            ]
+        })
+        self.assertEqual(audit.returncode, 0, audit.stdout + audit.stderr)
+        self.assertNotIn("documentation reference not found", audit.stdout)
+
+    # apply/upgrade check managed-file integrity, not project task content: a
+    # broken documentation link must not block installing the workflow.
+    def test_documentation_findings_do_not_block_apply(self) -> None:
+        root, env = self.make_project()
+        env = dict(env)
+        env["BACKLOG_FAKE_TASKS"] = json.dumps({"TASK-1": ["docs/GONE.md"]})
+        result = self.run_installer(root, "apply", env)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn("- Status: Installed", result.stdout)
+
+    # classification is pure and deterministic; assert it directly
+    def test_local_documentation_path_classification(self) -> None:
+        checked = {
+            "docs/PRD.md": "docs/PRD.md",
+            "docs/PRD.md#requirement-x": "docs/PRD.md",
+            "SPEC.md": "SPEC.md",
+            " docs/a b.md ": "docs/a b.md",
+            "docs/nested/deep/file.txt": "docs/nested/deep/file.txt",
+        }
+        for reference, expected in checked.items():
+            self.assertEqual(install.local_documentation_path(reference), expected, reference)
+        for reference in (
+            "https://example.com/a.md", "http://x/y", "//cdn/x.md", "www.x.com/a.md",
+            "mailto:a@b.c", "decision-3", "RFC 2119", "/abs/a.md", "~/a.md",
+            "../outside.md", "#anchor-only", "", "   ",
+        ):
+            self.assertIsNone(install.local_documentation_path(reference), reference)
 
     # 23. package validator passes
     def test_package_validator_passes(self) -> None:

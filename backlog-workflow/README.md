@@ -17,9 +17,8 @@ PRD/spec         = product truth
 Backlog.md canonical instructions (`backlog instructions ...`) are the single
 source of truth for Backlog mechanics. This workflow does not duplicate them —
 it adds development policy: execution modes, requirement authority, task
-decomposition policy, approval boundaries, grilling/decision policy, blocker
-policy, the four completion conditions, and deterministic automatic task
-selection.
+decomposition policy, decomposition review, approval boundaries,
+grilling/decision policy, blocker policy, and the Canonical Completion Gate.
 
 It answers a specific problem: coding agents drift. They start implementing
 before the requirement is settled, invent validation commands that do not exist,
@@ -81,17 +80,20 @@ tasks (different modules/files, no shared state) and you want to burn down the
 backlog faster. It's a poor fit for tightly coupled tasks likely to touch the
 same files — a merge conflict only blocks the one task involved, but you still
 pay for wasted work if batches routinely collide. Start at `2` and watch how
-often merges conflict before going higher. See "Parallel automatic execution"
-in `.agent-workflow/WORKFLOW.md` for the exact claim/execute/merge protocol.
+often merges conflict before going higher. See "Concurrency" in
+`.agent-workflow/AUTO.md` for the exact claim/execute/merge protocol.
 
 ## Core rules it enforces
 
 - **Backlog.md owns the mechanics; this workflow owns the policy.** Task mutation
   goes through the Backlog.md CLI; automation uses Backlog.md JSON output
-  (`backlog task list --json`, `backlog task <TASK-ID> --json`).
+  (`backlog task list --json`, `backlog task <TASK-ID> --json`). Autonomous
+  selection is the native `backlog task list --ready --sort priority --json`
+  query, not a dependency graph rebuilt task by task.
 - **Requirements and tasks are separate sources of truth.** PRDs and specs own
   product intent; Backlog.md owns decomposition, status, and evidence. A task
-  may not silently reinterpret a requirement.
+  may not silently reinterpret a requirement, and it cites its authority in the
+  native `documentation` field so traceability is queryable.
 - **Planning stops at decomposition; implementation plans are JIT.** `/backlog-plan`
   creates tasks without an Implementation Plan. `/backlog-run` researches the
   current codebase and records the plan before coding.
@@ -138,7 +140,10 @@ See [INSTALL.md](INSTALL.md).
 ```
 
 `/backlog-workflow audit` is a read-only drift check that repairs nothing and
-exits nonzero when something is off. `/backlog-workflow upgrade` refreshes the
+exits nonzero when something is off. Besides managed-file integrity it checks the
+status roles and every task's `documentation` references: a local path that no
+longer resolves is reported with its task ID, while remote URLs and opaque
+identifiers are left alone. `/backlog-workflow upgrade` refreshes the
 managed files in place and migrates the deprecated `TASK-TEMPLATE.md`.
 
 ## What it writes into your project
@@ -146,9 +151,18 @@ managed files in place and migrates the deprecated `TASK-TEMPLATE.md`.
 Managed by this workflow, replaced on `upgrade`:
 
 ```
-.agent-workflow/{VERSION,config.yml,WORKFLOW.md,TASK-POLICY.md}
+.agent-workflow/{VERSION,config.yml,WORKFLOW.md,PLAN.md,EXECUTION.md,AUTO.md,TASK-POLICY.md}
 .claude/skills/{backlog-plan,backlog-review,backlog-run,backlog-auto,grilling}/
 ```
+
+`WORKFLOW.md` holds only the invariants every mode shares — responsibility
+boundary, sources of truth, requirement traceability, decision policy, the
+Canonical Completion Gate, blockers — plus a routing table. The phase detail
+lives in `PLAN.md` (planning and decomposition review), `EXECUTION.md` (running
+one task), and `AUTO.md` (autonomous selection, concurrency, merge). Each skill
+reads the shared file and only the phase it is actually running, so planning
+never pays for the merge protocol and `/backlog-run` never pays for the review
+checks.
 
 Created once, then yours to maintain:
 
@@ -166,17 +180,25 @@ non-interactively before installing anything.
 
 ### What it will not touch
 
-`README.md`, existing Backlog.md tasks and configuration, PRDs, requirement
-matrices, ADRs, and any instruction file it does not manage. If an unmanaged
-file already occupies a managed path, `apply` reports the conflict and stops
-without writing anything.
+`README.md`, existing Backlog.md tasks, PRDs, requirement matrices, ADRs, and any
+instruction file it does not manage. If an unmanaged file already occupies a
+managed path, `apply` reports the conflict and stops without writing anything.
+
+The one exception is a single additive edit to the Backlog.md config: if the
+project has no status to park blocked tasks in, `Blocked` is inserted into
+`statuses` before the terminal status. Existing statuses, their order, and every
+other key are left alone, and a project that already has one (`On Hold`,
+`Blocked`, …) is not modified at all. `/backlog-auto` selects on the not-started
+status, so this is what stops a blocked task from being picked up again on the
+next round — the guarantee is the status, not the agent remembering.
 
 ## Other coding agents
 
 The slash commands are Claude Code specific; the process is not.
-`.agent-workflow/WORKFLOW.md` and `.agent-workflow/PROJECT.md` are plain Markdown,
-and tasks are driven through the Backlog.md CLI. Any agent that can read those
-files and run a shell command can follow the same workflow. `AGENTS.md` is always
+Everything under `.agent-workflow/` is plain Markdown, and tasks are driven
+through the Backlog.md CLI. Any agent that can read `WORKFLOW.md`, follow its
+routing table to the phase it needs, and run a shell command can follow the same
+workflow. `AGENTS.md` is always
 managed so agents that read it pick up the workflow automatically.
 
 ## Development

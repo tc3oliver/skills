@@ -6,7 +6,7 @@ disable-model-invocation: true
 allowed-tools: Read Glob Grep Bash Edit Write Skill
 ---
 
-<!-- Managed by backlog-workflow 1.3.0 -->
+<!-- Managed by backlog-workflow 1.4.0 -->
 
 # Plan Backlog Work
 
@@ -15,6 +15,7 @@ Input: `$ARGUMENTS`
 Read before acting:
 
 - `.agent-workflow/WORKFLOW.md`
+- `.agent-workflow/PLAN.md`
 - `.agent-workflow/PROJECT.md`
 - `.agent-workflow/TASK-POLICY.md`
 - applicable `CLAUDE.md` and `AGENTS.md` files
@@ -29,31 +30,11 @@ backlog instructions overview
 backlog instructions task-creation
 ```
 
-Follow the manual-planning section of `.agent-workflow/WORKFLOW.md`.
+Follow the "Planning" section of `.agent-workflow/PLAN.md`, and stop when its
+"Planning is complete when" conditions are met or a blocker is reported.
 
-Resolve facts through repository exploration. Invoke the model-invoked
-`grilling` skill only when product intent, scope, acceptance behavior, or an
-irreversible decision cannot be resolved from an authoritative source. Ask one
-decision at a time and do not create tasks until the user confirms shared
-understanding. Record each grilled decision per "Recording a grilled decision"
-in `.agent-workflow/WORKFLOW.md` before creating any task that cites it.
-
-Create or edit tasks through the Backlog.md CLI (the command recorded in
-`.agent-workflow/PROJECT.md`; see the "Command convention" note in
-`.agent-workflow/WORKFLOW.md`). Preserve existing IDs and history. Establish
-explicit dependencies, Acceptance Criteria, and priority. Bind the completion
-policy by adding the four Definition of Done items with one repeatable `--dod`
-flag per item (see "Native Definition of Done binding" in
-`.agent-workflow/WORKFLOW.md`). Write task title, description, and Acceptance
-Criteria in the user's language (see "Language" in `.agent-workflow/WORKFLOW.md`).
-
-Planning stops at decomposition. Do not produce an Implementation Plan
-(Implementation Plans are JIT, created during execution). Do not implement
-product code. Do not set any task to the active status.
-
-Do not review your own decomposition here. Checking whether the created tasks
-would satisfy the requirement source is a separate pass — end by pointing the
-user at `/backlog-review`.
+Do not implement product code, produce an Implementation Plan, or set any task to
+an active status. Do not review your own decomposition — that is `/backlog-review`.
 
 End with exactly this structure. Field labels may be localized to the user's
 language; the `Status` value, where present, always stays one of `Done`,

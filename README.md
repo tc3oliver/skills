@@ -171,15 +171,13 @@ Manual mode is the default.
 
 The agent reads the authoritative requirements and decomposes them into executable Backlog.md tasks.
 
-Tasks capture stable information such as:
+Tasks capture stable information, using Backlog.md's own fields wherever it has
+one:
 
-* requirement source
-* goal and scope
-* Acceptance Criteria
-* dependencies
-* priority
-* constraints
-* validation requirements
+* authoritative requirement source (native `documentation`)
+* Acceptance Criteria, dependencies, priority (native)
+* goal, scope and out-of-scope, constraints, validation requirements
+  (task description)
 
 `/backlog-plan` does not implement product code.
 
@@ -303,15 +301,16 @@ continue development
 
 Only `/backlog-auto` enables continuous task execution.
 
-Task selection uses Backlog.md structured data rather than parsing task Markdown directly.
+Task selection is Backlog.md's own query — `backlog task list --ready --sort priority --json` — not a dependency graph rebuilt by the agent.
 
 If product intent is missing or conflicting, automatic mode blocks instead of guessing.
 
 ---
 
-## Completion Policy
+## Canonical Completion Gate
 
-A task is complete only when:
+Defined once, in `.agent-workflow/WORKFLOW.md`, and bound to every task as
+Backlog.md Definition of Done items. A task is complete only when:
 
 1. Acceptance Criteria pass.
 2. Required applicable tests, lint, typecheck, and build checks pass.
@@ -350,7 +349,10 @@ A project using `backlog-workflow` receives:
 .agent-workflow/
 ├── VERSION
 ├── config.yml
-├── WORKFLOW.md
+├── WORKFLOW.md        shared invariants + mode routing
+├── PLAN.md            /backlog-plan, /backlog-review
+├── EXECUTION.md       /backlog-run
+├── AUTO.md            /backlog-auto
 ├── TASK-POLICY.md
 └── PROJECT.md
 
@@ -362,6 +364,10 @@ A project using `backlog-workflow` receives:
     ├── backlog-auto/
     └── grilling/
 ```
+
+Each skill reads `WORKFLOW.md` plus only the phase file it actually runs, so
+planning never loads the merge protocol and execution never loads the review
+checks.
 
 Small managed entry points are also added to:
 

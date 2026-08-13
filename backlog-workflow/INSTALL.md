@@ -1,17 +1,37 @@
 # Installation
 
-Copy this entire `backlog-workflow` directory to your personal Claude Code skills directory:
+Use one of the packaged installers. Each copies exactly the files the package
+tracks, so nothing local — build output, caches, or agent session state that
+tools drop into a working tree — is installed alongside the skill.
+
+Agent Skills CLI:
+
+```bash
+npx skills add tc3oliver/skills
+```
+
+Claude Code plugin:
+
+```text
+/plugin marketplace add tc3oliver/skills
+/plugin install tc3oliver-skills
+```
+
+## Manual install
+
+From a clone, copy through Git so the tracked file list is the manifest — an
+untracked file cannot be copied even if it is sitting in the working tree:
 
 ```bash
 mkdir -p ~/.claude/skills
-cp -R backlog-workflow ~/.claude/skills/backlog-workflow
+git archive HEAD backlog-workflow | tar -x -C ~/.claude/skills
 ```
 
 PowerShell:
 
 ```powershell
 New-Item -ItemType Directory -Force "$HOME\.claude\skills" | Out-Null
-Copy-Item -Recurse -Force ".\backlog-workflow" "$HOME\.claude\skills\backlog-workflow"
+git archive HEAD backlog-workflow | tar -x -C "$HOME\.claude\skills"
 ```
 
 If `~/.claude/skills` did not exist when Claude Code started, restart Claude Code once.

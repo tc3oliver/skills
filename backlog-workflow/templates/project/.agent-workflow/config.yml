@@ -1,6 +1,18 @@
-# Managed by backlog-workflow 1.3.0
-workflow_version: 1.3.0
+# Managed by backlog-workflow 1.4.0
+workflow_version: 1.4.0
 default_mode: manual
+
+# Which Backlog.md status plays each workflow role. Every value must be one of
+# the statuses configured in the Backlog.md project config
+# (`backlog config get statuses`). Detected at install and preserved across
+# upgrades, so a project with custom status names keeps them.
+# `blocked` must differ from `not_started`: /backlog-auto selects on
+# `not_started`, which is what keeps a blocked task out of the next round.
+statuses:
+  not_started: To Do
+  active: In Progress
+  blocked: Blocked
+  done: Done
 
 manual:
   planning_skill: backlog-plan

@@ -15,17 +15,33 @@ Use for both new and existing projects.
   If no candidate verifies, `apply`/`upgrade` fail with a clear "required
   interface" error — `PROJECT.md` is never written with an unverified or
   `not detected` CLI.
-- Install workflow version `1.3.0`.
+- Install workflow version `1.4.0`.
 - Install the project skills `/backlog-plan`, `/backlog-review`, `/backlog-run`,
   and `/backlog-auto`. `/backlog-review` is the separate decomposition-review
   pass: it checks whether completing the planned tasks would satisfy the
   requirement source, and is read-only until the user approves a fix.
+- Install the workflow policy as `.agent-workflow/WORKFLOW.md` (shared invariants
+  and mode routing) plus one reference per phase — `PLAN.md` (planning and
+  decomposition review), `EXECUTION.md` (single-task execution), and `AUTO.md`
+  (autonomous selection, concurrency, and merge). Each skill loads only the
+  phase it runs.
 - `.agent-workflow/config.yml` sets `automatic.max_parallel_tasks: 1` by
   default — `/backlog-auto` stays sequential unless the project raises it. See
-  "Parallel automatic execution" in `.agent-workflow/WORKFLOW.md` for what
-  changes, and when it's appropriate, at higher values.
-- Preserve all existing task files, Backlog.md configuration, requirement
-  documents, source code, and non-managed instructions.
+  "Concurrency" in `.agent-workflow/AUTO.md` for what changes at higher values.
+- Ensure the Backlog.md project has a status to park blocked tasks in, distinct
+  from the not-started one. `/backlog-auto` selects on the not-started status, so
+  this status is what keeps a blocked task out of the next round. `backlog config
+  set statuses` is refused by the CLI, which directs callers to the project
+  config file, so the installer edits `statuses:` there — additively, inserting
+  `Blocked` before the terminal status and touching no other key. A project that
+  already has one (`On Hold`, `Blocked`, …) keeps it and is left unmodified.
+- Record the status role mapping in `.agent-workflow/config.yml`
+  (`statuses.not_started/active/blocked/done`), detected from the Backlog.md
+  configuration on first install and preserved across upgrades, so a project with
+  renamed columns keeps its own vocabulary.
+- Preserve all existing task files, requirement documents, source code, and
+  non-managed instructions. Backlog.md configuration is preserved except for the
+  one additive `statuses:` change above.
 - Insert or update exactly one managed block in `CLAUDE.md` (or
   `.claude/CLAUDE.md` when only that one exists) **and** in `AGENTS.md`.
   `AGENTS.md` is created when absent so cross-agent tools (Codex, Cursor, and
@@ -65,6 +81,16 @@ Check:
 - Managed block count and content in each entry file (`CLAUDE.md`/`.claude/CLAUDE.md` and `AGENTS.md`)
 - Project configuration presence
 - Drift or unmanaged-path conflicts
+- Status roles: all four present, each naming a configured Backlog.md status, and
+  `blocked` different from `not_started`.
+- Task `documentation` references that point at a local file which no longer
+  exists. A `#fragment` is stripped before the existence check; remote references
+  (any `scheme:` prefix, protocol-relative, `www.`), machine-absolute and
+  home-relative paths, paths escaping the project, and opaque identifiers such as
+  `decision-3` are not filesystem-checkable and are skipped. Each finding names
+  the task ID and the reference. This walk costs one CLI call per task, so it
+  runs only for the explicit `audit` action — not for the check `apply` and
+  `upgrade` run afterwards, which covers managed-file integrity.
 - Recorded `PROJECT.md` facts that no longer match repository evidence. These are
   advisory: `audit` reports them, but they never block `apply` or `upgrade`.
 
@@ -75,14 +101,19 @@ Return nonzero when drift, missing files, or conflicts exist. Do not repair anyt
 ## upgrade
 
 - Refuse to downgrade a project with a newer workflow version.
-- Replace older managed templates with version `1.3.0`.
-- Preserve an existing `automatic.max_parallel_tasks` value in
-  `.agent-workflow/config.yml` if the project already set one; only add it with
-  the default `1` when absent.
+- Replace older managed templates with version `1.4.0`, adding
+  `.agent-workflow/PLAN.md`, `EXECUTION.md`, and `AUTO.md` to installs that
+  predate the split. No file is removed: the phase content moves out of
+  `WORKFLOW.md`, which is a managed template and is rewritten in place.
+- Preserve project-owned values in `.agent-workflow/config.yml`:
+  `automatic.max_parallel_tasks` and the `statuses:` role mapping. Only supply
+  defaults when absent — an install predating the role mapping gets one detected
+  from its Backlog.md configuration.
 - Migrate the deprecated managed `TASK-TEMPLATE.md` to `TASK-POLICY.md` (managed
   copy removed; unmanaged copy preserved).
 - Preserve `.agent-workflow/PROJECT.md`.
-- Preserve Backlog.md task data and configuration.
+- Preserve Backlog.md task data, and Backlog.md configuration apart from adding a
+  blocked status when the project has none.
 - Preserve text outside the managed block in every entry file.
 - Do not update `grilling` from any upstream source; the bundled copy is maintained as part of this workflow.
 

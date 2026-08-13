@@ -7,7 +7,7 @@ disable-model-invocation: true
 allowed-tools: Read Glob Grep Bash Edit Write Skill
 ---
 
-<!-- Managed by backlog-workflow 1.3.0 -->
+<!-- Managed by backlog-workflow 1.4.0 -->
 
 # Run One Backlog Task
 
@@ -16,10 +16,10 @@ Task: `$task_id`
 Read before acting:
 
 - `.agent-workflow/WORKFLOW.md`
+- `.agent-workflow/EXECUTION.md`
 - `.agent-workflow/PROJECT.md`
-- `.agent-workflow/TASK-POLICY.md`
 - applicable `CLAUDE.md` and `AGENTS.md` files
-- the specified task and its requirement sources
+- the specified task and the authoritative sources in its `documentation`
 
 Load the Backlog.md canonical instructions for execution using the CLI recorded
 in `.agent-workflow/PROJECT.md`:
@@ -29,36 +29,17 @@ backlog instructions overview
 backlog instructions task-execution
 ```
 
-When `$task_id` is empty, list dependency-ready tasks using the Backlog.md
-structured interface (`backlog task list --json`, plus
-`backlog task <TASK-ID> --json` for dependency detail) and stop without
-modifying task state or code.
+When `$task_id` is empty, list dependency-ready tasks
+(`backlog task list --ready --sort priority --json`) and stop without modifying
+task state or code.
 
-For a specified task, follow the manual-execution section of
-`.agent-workflow/WORKFLOW.md` completely. Use the Backlog.md CLI recorded in
-`.agent-workflow/PROJECT.md` for all task reads and writes (`backlog` in examples
-is a placeholder for that command — see "Command convention" in
-`.agent-workflow/WORKFLOW.md`). Before coding, read the task's Definition of
-Done and append any missing canonical completion-policy item with
-`backlog task edit <TASK-ID> --dod "<item>"` (see "Native Definition of Done
-binding"), then write the JIT Implementation Plan into the task
-(`backlog task edit <TASK-ID> --plan "..."`), set the task to the active status,
-implement, and validate.
+For a specified task, follow the flow in `.agent-workflow/EXECUTION.md`
+completely, then finalize with `backlog instructions task-finalization`.
 
 **Approval boundary.** `/backlog-run <TASK-ID>` already authorizes this task
-through JIT planning, implementation, and validation — do **not** pause only
-for another implementation-plan approval. See "Important approval override" in
-`.agent-workflow/WORKFLOW.md` for the full boundary and its blocker/grilling
-exceptions.
-
-Finalize with `backlog instructions task-finalization`: verify each Acceptance
-Criterion with objective evidence, check Definition of Done, record validation
-evidence in Implementation Notes, write the Final Summary, and set the terminal
-status.
-
-Attempt the repository delivery flow after validation when it is available:
-PR/MR, CI/review fixes, and merge. These steps do not add completion conditions
-beyond the four defined by the workflow.
+through JIT planning, implementation, and validation — do **not** pause only for
+another implementation-plan approval. See "Approval boundary" in
+`.agent-workflow/EXECUTION.md` for the blocker and grilling exceptions.
 
 After one task, stop. End with exactly this structure. Field labels may be
 localized to the user's language; the `Status` value always stays one of `Done`,

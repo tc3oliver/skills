@@ -53,15 +53,15 @@ Do not treat a Backlog task as a replacement product specification.
 
 Decisions reached through `grilling` during planning or execution are recorded as
 Backlog.md decision records (`backlog decision create`), not detected here — see
-"Recording a grilled decision" in `.agent-workflow/WORKFLOW.md`.
+"Decision policy" in `.agent-workflow/WORKFLOW.md`.
 
 ## Task policy
 
-Tasks carry additional project policy fields defined in
-`.agent-workflow/TASK-POLICY.md` (Requirement Source, Goal, Scope, Out of Scope,
-stable implementation constraints, and impact areas). Acceptance Criteria,
-Definition of Done, dependencies, Implementation Plan, Implementation Notes, and
-Final Summary use Backlog.md native fields.
+`.agent-workflow/TASK-POLICY.md` defines only what Backlog.md has no field for
+(goal, scope and out-of-scope, constraints, validation, impacts). The
+authoritative requirement source, supporting material, dependencies, Acceptance
+Criteria, Definition of Done, Implementation Plan, Implementation Notes, and
+Final Summary all use Backlog.md native fields.
 
 ## Validation commands
 

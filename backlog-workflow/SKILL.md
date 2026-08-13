@@ -1,6 +1,6 @@
 ---
 name: backlog-workflow
-description: Install, audit, or upgrade the versioned Backlog.md workflow in the current project. Installs manual planning/execution plus explicit automatic execution skills as a policy/orchestration layer over Backlog.md.
+description: Install, audit, or upgrade the versioned Backlog.md workflow in the current project. Installs the requirement-planning, decomposition-review, single-task-execution, and explicit autonomous-execution skills as a policy/orchestration layer over Backlog.md.
 argument-hint: "[apply|audit|upgrade]"
 arguments: action
 disable-model-invocation: true
@@ -21,9 +21,9 @@ This package is a **policy + orchestration layer** over Backlog.md:
   Criteria, Definition of Done, Implementation Plan, Implementation Notes, Final
   Summary, dependencies, CLI, JSON interface, canonical instructions).
 - **backlog-workflow** = development policy and orchestration on top of Backlog.md
-  (modes, requirement authority, task decomposition policy, approval boundaries,
-  grilling/decision policy, blocker policy, completion conditions, deterministic
-  automatic task selection).
+  (modes, requirement authority, task decomposition policy, decomposition review,
+  approval boundaries, grilling/decision policy, blocker policy, the Canonical
+  Completion Gate, and autonomous execution).
 - **PROJECT.md** = repository-specific configuration.
 - **PRD/spec** = product truth.
 
