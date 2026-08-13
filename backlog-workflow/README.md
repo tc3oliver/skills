@@ -88,8 +88,11 @@ often merges conflict before going higher. See "Concurrency" in
 - **Backlog.md owns the mechanics; this workflow owns the policy.** Task mutation
   goes through the Backlog.md CLI; automation uses Backlog.md JSON output
   (`backlog task list --json`, `backlog task <TASK-ID> --json`). Autonomous
-  selection is the native `backlog task list --ready --sort priority --json`
-  query, not a dependency graph rebuilt task by task.
+  selection is the native
+  `backlog task list --ready --status "<not-started status>" --sort priority --json`
+  query, not a dependency graph rebuilt task by task. `--ready` on its own still
+  returns claimed and blocked tasks, so the status filter is part of the query,
+  not an optional extra.
 - **Requirements and tasks are separate sources of truth.** PRDs and specs own
   product intent; Backlog.md owns decomposition, status, and evidence. A task
   may not silently reinterpret a requirement, and it cites its authority in the

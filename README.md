@@ -301,7 +301,7 @@ continue development
 
 Only `/backlog-auto` enables continuous task execution.
 
-Task selection is Backlog.md's own query — `backlog task list --ready --sort priority --json` — not a dependency graph rebuilt by the agent.
+Task selection is Backlog.md's own query — `backlog task list --ready --status "<not-started status>" --sort priority --json` — not a dependency graph rebuilt by the agent. `--ready` alone still returns tasks already claimed or blocked, so the status filter is what keeps the loop from re-selecting them.
 
 If product intent is missing or conflicting, automatic mode blocks instead of guessing.
 

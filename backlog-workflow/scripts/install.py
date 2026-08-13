@@ -15,7 +15,7 @@ import tempfile
 from pathlib import Path, PurePosixPath
 from typing import Iterable
 
-VERSION = "1.4.0"
+VERSION = "1.4.1"
 MANAGED_BEGIN = f"<!-- backlog-workflow:begin version={VERSION} -->"
 MANAGED_END = "<!-- backlog-workflow:end -->"
 MANAGED_BLOCK = f"""{MANAGED_BEGIN}
@@ -156,8 +156,15 @@ STATUS_ROLE_HINTS = {
 
 BACKLOG_CONFIG_PATHS = ("backlog/config.yml", ".backlog/config.yml", "backlog.config.yml")
 
-# Matches the inline list form Backlog.md writes: `statuses: ["To Do", "Done"]`.
-BACKLOG_STATUSES_PATTERN = re.compile(r"(?m)^(statuses:[ \t]*)\[(.*)\][ \t]*$")
+# Backlog.md accepts both the inline list it writes by default and a block list
+# (supported since 1.48), so both shapes must be recognised *and* rewritten in
+# place. Confusing "not a shape I understand" with "no statuses key" is what
+# would append a second `statuses:` key and corrupt the config.
+STATUSES_KEY_PATTERN = re.compile(r"(?m)^statuses:(.*)$")
+INLINE_STATUSES_PATTERN = re.compile(r"(?m)^(statuses:[ \t]*)\[(.*)\][ \t]*$")
+BARE_STATUSES_PATTERN = re.compile(r"(?m)^statuses:[ \t]*(?:#.*)?$")
+BLOCK_ITEM_PATTERN = re.compile(r"^([ \t]+)-[ \t]*(.*?)[ \t]*$")
+COMMENT_LINE_PATTERN = re.compile(r"^[ \t]*#")
 
 DEFAULT_BLOCKED_STATUS = "Blocked"
 
@@ -170,20 +177,76 @@ def backlog_config_path(root: Path) -> Path | None:
     return None
 
 
-def parse_backlog_statuses(text: str) -> list[str] | None:
-    """Configured Backlog.md statuses, or None when the list is not in the
-    inline form this installer can safely rewrite."""
-    match = BACKLOG_STATUSES_PATTERN.search(text)
-    if not match:
-        return None
-    values = [item.strip().strip("\"'").strip() for item in match.group(2).split(",")]
-    values = [value for value in values if value]
-    return values or None
+def unquote(value: str) -> str:
+    value = value.strip()
+    if len(value) >= 2 and value[0] == value[-1] and value[0] in "\"'":
+        return value[1:-1]
+    return value.split(" #", 1)[0].strip()
+
+
+def read_backlog_statuses(text: str) -> tuple[str, list[str]]:
+    """Classify the `statuses:` key and read its values.
+
+    Returns one of four shapes, so callers can tell apart "the key is absent"
+    (safe to add) from "the key is there in a form this installer must not
+    rewrite" (fail closed):
+
+    - `missing`      no `statuses:` key
+    - `inline`       `statuses: ["To Do", "Done"]`
+    - `block`        `statuses:` followed by indented `- ` items
+    - `unsupported`  present, but neither shape parsed into values
+    """
+    if not STATUSES_KEY_PATTERN.search(text):
+        return ("missing", [])
+
+    inline = INLINE_STATUSES_PATTERN.search(text)
+    if inline:
+        values = [unquote(item) for item in inline.group(2).split(",")]
+        values = [value for value in values if value]
+        return ("inline", values) if values else ("unsupported", [])
+
+    bare = BARE_STATUSES_PATTERN.search(text)
+    if bare:
+        values: list[str] = []
+        for line in text[bare.end() :].splitlines()[1:]:
+            if COMMENT_LINE_PATTERN.match(line):
+                continue
+            item = BLOCK_ITEM_PATTERN.match(line)
+            if not item:
+                break
+            value = unquote(item.group(2))
+            if value:
+                values.append(value)
+        return ("block", values) if values else ("unsupported", [])
+
+    # The key exists in some other shape (an anchor, a flow list spanning lines,
+    # a merge key). Rewriting it blind would corrupt the config, so refuse.
+    return ("unsupported", [])
+
+
+def render_block_statuses(text: str, statuses: list[str]) -> str:
+    """Replace a block-style `statuses:` list, keeping its indentation."""
+    bare = BARE_STATUSES_PATTERN.search(text)
+    lines = text[bare.end() :].splitlines(keepends=True)
+    indent, consumed = "  ", 0
+    for line in lines[1:]:
+        item = BLOCK_ITEM_PATTERN.match(line.rstrip("\n"))
+        if not item and not COMMENT_LINE_PATTERN.match(line):
+            break
+        if item:
+            indent = item.group(1)
+        consumed += 1
+    rendered = "".join(f"{indent}- {status}\n" for status in statuses)
+    tail = "".join(lines[1 + consumed :])
+    return text[: bare.end()] + "\n" + rendered + tail
 
 
 def backlog_statuses(root: Path) -> list[str] | None:
     path = backlog_config_path(root)
-    return parse_backlog_statuses(read_text(path)) if path else None
+    if path is None:
+        return None
+    _shape, values = read_backlog_statuses(read_text(path))
+    return values or None
 
 
 def cli_backlog_statuses(root: Path, backlog_cli: str) -> list[str] | None:
@@ -212,41 +275,71 @@ def ensure_blocked_status(root: Path, backlog_cli: str) -> str | None:
     path = backlog_config_path(root)
     if path is None:
         raise InstallError("Backlog.md configuration not found; cannot verify a blocked status")
+    relative = path.relative_to(root).as_posix()
     text = read_text(path)
-    statuses = parse_backlog_statuses(text)
-    listed = statuses if statuses is not None else cli_backlog_statuses(root, backlog_cli)
-    if listed is None:
+    shape, statuses = read_backlog_statuses(text)
+
+    if shape == "unsupported":
         raise InstallError(
-            f"cannot read the configured statuses for {path.relative_to(root).as_posix()}; "
-            f"add a blocked status (for example {DEFAULT_BLOCKED_STATUS!r}) manually, then re-run"
+            f"the `statuses:` key in {relative} is not in a form this installer can "
+            f"safely rewrite; add a blocked status (for example "
+            f"{DEFAULT_BLOCKED_STATUS!r}) to it manually, then re-run"
         )
-    if match_status_role(listed, "blocked"):
+    if shape == "missing":
+        # No `statuses:` key at all: the project relies on Backlog.md defaults, so
+        # ask the CLI what those are and write the key once. Adding a key that is
+        # genuinely absent cannot produce a duplicate.
+        statuses = cli_backlog_statuses(root, backlog_cli) or []
+        if not statuses:
+            raise InstallError(
+                f"{relative} has no `statuses:` key and the CLI did not report the "
+                f"configured statuses; add a blocked status manually, then re-run"
+            )
+
+    if match_status_role(statuses, "blocked"):
         return None
 
-    done = match_status_role(listed, "done")
-    insert_at = listed.index(done) if done else len(listed)
-    updated = [*listed[:insert_at], DEFAULT_BLOCKED_STATUS, *listed[insert_at:]]
-    rendered = ", ".join(f'"{status}"' for status in updated)
-    if statuses is None:
-        # No `statuses:` line at all: the project was relying on defaults, so
-        # write the resolved list rather than rewriting a line that is not there.
+    done = match_status_role(statuses, "done")
+    insert_at = statuses.index(done) if done else len(statuses)
+    updated = [*statuses[:insert_at], DEFAULT_BLOCKED_STATUS, *statuses[insert_at:]]
+
+    if shape == "inline":
+        rendered = ", ".join(f'"{status}"' for status in updated)
+        atomic_write(path, INLINE_STATUSES_PATTERN.sub(rf"\g<1>[{rendered}]", text, count=1))
+    elif shape == "block":
+        atomic_write(path, render_block_statuses(text, updated))
+    else:
+        rendered = ", ".join(f'"{status}"' for status in updated)
         separator = "" if not text or text.endswith("\n") else "\n"
         atomic_write(path, f"{text}{separator}statuses: [{rendered}]\n")
-    else:
-        atomic_write(path, BACKLOG_STATUSES_PATTERN.sub(rf"\g<1>[{rendered}]", text, count=1))
-    return f"added {DEFAULT_BLOCKED_STATUS!r} status to {path.relative_to(root).as_posix()}"
+    return f"added {DEFAULT_BLOCKED_STATUS!r} status to {relative}"
 
 
-def match_status_role(statuses: Iterable[str], role: str) -> str | None:
-    """The configured status that plays `role`, or None when none matches."""
-    lowered = [(status, status.strip().lower()) for status in statuses]
+def status_tokens(status: str) -> list[str]:
+    return re.findall(r"[a-z0-9]+", status.lower())
+
+
+def match_status_role(
+    statuses: Iterable[str], role: str, taken: Iterable[str] = ()
+) -> str | None:
+    """The configured status that plays `role`, or None when none matches.
+
+    Hints match on whole words, not substrings: `Incomplete` must not be read as
+    the `done` status because it contains "complete". Statuses already assigned
+    to another role are skipped so two roles never collapse onto one status.
+    """
+    excluded = set(taken)
+    candidates = [(status, status_tokens(status)) for status in statuses if status not in excluded]
     for hint in STATUS_ROLE_HINTS[role]:
-        for status, name in lowered:
-            if name == hint:
+        wanted = status_tokens(hint)
+        for status, tokens in candidates:
+            if tokens == wanted:
                 return status
     for hint in STATUS_ROLE_HINTS[role]:
-        for status, name in lowered:
-            if hint in name:
+        wanted = status_tokens(hint)
+        span = len(wanted)
+        for status, tokens in candidates:
+            if any(tokens[i : i + span] == wanted for i in range(len(tokens) - span + 1)):
                 return status
     return None
 
@@ -254,21 +347,28 @@ def match_status_role(statuses: Iterable[str], role: str) -> str | None:
 def detect_status_roles(root: Path) -> dict[str, str]:
     """Map each workflow role onto a configured Backlog.md status.
 
-    Falls back to positional guesses only for roles no name matched, so an
-    unconventional board still produces a complete mapping that `audit` can
-    check against the real status list.
+    Roles are resolved most-specific first, each excluding what earlier roles
+    claimed, then any role no name matched falls back to a positional guess so
+    an unconventional board still produces a complete mapping `audit` can check.
     """
     statuses = backlog_statuses(root) or []
     roles: dict[str, str] = {}
-    for role in STATUS_ROLES:
-        matched = match_status_role(statuses, role)
+    for role in ("done", "blocked", "active", "not_started"):
+        matched = match_status_role(statuses, role, taken=roles.values())
         if matched:
             roles[role] = matched
-    if statuses:
-        roles.setdefault("not_started", statuses[0])
-        roles.setdefault("done", statuses[-1])
-        roles.setdefault("active", statuses[1] if len(statuses) > 1 else statuses[0])
-        roles.setdefault("blocked", DEFAULT_BLOCKED_STATUS)
+    if not statuses:
+        return roles
+    remaining = [status for status in statuses if status not in set(roles.values())]
+    for role, fallback in (
+        ("not_started", statuses[0]),
+        ("done", statuses[-1]),
+        ("active", statuses[1] if len(statuses) > 1 else statuses[0]),
+        ("blocked", DEFAULT_BLOCKED_STATUS),
+    ):
+        if role in roles:
+            continue
+        roles[role] = remaining.pop(0) if remaining else fallback
     return roles
 
 
@@ -875,8 +975,14 @@ def local_documentation_path(reference: str) -> str | None:
     return path
 
 
-def task_documentation(root: Path, backlog_cli: str) -> list[tuple[str, list[str]]]:
-    """(task id, documentation entries) for every task, read through the CLI."""
+def task_documentation(root: Path, backlog_cli: str) -> list[tuple[str, list[str] | None]]:
+    """(task id, documentation entries) for every task, read through the CLI.
+
+    Entries are `None` when the task could not be read. Audit is an integrity
+    command, so an unreadable task is reported rather than skipped: silently
+    dropping it would let a `Clean` verdict mean "every task passed" when it
+    really meant "every task I happened to be able to parse".
+    """
     proc = run([*backlog_cli.split(), "task", "list", "--json"], root)
     if proc.returncode != 0:
         raise InstallError("could not list tasks through the Backlog.md CLI")
@@ -885,32 +991,46 @@ def task_documentation(root: Path, backlog_cli: str) -> list[tuple[str, list[str
     except json.JSONDecodeError:
         raise InstallError("Backlog.md task list did not return valid JSON") from None
 
-    results: list[tuple[str, list[str]]] = []
-    for entry in listed:
+    results: list[tuple[str, list[str] | None]] = []
+    for index, entry in enumerate(listed):
         task_id = entry.get("id")
-        if not isinstance(task_id, str):
+        if not isinstance(task_id, str) or not task_id:
+            results.append((f"<task list entry {index}>", None))
             continue
         detail = run([*backlog_cli.split(), "task", task_id, "--json"], root)
         if detail.returncode != 0:
+            results.append((task_id, None))
             continue
         try:
-            task = json.loads(detail.stdout or "{}").get("task") or {}
+            task = json.loads(detail.stdout or "{}").get("task")
         except json.JSONDecodeError:
+            results.append((task_id, None))
+            continue
+        if not isinstance(task, dict):
+            results.append((task_id, None))
             continue
         documentation = task.get("documentation")
-        results.append((task_id, [d for d in documentation if isinstance(d, str)] if isinstance(documentation, list) else []))
+        if documentation is None:
+            results.append((task_id, []))
+        elif isinstance(documentation, list):
+            results.append((task_id, [d for d in documentation if isinstance(d, str)]))
+        else:
+            results.append((task_id, None))
     return results
 
 
 def documentation_findings(root: Path, backlog_cli: str) -> list[str]:
     """Report `documentation` entries that point at a local file which is gone.
 
-    Requirement traceability now rides on the native `documentation` field, so a
+    Requirement traceability rides on the native `documentation` field, so a
     reference that no longer resolves is a silently broken link between a task
     and its authority.
     """
     findings: list[str] = []
     for task_id, references in task_documentation(root, backlog_cli):
+        if references is None:
+            findings.append(f"cannot inspect documentation: {task_id}")
+            continue
         for reference in references:
             relative = local_documentation_path(reference)
             if relative is None:

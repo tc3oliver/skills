@@ -1,13 +1,14 @@
-<!-- Managed by backlog-workflow 1.4.0 -->
+<!-- Managed by backlog-workflow 1.4.1 -->
 
 # Planning and Decomposition Review
 
 Read `.agent-workflow/WORKFLOW.md` first. This file covers `/backlog-plan` and
 `/backlog-review`.
 
-## Task Ready Gate
+## Authoring a ready task
 
-A task may enter an active status only when all applicable items are settled.
+The Task Ready Gate in `.agent-workflow/WORKFLOW.md` is the bar a task must clear
+before anything executes it. A task created here should clear it on creation.
 Backlog.md native fields carry what Backlog.md owns; `.agent-workflow/TASK-POLICY.md`
 defines what goes in the description.
 
@@ -19,8 +20,7 @@ defines what goes in the description.
 - Validation method or commands, and the test coverage the task requires
 - Security, data/schema, API/compatibility, documentation, and migration impact
 
-A task should fit one reviewable change. Missing product intent is a blocker.
-Engineering details determinable from repository evidence are not.
+A task should fit one reviewable change.
 
 ## Planning
 
@@ -44,9 +44,9 @@ Engineering details determinable from repository evidence are not.
    items from "Native Definition of Done binding".
 
 Planning stops at decomposition. Do not research task-level implementation, write
-an Implementation Plan (those are JIT — see `.agent-workflow/EXECUTION.md`),
-decide function-level implementation, write product code, or set any task to an
-active status.
+an Implementation Plan (those are created just-in-time during execution), decide
+function-level implementation, write product code, or set any task to an active
+status.
 
 Report and stop. Planning does not review its own decomposition — hand off to
 `/backlog-review`.

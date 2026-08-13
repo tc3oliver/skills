@@ -49,11 +49,15 @@ arg = sys.argv[1] if len(sys.argv) > 1 else "list"
 if arg == "list":
     print(json.dumps({"schemaVersion": 1, "kind": "task-list",
                       "tasks": [{"id": t} for t in sorted(tasks)]}))
+elif tasks.get(arg) is None:
+    # null models a task detail the CLI cannot return (error or bad JSON)
+    print(f"error: could not read {arg}", file=sys.stderr)
+    sys.exit(1)
 else:
     print(json.dumps({"schemaVersion": 1, "kind": "task-view",
-                      "task": {"id": arg, "documentation": tasks.get(arg, [])}}))
+                      "task": {"id": arg, "documentation": tasks[arg]}}))
 PYEOF
-  exit 0
+  exit $?
 fi
 exit 0
 """
@@ -180,18 +184,18 @@ class InstallerTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         return result
 
-    # 1. fresh apply creates the 1.4.0 workflow
-    def test_fresh_apply_creates_1_4_0_workflow(self) -> None:
+    # 1. fresh apply creates the 1.4.1 workflow
+    def test_fresh_apply_creates_current_workflow(self) -> None:
         root, env = self.make_project()
         result = self.apply(root, env)
         self.assertIn("- Status: Installed", result.stdout)
-        self.assertEqual(read(root / ".agent-workflow/VERSION").strip(), "1.4.0")
-        self.assertIn("workflow_version: 1.4.0", read(root / ".agent-workflow/config.yml"))
+        self.assertEqual(read(root / ".agent-workflow/VERSION").strip(), "1.4.1")
+        self.assertIn("workflow_version: 1.4.1", read(root / ".agent-workflow/config.yml"))
         self.assertTrue((root / ".agent-workflow/TASK-POLICY.md").exists())
         self.assertFalse((root / ".agent-workflow/TASK-TEMPLATE.md").exists())
 
-    # 20. managed files contain version 1.4.0
-    def test_managed_files_contain_1_4_0(self) -> None:
+    # 20. managed files contain version 1.4.1
+    def test_managed_files_carry_current_version(self) -> None:
         root, env = self.make_project()
         self.apply(root, env)
         for rel in (
@@ -206,7 +210,7 @@ class InstallerTests(unittest.TestCase):
             ".claude/skills/backlog-run/SKILL.md",
             ".claude/skills/backlog-auto/SKILL.md",
         ):
-            self.assertIn("1.4.0", read(root / rel), f"missing 1.4.0 marker in {rel}")
+            self.assertIn("1.4.1", read(root / rel), f"missing version marker in {rel}")
 
     # Progressive disclosure: WORKFLOW.md holds only the shared invariants, and
     # each skill loads exactly the phase reference it needs.
@@ -808,6 +812,396 @@ class InstallerTests(unittest.TestCase):
             "../outside.md", "#anchor-only", "", "   ",
         ):
             self.assertIsNone(install.local_documentation_path(reference), reference)
+
+    # The Ready Gate is an execution invariant, not planning trivia: /backlog-run
+    # never reads PLAN.md, so a gate that only lived there would not stop a
+    # hand-written malformed task from entering the active status.
+    def test_ready_gate_is_reachable_from_execution(self) -> None:
+        root, env = self.make_project()
+        self.apply(root, env)
+        workflow = read(root / ".agent-workflow/WORKFLOW.md")
+        self.assertIn("## Task Ready Gate", workflow)
+        for item in ("documentation", "Acceptance Criteria", "dependencies", "validation"):
+            self.assertIn(item, workflow.split("## Task Ready Gate", 1)[1].split("##", 1)[0], item)
+
+        # /backlog-run reads WORKFLOW.md + EXECUTION.md only, and the check
+        # happens before the claim.
+        execution = read(root / ".agent-workflow/EXECUTION.md")
+        self.assertIn("Task Ready Gate", execution)
+        self.assertLess(
+            execution.index("Task Ready Gate"),
+            execution.index('-s "<active status>"'),
+            "the gate must be checked before the task is claimed",
+        )
+        self.assertNotIn(".agent-workflow/PLAN.md", read(root / ".claude/skills/backlog-run/SKILL.md"))
+
+    # audit is an integrity command: a task it cannot read is reported, not
+    # skipped, or a Clean verdict would mean "every task I could parse".
+    def test_documentation_audit_fails_closed_on_unreadable_task(self) -> None:
+        root, env = self.make_project()
+        self.apply(root, env)
+        # `null` documentation stands in for a task detail the audit cannot use.
+        audit = self.audit_with_tasks(root, env, {"TASK-1": None, "TASK-2": ["docs/PRD.md"]})
+        self.assertEqual(audit.returncode, 2, audit.stdout)
+        self.assertIn("cannot inspect documentation: TASK-1", audit.stdout)
+
+    # --- `statuses:` YAML shapes -------------------------------------------
+    #
+    # Backlog.md accepts both the inline list it writes and a block list. Reading
+    # "a shape I cannot rewrite" as "no statuses key" is what would append a
+    # second `statuses:` key and leave a config with a duplicate mapping key.
+
+    def apply_with_backlog_config(self, config: str) -> tuple[Path, dict, subprocess.CompletedProcess[str]]:
+        root, env = self.make_project()
+        (root / "backlog/config.yml").write_text(config, encoding="utf-8")
+        return root, env, self.run_installer(root, "apply", env)
+
+    def assert_single_statuses_key(self, root: Path) -> None:
+        text = read(root / "backlog/config.yml")
+        keys = len(re.findall(r"(?m)^statuses:", text))
+        self.assertEqual(keys, 1, f"expected one `statuses:` key, got {keys}:\n{text}")
+
+    def test_inline_statuses_are_rewritten_in_place(self) -> None:
+        root, env, result = self.apply_with_backlog_config(
+            'project_name: demo\nstatuses: ["To Do", "In Progress", "Done"]\nlabels: []\n'
+        )
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assert_single_statuses_key(root)
+        self.assertIn('statuses: ["To Do", "In Progress", "Blocked", "Done"]', read(root / "backlog/config.yml"))
+        self.assertIn("labels: []", read(root / "backlog/config.yml"))
+
+    def test_block_style_statuses_are_rewritten_in_place(self) -> None:
+        root, env, result = self.apply_with_backlog_config(
+            "project_name: demo\nstatuses:\n  - To Do\n  - In Progress\n  - Done\nlabels: []\n"
+        )
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assert_single_statuses_key(root)
+        text = read(root / "backlog/config.yml")
+        # Block style is preserved, the new status inserted before the terminal one.
+        self.assertIn("statuses:\n  - To Do\n  - In Progress\n  - Blocked\n  - Done\n", text)
+        self.assertIn("labels: []", text)
+        # The list stays block style; it is not silently converted to inline.
+        self.assertNotIn("statuses: [", text)
+        self.assertEqual(self.run_installer(root, "audit", env).returncode, 0)
+        self.assertIn("blocked: Blocked", read(root / ".agent-workflow/config.yml"))
+
+    def test_block_style_statuses_with_comments_and_quotes(self) -> None:
+        root, env, result = self.apply_with_backlog_config(
+            "project_name: demo\nstatuses:\n"
+            "  # workflow columns\n"
+            '  - "To Do"\n'
+            "  - 'In Progress'\n"
+            "  - Done\n"
+            "labels: []\n"
+        )
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assert_single_statuses_key(root)
+        text = read(root / "backlog/config.yml")
+        self.assertIn("  - Blocked\n  - Done\n", text)
+        self.assertIn("labels: []", text)
+
+    def test_custom_status_names_in_block_style(self) -> None:
+        root, env, result = self.apply_with_backlog_config(
+            "project_name: demo\nstatuses:\n  - Backlog\n  - WIP\n  - On Hold\n  - Shipped\n"
+        )
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        # A project that already parks blocked work keeps its own list untouched.
+        self.assertNotIn("added 'Blocked' status", result.stdout)
+        self.assertIn("statuses:\n  - Backlog\n  - WIP\n  - On Hold\n  - Shipped\n", read(root / "backlog/config.yml"))
+        workflow_config = read(root / ".agent-workflow/config.yml")
+        self.assertIn("blocked: On Hold", workflow_config)
+        self.assertIn("done: Shipped", workflow_config)
+
+    def test_absent_statuses_key_is_added_once(self) -> None:
+        root, env, result = self.apply_with_backlog_config("project_name: demo\ntask_prefix: DEMO\n")
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assert_single_statuses_key(root)
+        # Falls back to what the CLI reports, plus the blocked status.
+        self.assertIn('statuses: ["To Do", "In Progress", "Blocked", "Done"]', read(root / "backlog/config.yml"))
+
+    def test_unsupported_statuses_shape_fails_closed(self) -> None:
+        # A shape the installer cannot safely rewrite must block, never append.
+        root, env, result = self.apply_with_backlog_config(
+            "project_name: demo\nstatuses: &columns\nlabels: []\n"
+        )
+        self.assertEqual(result.returncode, 2, result.stdout)
+        self.assertIn("not in a form this installer can", result.stdout)
+        self.assert_single_statuses_key(root)
+        self.assertFalse((root / ".agent-workflow/WORKFLOW.md").exists(), "must not install partially")
+
+    def test_read_backlog_statuses_shapes(self) -> None:
+        cases = {
+            'statuses: ["To Do", "Done"]': ("inline", ["To Do", "Done"]),
+            "statuses:\n  - To Do\n  - Done\n": ("block", ["To Do", "Done"]),
+            "statuses:\n  - 'On Hold'\nlabels: []\n": ("block", ["On Hold"]),
+            "project_name: x\n": ("missing", []),
+            "statuses: &anchor\nlabels: []\n": ("unsupported", []),
+            "statuses: []\n": ("unsupported", []),
+        }
+        for text, expected in cases.items():
+            self.assertEqual(install.read_backlog_statuses(text), expected, text)
+
+    # --- status role matching ----------------------------------------------
+
+    def test_status_role_matching_uses_whole_words(self) -> None:
+        # "Incomplete" contains "complete" but is not the done status.
+        statuses = ["To Do", "Incomplete", "Done"]
+        self.assertEqual(install.match_status_role(statuses, "done"), "Done")
+        # Roles never collapse onto the same status.
+        roles = ["Backlog", "In Progress", "On Hold", "Shipped"]
+        assigned: list[str] = []
+        for role in ("done", "blocked", "active", "not_started"):
+            matched = install.match_status_role(roles, role, taken=assigned)
+            assigned.append(matched)
+        self.assertEqual(len(set(assigned)), 4, assigned)
+        self.assertEqual(assigned, ["Shipped", "On Hold", "In Progress", "Backlog"])
+
+    # --- parallel /backlog-auto git lifecycle ------------------------------
+    #
+    # Backlog.md `autoCommit` defaults to off, so claiming a task only edits
+    # `backlog/tasks/*.md` in the working tree. If those edits are still
+    # uncommitted when a worker branch is merged back, Git refuses the merge
+    # because the same file has local changes — which would break every task in
+    # the batch, not just one. These exercise real git, not the documentation.
+
+    def git(self, root: Path, *args: str) -> subprocess.CompletedProcess[str]:
+        return subprocess.run(
+            ["git", *args], cwd=str(root), text=True,
+            stdout=subprocess.PIPE, stderr=subprocess.STDOUT, check=False,
+        )
+
+    def parallel_batch_repo(self) -> Path:
+        """A repo holding one committed task file, as after selection."""
+        root = Path(tempfile.mkdtemp(prefix="bw-parallel-"))
+        self.git(root, "init", "-q", "-b", "main")
+        self.git(root, "config", "user.email", "test@example.com")
+        self.git(root, "config", "user.name", "test")
+        (root / "backlog/tasks").mkdir(parents=True)
+        (root / "backlog/tasks/task-1.md").write_text("status: To Do\n", encoding="utf-8")
+        self.git(root, "add", "-A")
+        self.git(root, "commit", "-q", "-m", "base")
+        return root
+
+    def run_worker(self, root: Path, worktree: Path) -> None:
+        """A worker: branch from HEAD, finish the task, commit on its branch."""
+        self.git(root, "worktree", "add", "-q", str(worktree), "-b", "backlog/TASK-1", "HEAD")
+        (worktree / "backlog/tasks/task-1.md").write_text("status: Done\n", encoding="utf-8")
+        (worktree / "impl.py").write_text("print('done')\n", encoding="utf-8")
+        self.git(worktree, "add", "-A")
+        self.git(worktree, "commit", "-q", "-m", "TASK-1 done")
+
+    def test_uncommitted_claim_breaks_the_batch_merge(self) -> None:
+        """The failure the claim checkpoint exists to prevent."""
+        root = self.parallel_batch_repo()
+        # Claim without committing — what `backlog task edit -s` leaves behind
+        # when autoCommit is off.
+        (root / "backlog/tasks/task-1.md").write_text("status: In Progress\n", encoding="utf-8")
+        worktree = Path(tempfile.mkdtemp(prefix="bw-wt-")) / "w"
+        self.run_worker(root, worktree)
+
+        merge = self.git(root, "merge", "backlog/TASK-1")
+        self.assertNotEqual(merge.returncode, 0, merge.stdout)
+        self.assertIn("would be overwritten by merge", merge.stdout)
+
+    def test_committed_claim_lets_the_batch_merge(self) -> None:
+        """AUTO.md step 3: commit the claim, branch from that commit, merge."""
+        root = self.parallel_batch_repo()
+        (root / "backlog/tasks/task-1.md").write_text("status: In Progress\n", encoding="utf-8")
+        self.assertIn("backlog/tasks/task-1.md", self.git(root, "status", "--short", "--", "backlog").stdout)
+
+        self.git(root, "add", "backlog")
+        self.git(root, "commit", "-q", "-m", "backlog: claim TASK-1")
+        self.assertEqual(self.git(root, "status", "--short", "--", "backlog").stdout.strip(), "")
+
+        worktree = Path(tempfile.mkdtemp(prefix="bw-wt-")) / "w"
+        self.run_worker(root, worktree)
+
+        merge = self.git(root, "merge", "backlog/TASK-1")
+        self.assertEqual(merge.returncode, 0, merge.stdout)
+        self.assertEqual(read(root / "backlog/tasks/task-1.md"), "status: Done\n")
+        self.assertTrue((root / "impl.py").exists())
+
+    # Workers branch from a commit, so uncommitted work in the base tree is
+    # invisible to them. The claim checkpoint deliberately commits only
+    # `backlog/`, which leaves the user's own source changes behind — hence the
+    # clean-source-tree precondition.
+
+    def parallel_repo_with_source(self) -> Path:
+        root = self.parallel_batch_repo()
+        (root / "src").mkdir()
+        (root / "src/app.py").write_text("def f():\n    return 1\n", encoding="utf-8")
+        self.git(root, "add", "-A")
+        self.git(root, "commit", "-q", "-m", "source")
+        return root
+
+    def dirty_source_check(self, root: Path) -> str:
+        """The precondition query AUTO.md specifies."""
+        return self.git(
+            root, "status", "--porcelain", "--untracked-files=normal", "--", ".", ":(exclude)backlog"
+        ).stdout.strip()
+
+    def test_precondition_detects_source_changes_the_claim_commit_leaves(self) -> None:
+        root = self.parallel_repo_with_source()
+        (root / "src/app.py").write_text("def f():\n    return 2  # user WIP\n", encoding="utf-8")
+        (root / "backlog/tasks/task-1.md").write_text("status: In Progress\n", encoding="utf-8")
+
+        # Committing the claim clears `backlog/` but not the user's source work.
+        self.git(root, "add", "backlog")
+        self.git(root, "commit", "-q", "-m", "backlog: claim TASK-1")
+        self.assertEqual(self.git(root, "status", "--short", "--", "backlog").stdout.strip(), "")
+        self.assertIn("src/app.py", self.dirty_source_check(root))
+
+    def test_dirty_base_hides_user_work_from_the_worker(self) -> None:
+        """The quiet failure: no error, wrong codebase."""
+        root = self.parallel_repo_with_source()
+        (root / "src/app.py").write_text("def f():\n    return 2  # user WIP\n", encoding="utf-8")
+        worktree = Path(tempfile.mkdtemp(prefix="bw-wt-")) / "w"
+        self.git(root, "worktree", "add", "-q", str(worktree), "-b", "backlog/TASK-1", "HEAD")
+
+        self.assertIn("return 2", read(root / "src/app.py"))
+        self.assertNotIn("return 2", read(worktree / "src/app.py"))
+
+    def test_dirty_base_breaks_the_merge_when_files_overlap(self) -> None:
+        root = self.parallel_repo_with_source()
+        (root / "src/app.py").write_text("def f():\n    return 2  # user WIP\n", encoding="utf-8")
+        worktree = Path(tempfile.mkdtemp(prefix="bw-wt-")) / "w"
+        self.git(root, "worktree", "add", "-q", str(worktree), "-b", "backlog/TASK-1", "HEAD")
+        (worktree / "src/app.py").write_text("def f():\n    return 1\n\ndef g():\n    return 3\n", encoding="utf-8")
+        self.git(worktree, "add", "-A")
+        self.git(worktree, "commit", "-q", "-m", "TASK-1")
+
+        merge = self.git(root, "merge", "backlog/TASK-1")
+        self.assertNotEqual(merge.returncode, 0, merge.stdout)
+        self.assertIn("would be overwritten by merge", merge.stdout)
+
+    def test_clean_base_gives_the_worker_the_current_codebase(self) -> None:
+        root = self.parallel_repo_with_source()
+        (root / "src/app.py").write_text("def f():\n    return 2  # committed\n", encoding="utf-8")
+        self.git(root, "add", "-A")
+        self.git(root, "commit", "-q", "-m", "user work committed")
+        self.assertEqual(self.dirty_source_check(root), "")
+
+        worktree = Path(tempfile.mkdtemp(prefix="bw-wt-")) / "w"
+        self.git(root, "worktree", "add", "-q", str(worktree), "-b", "backlog/TASK-1", "HEAD")
+        self.assertIn("return 2", read(worktree / "src/app.py"))
+
+        (worktree / "src/app.py").write_text("def f():\n    return 2  # committed\n\ndef g():\n    return 3\n", encoding="utf-8")
+        (worktree / "backlog/tasks/task-1.md").write_text("status: Done\n", encoding="utf-8")
+        self.git(worktree, "add", "-A")
+        self.git(worktree, "commit", "-q", "-m", "TASK-1 done")
+
+        merge = self.git(root, "merge", "backlog/TASK-1")
+        self.assertEqual(merge.returncode, 0, merge.stdout)
+        self.assertIn("def g()", read(root / "src/app.py"))
+        self.assertIn("return 2", read(root / "src/app.py"))
+
+    # An untracked file is usually work the user has not staged yet, and it is
+    # just as invisible to a worker as an uncommitted edit — so it blocks too.
+    def test_untracked_user_source_blocks_parallel_execution(self) -> None:
+        root = self.parallel_repo_with_source()
+        self.assertEqual(self.dirty_source_check(root), "")
+        (root / "src/new_feature.py").write_text("def new(): ...\n", encoding="utf-8")
+        self.assertIn("?? src/new_feature.py", self.dirty_source_check(root))
+
+    def test_untracked_user_source_is_missing_from_worker(self) -> None:
+        """Why untracked has to block: HEAD does not contain the file at all."""
+        root = self.parallel_repo_with_source()
+        (root / "src/new_feature.py").write_text("def new(): ...\n", encoding="utf-8")
+        worktree = Path(tempfile.mkdtemp(prefix="bw-wt-")) / "w"
+        self.git(root, "worktree", "add", "-q", str(worktree), "-b", "backlog/TASK-1", "HEAD")
+
+        self.assertTrue((root / "src/new_feature.py").exists())
+        self.assertFalse((worktree / "src/new_feature.py").exists())
+        # Nothing errors — the worker simply analyses a different codebase.
+        self.assertEqual(sorted(p.name for p in (worktree / "src").iterdir()), ["app.py"])
+
+    # Ignored paths are not project state the worker needs, and git does not list
+    # them, so the precondition must not trip on build output.
+    def test_ignored_build_artifact_does_not_block_parallel_execution(self) -> None:
+        root = self.parallel_repo_with_source()
+        (root / ".gitignore").write_text("build/\n*.tmp\n", encoding="utf-8")
+        self.git(root, "add", "-A")
+        self.git(root, "commit", "-q", "-m", "gitignore")
+        self.assertEqual(self.dirty_source_check(root), "")
+
+        (root / "build").mkdir()
+        (root / "build/output.bin").write_text("binary\n", encoding="utf-8")
+        (root / "scratch.tmp").write_text("scratch\n", encoding="utf-8")
+        self.assertEqual(self.dirty_source_check(root), "", "ignored paths must not block")
+
+        # They only appear when explicitly asked for, which AUTO.md forbids.
+        ignored = self.git(root, "status", "--porcelain", "--ignored", "--", ".", ":(exclude)backlog")
+        self.assertIn("!! build/", ignored.stdout)
+
+    # Staged and deleted paths are project state HEAD does not carry either.
+    def test_staged_and_deleted_paths_block_parallel_execution(self) -> None:
+        root = self.parallel_repo_with_source()
+        (root / "src/staged.py").write_text("x = 1\n", encoding="utf-8")
+        self.git(root, "add", "src/staged.py")
+        self.assertIn("A  src/staged.py", self.dirty_source_check(root))
+
+        self.git(root, "reset", "-q")
+        (root / "src/staged.py").unlink()
+        (root / "src/app.py").unlink()
+        self.assertIn("src/app.py", self.dirty_source_check(root))
+
+    # Changes under backlog/ are excluded: the claim checkpoint owns those.
+    def test_backlog_changes_are_excluded_from_the_precondition(self) -> None:
+        root = self.parallel_repo_with_source()
+        (root / "backlog/tasks/task-1.md").write_text("status: In Progress\n", encoding="utf-8")
+        self.assertEqual(self.dirty_source_check(root), "")
+        self.assertIn("task-1.md", self.git(root, "status", "--short", "--", "backlog").stdout)
+
+    def test_auto_documents_the_clean_source_precondition(self) -> None:
+        root, env = self.make_project()
+        self.apply(root, env)
+        auto = read(root / ".agent-workflow/AUTO.md")
+        flat = re.sub(r"\s+", " ", auto)  # the file is hard-wrapped
+        precondition = (
+            "no staged, modified, deleted, renamed, or untracked non-ignored files"
+        )
+        self.assertIn(precondition, flat)
+        self.assertIn(
+            "git status --porcelain --untracked-files=normal -- . ':(exclude)backlog'", auto
+        )
+        # Checked before the batch is claimed, not after work has started.
+        self.assertLess(
+            flat.index(precondition),
+            flat.index('backlog task edit <TASK-ID> -s "<active'),
+            "the precondition must be checked before any task is claimed",
+        )
+        self.assertIn("true blocker 3", flat)
+        # The user's in-progress work is theirs; the workflow must not touch it.
+        self.assertIn(
+            "Do not stash, commit, discard, or otherwise modify the user's working changes", flat
+        )
+        # Ignored paths must not block, and --ignored must not be recommended.
+        self.assertIn("Ignored files do not block parallel execution", flat)
+        self.assertIn("Do not add `--ignored`", flat)
+        # Sequential mode keeps its existing behaviour.
+        self.assertIn("This precondition applies only when execution uses isolated worktrees", flat)
+        self.assertIn("Sequential execution (`max_parallel_tasks: 1`) has no snapshot boundary", flat)
+
+    def test_auto_documents_the_claim_checkpoint(self) -> None:
+        root, env = self.make_project()
+        self.apply(root, env)
+        auto = read(root / ".agent-workflow/AUTO.md")
+        # The commit must be ordered before worktree creation, not after.
+        checkpoint = "Commit the claims before creating any worktree"
+        self.assertIn(checkpoint, auto)
+        self.assertLess(
+            auto.index(checkpoint), auto.index("git worktree add"),
+            "claims must be committed before worktrees exist",
+        )
+        self.assertIn("git add backlog && git commit", auto)
+        self.assertIn("autoCommit", auto)
+        self.assertIn("would be overwritten by merge", auto)
+        # A conflict parks the task in the blocked status, which is another task
+        # file edit and must be committed for the rest of the batch to merge.
+        self.assertIn("Commit that status change", auto)
+        # The workflow must not demand the user flip autoCommit on.
+        self.assertNotIn("autoCommit: true`.", auto)
+        self.assertNotIn("set autoCommit", auto)
 
     # 23. package validator passes
     def test_package_validator_passes(self) -> None:

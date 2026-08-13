@@ -201,6 +201,61 @@ def main() -> int:
     if "blocked" not in workflow.lower() or "<blocked status>" not in workflow:
         raise AssertionError("WORKFLOW.md must define how a true blocker is written to a status")
 
+    # Backlog.md `autoCommit` defaults to off, so an uncommitted claim sits on the
+    # same task files the workers change and aborts the whole batch merge. The
+    # commit must come before any worktree exists.
+    checkpoint = "Commit the claims before creating any worktree"
+    if checkpoint not in auto:
+        raise AssertionError(f"AUTO.md must instruct: {checkpoint!r}")
+    if auto.index(checkpoint) > auto.index("git worktree add"):
+        raise AssertionError("AUTO.md must commit the batch claims before creating worktrees")
+    if "git add backlog && git commit" not in auto:
+        raise AssertionError("AUTO.md must show the claim commit, not just describe it")
+    if "autoCommit" not in auto:
+        raise AssertionError("AUTO.md must explain the autoCommit default the checkpoint exists for")
+
+    # Workers branch from a commit, so uncommitted source work in the base tree is
+    # invisible to them — silently, when the changed files do not overlap. A
+    # parallel batch must refuse to start against a dirty tracked source tree.
+    flat_auto = re.sub(r"\s+", " ", auto)
+    precondition = "no staged, modified, deleted, renamed, or untracked non-ignored files"
+    if precondition not in flat_auto:
+        raise AssertionError(f"AUTO.md must state the parallel precondition: {precondition!r}")
+    check = "git status --porcelain --untracked-files=normal -- . ':(exclude)backlog'"
+    if check not in auto:
+        raise AssertionError(f"AUTO.md must show the precondition check verbatim: {check!r}")
+    if flat_auto.index(precondition) > flat_auto.index('backlog task edit <TASK-ID> -s "<active'):
+        raise AssertionError("AUTO.md must check the clean-source precondition before claiming")
+    if "Do not stash, commit, discard, or otherwise modify the user's working changes" not in flat_auto:
+        raise AssertionError("AUTO.md must leave the user's in-progress work alone")
+    # Ignored paths are not project state a worker needs; blocking on them would
+    # trip on build output and make the precondition unusable.
+    if "Ignored files do not block parallel execution" not in flat_auto:
+        raise AssertionError("AUTO.md must exempt ignored paths from the precondition")
+    if "--ignored" not in auto or "Do not add `--ignored`" not in flat_auto:
+        raise AssertionError("AUTO.md must warn against adding --ignored to the check")
+
+    # The Ready Gate is an execution invariant: /backlog-run never reads PLAN.md,
+    # so a gate that only lived there could not stop an unready task.
+    if "## Task Ready Gate" not in workflow:
+        raise AssertionError("WORKFLOW.md must carry the Task Ready Gate as a shared invariant")
+    execution = (TEMPLATE_ROOT / ".agent-workflow/EXECUTION.md").read_text(encoding="utf-8")
+    if "Task Ready Gate" not in execution:
+        raise AssertionError("EXECUTION.md must check the Task Ready Gate")
+    if execution.index("Task Ready Gate") > execution.index('-s "<active status>"'):
+        raise AssertionError("EXECUTION.md must check the Ready Gate before claiming the task")
+
+    # `--ready` alone still returns claimed and blocked tasks, so every documented
+    # selection query must carry the status filter that makes the loop terminate.
+    for path in [*iter_template_files(), ROOT / "README.md", ROOT.parent / "README.md"]:
+        if path.suffix != ".md" or not path.exists():
+            continue
+        for line in path.read_text(encoding="utf-8").splitlines():
+            if "task list --ready" in line and "--status" not in line:
+                raise AssertionError(
+                    f"selection query without --status in {path.name}: {line.strip()!r}"
+                )
+
     # Installation must go through a manifest, never a recursive copy of the
     # working tree: that is how untracked runtime state gets installed.
     install_md = (ROOT / "INSTALL.md").read_text(encoding="utf-8")

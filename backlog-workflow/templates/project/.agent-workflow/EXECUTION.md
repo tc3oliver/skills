@@ -1,4 +1,4 @@
-<!-- Managed by backlog-workflow 1.4.0 -->
+<!-- Managed by backlog-workflow 1.4.1 -->
 
 # Single-Task Execution
 
@@ -8,22 +8,25 @@ executed — by `/backlog-run`, and by `/backlog-auto` once it has selected a ta
 ## Without a task ID
 
 `/backlog-run` with no argument lists dependency-ready tasks
-(`backlog task list --ready --sort priority --json`) and stops. It modifies no
-task and no code.
+(`backlog task list --ready --status "<not-started status>" --sort priority --json`)
+and stops. It modifies no task and no code.
 
 ## Flow
 
 1. Load `backlog instructions overview` and `backlog instructions task-execution`.
 2. Read the task (`backlog task <TASK-ID> --json`) and the authoritative sources
-   in its `documentation`. Missing product intent is a blocker, not a guess.
-   Append any missing canonical Definition of Done item (see "Native Definition
-   of Done binding" in `.agent-workflow/WORKFLOW.md`).
+   in its `documentation`. Check it against the Task Ready Gate in
+   `.agent-workflow/WORKFLOW.md` — a task can reach the board without having been
+   planned, and an unready one is a blocker, not something to fill in while
+   implementing. Append any missing canonical Definition of Done item (see
+   "Native Definition of Done binding" there).
 3. Research the **current** codebase, tests, configuration, and history. Do not
    rely on an approach proposed when the task was created.
 4. Write the JIT Implementation Plan before coding:
    `backlog task edit <TASK-ID> --plan "..."`.
 5. Claim the task: `backlog task edit <TASK-ID> -s "<active status>"` (see
    "Status roles" in `.agent-workflow/WORKFLOW.md` for the configured names).
+   Nothing enters the active status until step 2's Ready Gate check passed.
 6. Implement the complete task.
 7. Run the applicable validation recorded in `.agent-workflow/PROJECT.md`: tests,
    lint, typecheck, build. A command recorded as `not detected` is not invented.

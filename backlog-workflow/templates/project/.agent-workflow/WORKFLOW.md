@@ -1,4 +1,4 @@
-<!-- Managed by backlog-workflow 1.4.0 -->
+<!-- Managed by backlog-workflow 1.4.1 -->
 
 # Backlog Development Workflow
 
@@ -103,6 +103,24 @@ art, related code). Both come back from `backlog task <TASK-ID> --json` as
 `documentation` and `references`.
 
 A task with an empty `documentation` is unsourced work.
+
+## Task Ready Gate
+
+Before any task enters the active status, verify it has:
+
+- an authoritative source (native `documentation`) or a recorded technical rationale
+- settled scope, including what is explicitly out of scope
+- objectively verifiable Acceptance Criteria
+- dependencies that are recorded and satisfied
+- a defined validation method
+
+A task missing any of these is not executable. Missing product intent is a
+blocker; engineering detail determinable from repository evidence is not. This
+gate is checked at execution because a task can reach the board without ever
+passing through `/backlog-plan`.
+
+How to author a task that satisfies the gate is in `.agent-workflow/PLAN.md` and
+`.agent-workflow/TASK-POLICY.md`.
 
 ## Decision policy
 

@@ -7,7 +7,7 @@ disable-model-invocation: true
 allowed-tools: Read Glob Grep Bash Edit Write Agent
 ---
 
-<!-- Managed by backlog-workflow 1.4.0 -->
+<!-- Managed by backlog-workflow 1.4.1 -->
 
 # Run Backlog Tasks Automatically
 
@@ -37,6 +37,13 @@ Otherwise follow `.agent-workflow/AUTO.md`: select with
 `backlog task list --ready --status "<not-started status>" --sort priority --json`,
 claim the batch sequentially, execute each task per `.agent-workflow/EXECUTION.md`,
 merge, and re-query before the next batch.
+
+When `max_parallel_tasks` is greater than 1, two `AUTO.md` rules are load-bearing
+and both are checked before anything is claimed: the non-`backlog` working tree must have
+no staged, modified, deleted, renamed, or untracked non-ignored files, and the
+claims must be committed before any worktree is created. Workers branch from a
+commit, so anything not committed — including a new file never `git add`ed — does
+not exist for them.
 
 Do not invoke `grilling`, ask interactive product questions, or guess missing
 product intent. When a product decision is missing, put the task in the
