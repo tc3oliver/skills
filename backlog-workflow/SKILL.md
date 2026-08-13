@@ -27,6 +27,10 @@ This package is a **policy + orchestration layer** over Backlog.md:
 - **PROJECT.md** = repository-specific configuration.
 - **PRD/spec** = product truth.
 
+`apply` installs exactly four project skills: `/backlog-plan` (requirement
+planning), `/backlog-review` (decomposition review), `/backlog-run` (single-task
+execution), and `/backlog-auto` (explicit autonomous execution).
+
 Backlog.md canonical instructions are the single source of truth for Backlog
 mechanics. This workflow does not duplicate them.
 

@@ -1,4 +1,4 @@
-<!-- Managed by backlog-workflow 1.4.1 -->
+<!-- Managed by backlog-workflow 1.5.0 -->
 
 # Backlog Development Workflow
 
@@ -90,8 +90,11 @@ Resolve conflicts in the authoritative source before implementation.
 
 ### Requirement traceability
 
-A task records its authoritative source in the Backlog.md native `documentation`
-field, so traceability is queryable instead of parsed out of Markdown:
+One rule, used identically when a task is planned, reviewed, and executed:
+**every executable task has a non-empty native `documentation` naming its
+authority — an authoritative requirement source, or a persisted decision record.**
+
+Traceability is then queryable instead of parsed out of Markdown:
 
 ```bash
 backlog task create "<title>" --doc "docs/PRD.md#feature-x"
@@ -102,13 +105,16 @@ Use `--ref` for supporting material that is not the authority (issue links, prio
 art, related code). Both come back from `backlog task <TASK-ID> --json` as
 `documentation` and `references`.
 
-A task with an empty `documentation` is unsourced work.
+Task-local engineering rationale — why this approach, which module, what the
+trade-off was — belongs in the description, Implementation Plan, or Implementation
+Notes. It explains how the task is built and never substitutes for the authority
+it is built from. A task with empty `documentation` is unsourced work.
 
 ## Task Ready Gate
 
 Before any task enters the active status, verify it has:
 
-- an authoritative source (native `documentation`) or a recorded technical rationale
+- non-empty native `documentation` (see "Requirement traceability")
 - settled scope, including what is explicitly out of scope
 - objectively verifiable Acceptance Criteria
 - dependencies that are recorded and satisfied
@@ -118,6 +124,11 @@ A task missing any of these is not executable. Missing product intent is a
 blocker; engineering detail determinable from repository evidence is not. This
 gate is checked at execution because a task can reach the board without ever
 passing through `/backlog-plan`.
+
+A task that fails the gate is not repaired while implementing it. It stays out of
+the active status and goes back to planning as a task blocker. Ambiguity that
+surfaces only after a ready task is already being executed is a different case —
+see "Approval boundary" in `.agent-workflow/EXECUTION.md`.
 
 How to author a task that satisfies the gate is in `.agent-workflow/PLAN.md` and
 `.agent-workflow/TASK-POLICY.md`.
@@ -178,9 +189,9 @@ outside the workflow, cannot bypass the gate.
 Task-specific completion requirements belong in the same native Definition of
 Done, alongside these four.
 
-## True blockers
+## Task blockers
 
-Stop or block a task only for:
+A task blocker stops the task it was found in. Block a task only for:
 
 1. Contradictory product requirements or Acceptance Criteria
 2. Missing required permission, credential, external service, or hardware
@@ -195,7 +206,7 @@ Stop or block a task only for:
 Implementation patterns, code navigation, task-scoped refactoring, test fixes,
 and reversible engineering choices are not blockers.
 
-On a true blocker, put the task in the blocked status and record why:
+On a task blocker, put the task in the blocked status and record why:
 
 ```bash
 backlog task edit <TASK-ID> -s "<blocked status>" --append-notes "Blocked: <evidence>"
@@ -205,6 +216,9 @@ The status is what carries the blocked state forward — `/backlog-auto` selects
 the not-started status, so a task parked in the blocked status is out of the next
 round by construction, with nothing to remember. Reporting `Status: Blocked`
 without writing the status leaves the task selectable.
+
+Autonomous execution additionally recognizes a *run blocker*, which stops the
+whole run rather than one task; it is defined in `.agent-workflow/AUTO.md`.
 
 ## Change discipline
 

@@ -15,7 +15,7 @@ import tempfile
 from pathlib import Path, PurePosixPath
 from typing import Iterable
 
-VERSION = "1.4.1"
+VERSION = "1.5.0"
 MANAGED_BEGIN = f"<!-- backlog-workflow:begin version={VERSION} -->"
 MANAGED_END = "<!-- backlog-workflow:end -->"
 MANAGED_BLOCK = f"""{MANAGED_BEGIN}
@@ -52,6 +52,7 @@ MANAGED_FILES = (
     Path(".agent-workflow/PLAN.md"),
     Path(".agent-workflow/EXECUTION.md"),
     Path(".agent-workflow/AUTO.md"),
+    Path(".agent-workflow/PARALLEL.md"),
     Path(".agent-workflow/TASK-POLICY.md"),
     Path(".claude/skills/backlog-plan/SKILL.md"),
     Path(".claude/skills/backlog-review/SKILL.md"),
@@ -141,7 +142,35 @@ def template_text(relative: Path) -> str:
     return read_text(TEMPLATE_ROOT / relative)
 
 
-MAX_PARALLEL_TASKS_PATTERN = re.compile(r"(?m)^([ \t]*max_parallel_tasks:[ \t]*)(\d+)[ \t]*$")
+MAX_PARALLEL_TASKS_PATTERN = re.compile(r"(?m)^([ \t]*max_parallel_tasks:[ \t]*)(.*?)[ \t]*$")
+
+
+def max_parallel_tasks_value(text: str) -> str | None:
+    """The raw `max_parallel_tasks` value in a config, or None when unset."""
+    match = MAX_PARALLEL_TASKS_PATTERN.search(text)
+    if not match:
+        return None
+    return match.group(2).split("#", 1)[0].strip()
+
+
+def invalid_max_parallel_tasks(text: str) -> str | None:
+    """Reject a `max_parallel_tasks` that is not an integer of at least 1.
+
+    The value decides whether `/backlog-auto` runs in the current worktree or
+    spawns isolated ones. `0` would select a batch and execute nothing, and a
+    non-integer has no defined meaning, so both fail closed here rather than
+    being silently rounded into behavior the project did not ask for.
+    """
+    value = max_parallel_tasks_value(text)
+    if value is None:
+        return None
+    if not re.fullmatch(r"\d+", value) or int(value) < 1:
+        return (
+            f"config.yml automatic.max_parallel_tasks must be an integer >= 1, "
+            f"got {value!r}"
+        )
+    return None
+
 
 STATUS_ROLES = ("not_started", "active", "blocked", "done")
 
@@ -161,7 +190,7 @@ BACKLOG_CONFIG_PATHS = ("backlog/config.yml", ".backlog/config.yml", "backlog.co
 # place. Confusing "not a shape I understand" with "no statuses key" is what
 # would append a second `statuses:` key and corrupt the config.
 STATUSES_KEY_PATTERN = re.compile(r"(?m)^statuses:(.*)$")
-INLINE_STATUSES_PATTERN = re.compile(r"(?m)^(statuses:[ \t]*)\[(.*)\][ \t]*$")
+INLINE_STATUSES_PATTERN = re.compile(r"(?m)^(statuses:[ \t]*)\[(.*)\]([ \t]*(?:#.*)?)$")
 BARE_STATUSES_PATTERN = re.compile(r"(?m)^statuses:[ \t]*(?:#.*)?$")
 BLOCK_ITEM_PATTERN = re.compile(r"^([ \t]+)-[ \t]*(.*?)[ \t]*$")
 COMMENT_LINE_PATTERN = re.compile(r"^[ \t]*#")
@@ -175,6 +204,28 @@ def backlog_config_path(root: Path) -> Path | None:
         if path.exists():
             return path
     return None
+
+
+BACKLOG_DIRECTORY_PATTERN = re.compile(r"(?m)^backlog_directory:[ \t]*(.+?)[ \t]*$")
+
+
+def backlog_directory(root: Path) -> str:
+    """The project-relative directory Backlog.md keeps its data in.
+
+    Backlog.md supports `backlog/`, `.backlog/`, and a custom project-relative
+    path (which it records as `backlog_directory:` in a root config), so the name
+    is read rather than assumed. Defaults to `backlog` when nothing is configured.
+    """
+    path = backlog_config_path(root)
+    if path is None:
+        return "backlog"
+    match = BACKLOG_DIRECTORY_PATTERN.search(read_text(path))
+    if match:
+        configured = unquote(match.group(1)).strip("/")
+        if configured:
+            return configured
+    parent = path.parent
+    return "backlog" if parent == root else parent.relative_to(root).as_posix()
 
 
 def unquote(value: str) -> str:
@@ -224,21 +275,43 @@ def read_backlog_statuses(text: str) -> tuple[str, list[str]]:
     return ("unsupported", [])
 
 
-def render_block_statuses(text: str, statuses: list[str]) -> str:
-    """Replace a block-style `statuses:` list, keeping its indentation."""
-    bare = BARE_STATUSES_PATTERN.search(text)
-    lines = text[bare.end() :].splitlines(keepends=True)
-    indent, consumed = "  ", 0
-    for line in lines[1:]:
-        item = BLOCK_ITEM_PATTERN.match(line.rstrip("\n"))
-        if not item and not COMMENT_LINE_PATTERN.match(line):
+def insert_block_status(text: str, status: str, before: str | None) -> str:
+    """Add one status to a block-style `statuses:` list.
+
+    Strictly an insertion: every existing line is left byte-identical, including
+    the project's own comments inside the list. Re-rendering the list from parsed
+    values would silently delete those comments, and they are project-owned
+    content this installer has no business rewriting.
+
+    The new item goes before the `before` status when that item is present, else
+    after the last item. A comment block introducing the `before` item stays
+    attached to it.
+    """
+    lines = text.splitlines(keepends=True)
+    start = next(
+        index
+        for index, line in enumerate(lines)
+        if BARE_STATUSES_PATTERN.fullmatch(line.rstrip("\n"))
+    )
+    indent = "  "
+    after_last_item = start + 1
+    target: int | None = None
+    for index in range(start + 1, len(lines)):
+        raw = lines[index].rstrip("\n")
+        if COMMENT_LINE_PATTERN.match(raw):
+            continue
+        item = BLOCK_ITEM_PATTERN.match(raw)
+        if not item:
             break
-        if item:
-            indent = item.group(1)
-        consumed += 1
-    rendered = "".join(f"{indent}- {status}\n" for status in statuses)
-    tail = "".join(lines[1 + consumed :])
-    return text[: bare.end()] + "\n" + rendered + tail
+        indent = item.group(1)
+        after_last_item = index + 1
+        if target is None and before is not None and unquote(item.group(2)) == before:
+            target = index
+
+    at = after_last_item if target is None else target
+    while target is not None and at - 1 > start and COMMENT_LINE_PATTERN.match(lines[at - 1]):
+        at -= 1
+    return "".join(lines[:at] + [f"{indent}- {status}\n"] + lines[at:])
 
 
 def backlog_statuses(root: Path) -> list[str] | None:
@@ -305,9 +378,9 @@ def ensure_blocked_status(root: Path, backlog_cli: str) -> str | None:
 
     if shape == "inline":
         rendered = ", ".join(f'"{status}"' for status in updated)
-        atomic_write(path, INLINE_STATUSES_PATTERN.sub(rf"\g<1>[{rendered}]", text, count=1))
+        atomic_write(path, INLINE_STATUSES_PATTERN.sub(rf"\g<1>[{rendered}]\g<3>", text, count=1))
     elif shape == "block":
-        atomic_write(path, render_block_statuses(text, updated))
+        atomic_write(path, insert_block_status(text, DEFAULT_BLOCKED_STATUS, done))
     else:
         rendered = ", ".join(f'"{status}"' for status in updated)
         separator = "" if not text or text.endswith("\n") else "\n"
@@ -398,9 +471,9 @@ def render_config_yml(root: Path) -> str:
     destination = root / ".agent-workflow/config.yml"
     existing = read_text(destination) if destination.exists() else ""
 
-    match = MAX_PARALLEL_TASKS_PATTERN.search(existing)
-    if match:
-        rendered = MAX_PARALLEL_TASKS_PATTERN.sub(rf"\g<1>{match.group(2)}", rendered, count=1)
+    parallel = max_parallel_tasks_value(existing)
+    if parallel and not invalid_max_parallel_tasks(existing):
+        rendered = MAX_PARALLEL_TASKS_PATTERN.sub(rf"\g<1>{parallel}", rendered, count=1)
 
     recorded = recorded_status_roles(existing)
     detected = detect_status_roles(root)
@@ -728,13 +801,21 @@ def detect_task_prefix(root: Path) -> str:
 
 
 def iter_project_files(root: Path, max_depth: int = 5) -> Iterable[Path]:
+    # Backlog.md's own directory is workflow data, not project documentation: a
+    # task or decision record there must never be listed as a requirement source.
+    # Its name is per-project, so it is read, not assumed.
+    backlog_dir = root / backlog_directory(root)
     for current, dirnames, filenames in os.walk(root):
         current_path = Path(current)
         depth = len(current_path.relative_to(root).parts)
         if depth >= max_depth:
             dirnames[:] = []
         else:
-            dirnames[:] = [name for name in dirnames if name not in EXCLUDED_DIRS]
+            dirnames[:] = [
+                name
+                for name in dirnames
+                if name not in EXCLUDED_DIRS and current_path / name != backlog_dir
+            ]
         for filename in filenames:
             yield current_path / filename
 
@@ -1056,6 +1137,14 @@ def preflight_conflicts(root: Path) -> list[str]:
         if not is_owned_managed_file(root, relative):
             conflicts.append(f"unmanaged file occupies managed path: {relative.as_posix()}")
 
+    # A project-owned value that is preserved across upgrades must be valid before
+    # anything is written, or the install would carry it forward unchecked.
+    config = root / ".agent-workflow/config.yml"
+    if config.exists():
+        invalid_parallel = invalid_max_parallel_tasks(read_text(config))
+        if invalid_parallel:
+            conflicts.append(invalid_parallel)
+
     root_claude = root / "CLAUDE.md"
     nested_claude = root / ".claude/CLAUDE.md"
     if has_managed_block(root_claude) and has_managed_block(nested_claude):
@@ -1176,11 +1265,24 @@ def status_role_drift(root: Path) -> list[str]:
                     f"config.yml `{role}` status {value!r} is not a configured "
                     f"Backlog.md status ({', '.join(statuses)})"
                 )
-    if recorded.get("blocked") and recorded.get("blocked") == recorded.get("not_started"):
-        drift.append(
-            "config.yml `blocked` and `not_started` are the same status; a blocked "
-            "task would be selected again by /backlog-auto"
+    # Every role needs its own status. Two roles on one status makes that status
+    # ambiguous in both directions: `active` == `done` cannot tell a claimed task
+    # from a finished one, and `blocked` == `not_started` puts blocked tasks back
+    # into selection.
+    sharing: dict[str, list[str]] = {}
+    for role in STATUS_ROLES:
+        if role in recorded:
+            sharing.setdefault(recorded[role], []).append(role)
+    for value, roles in sharing.items():
+        if len(roles) < 2:
+            continue
+        message = (
+            f"config.yml status roles {', '.join(roles)} all map to {value!r}; "
+            f"each workflow role needs its own status"
         )
+        if {"blocked", "not_started"} <= set(roles):
+            message += " — a blocked task would be selected again by /backlog-auto"
+        drift.append(message)
     return drift
 
 
@@ -1229,6 +1331,9 @@ def audit(root: Path, check_documentation: bool = False) -> list[str]:
         text = read_text(config)
         if not re.search(r"(?m)^default_mode:\s*manual\s*$", text):
             drift.append("default mode is not manual")
+        invalid_parallel = invalid_max_parallel_tasks(text)
+        if invalid_parallel:
+            drift.append(invalid_parallel)
 
     drift.extend(status_role_drift(root))
 

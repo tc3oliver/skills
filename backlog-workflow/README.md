@@ -80,8 +80,17 @@ tasks (different modules/files, no shared state) and you want to burn down the
 backlog faster. It's a poor fit for tightly coupled tasks likely to touch the
 same files — a merge conflict only blocks the one task involved, but you still
 pay for wasted work if batches routinely collide. Start at `2` and watch how
-often merges conflict before going higher. See "Concurrency" in
-`.agent-workflow/AUTO.md` for the exact claim/execute/merge protocol.
+often merges conflict before going higher.
+
+The protocol lives in `.agent-workflow/PARALLEL.md`, which `/backlog-auto` reads
+only when `max_parallel_tasks` is above 1. Three things it guarantees: the whole
+non-ignored working tree must be clean before a batch starts (workers branch from
+a commit, so uncommitted or untracked work is invisible to them — including your
+uncommitted Backlog.md edits, which is why nothing is excluded); claims are
+committed by staging the exact task paths reported by `backlog task <ID> --json`,
+never a whole directory; and only workers that finished `Done` are merged — a
+blocked worker's partial implementation stays on its branch while the base branch
+records the blocked status.
 
 ## Core rules it enforces
 
@@ -95,8 +104,11 @@ often merges conflict before going higher. See "Concurrency" in
   not an optional extra.
 - **Requirements and tasks are separate sources of truth.** PRDs and specs own
   product intent; Backlog.md owns decomposition, status, and evidence. A task
-  may not silently reinterpret a requirement, and it cites its authority in the
-  native `documentation` field so traceability is queryable.
+  may not silently reinterpret a requirement. One rule covers planning, review,
+  and execution alike: every executable task has a non-empty native
+  `documentation` naming an authoritative requirement source or a persisted
+  decision record. Engineering rationale in the description or notes explains how
+  a task is built; it is never the authority it is built from.
 - **Planning stops at decomposition; implementation plans are JIT.** `/backlog-plan`
   creates tasks without an Implementation Plan. `/backlog-run` researches the
   current codebase and records the plan before coding.
@@ -133,6 +145,34 @@ unverified command.
 
 See [INSTALL.md](INSTALL.md).
 
+### Upgrading from 1.4.0 or 1.4.1
+
+**If you set `max_parallel_tasks` above 1 on 1.4.0 or 1.4.1, upgrade to 1.5.0.**
+Those versions have a defect in the parallel claim protocol:
+
+- The claim checkpoint committed the claims with `git add backlog`, assuming the
+  Backlog.md directory is named `backlog/`. On a project using `.backlog/` or a
+  custom directory that command fails with `pathspec 'backlog' did not match any
+  files`, so the claims stay uncommitted and the batch merge then aborts with
+  *"Your local changes would be overwritten by merge"* — for every task in the
+  batch. 1.5.0 stages the exact path each claim wrote, read from
+  `backlog task <TASK-ID> --json` (`.task.path`).
+- The dirty-tree precondition excluded the Backlog.md directory, so a blanket
+  claim commit could sweep up Backlog.md edits the user had in progress. 1.5.0
+  requires the whole non-ignored working tree to be clean before a batch starts
+  and stages only the claimed task files.
+- A worker that ended `Blocked` had no defined merge behavior. 1.5.0 states it:
+  only workers that finished `Done` are merged, and a blocked worker's partial
+  implementation stays on its branch while the base branch records the blocked
+  status.
+
+Sequential `/backlog-auto` (the default `max_parallel_tasks: 1`) and
+`/backlog-run` are unaffected by all three.
+
+`/backlog-workflow upgrade` installs 1.5.0 in place, adds
+`.agent-workflow/PARALLEL.md`, and preserves `PROJECT.md`, the status role
+mapping, and `max_parallel_tasks`.
+
 ## Usage
 
 ```text
@@ -154,18 +194,20 @@ managed files in place and migrates the deprecated `TASK-TEMPLATE.md`.
 Managed by this workflow, replaced on `upgrade`:
 
 ```
-.agent-workflow/{VERSION,config.yml,WORKFLOW.md,PLAN.md,EXECUTION.md,AUTO.md,TASK-POLICY.md}
+.agent-workflow/{VERSION,config.yml,WORKFLOW.md,PLAN.md,EXECUTION.md,AUTO.md,PARALLEL.md,TASK-POLICY.md}
 .claude/skills/{backlog-plan,backlog-review,backlog-run,backlog-auto,grilling}/
 ```
 
 `WORKFLOW.md` holds only the invariants every mode shares — responsibility
 boundary, sources of truth, requirement traceability, decision policy, the
-Canonical Completion Gate, blockers — plus a routing table. The phase detail
+Canonical Completion Gate, task blockers — plus a routing table. The phase detail
 lives in `PLAN.md` (planning and decomposition review), `EXECUTION.md` (running
-one task), and `AUTO.md` (autonomous selection, concurrency, merge). Each skill
-reads the shared file and only the phase it is actually running, so planning
-never pays for the merge protocol and `/backlog-run` never pays for the review
-checks.
+one task), and `AUTO.md` (autonomous selection, blockers, concurrency). Each
+skill reads the shared file and only the phase it is actually running, so
+planning never pays for the merge protocol and `/backlog-run` never pays for the
+review checks. `PARALLEL.md` goes one level further: no skill names it at all,
+and `AUTO.md` points at it only when `max_parallel_tasks` is above 1 — the
+default sequential run never loads the worktree protocol.
 
 Created once, then yours to maintain:
 

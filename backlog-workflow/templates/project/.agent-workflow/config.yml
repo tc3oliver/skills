@@ -1,5 +1,5 @@
-# Managed by backlog-workflow 1.4.1
-workflow_version: 1.4.1
+# Managed by backlog-workflow 1.5.0
+workflow_version: 1.5.0
 default_mode: manual
 
 # Which Backlog.md status plays each workflow role. Every value must be one of

@@ -7,7 +7,7 @@ disable-model-invocation: true
 allowed-tools: Read Glob Grep Bash Edit Write Agent
 ---
 
-<!-- Managed by backlog-workflow 1.4.1 -->
+<!-- Managed by backlog-workflow 1.5.0 -->
 
 # Run Backlog Tasks Automatically
 
@@ -35,20 +35,15 @@ When `$task_id` is present, execute only that task and stop.
 
 Otherwise follow `.agent-workflow/AUTO.md`: select with
 `backlog task list --ready --status "<not-started status>" --sort priority --json`,
-claim the batch sequentially, execute each task per `.agent-workflow/EXECUTION.md`,
-merge, and re-query before the next batch.
-
-When `max_parallel_tasks` is greater than 1, two `AUTO.md` rules are load-bearing
-and both are checked before anything is claimed: the non-`backlog` working tree must have
-no staged, modified, deleted, renamed, or untracked non-ignored files, and the
-claims must be committed before any worktree is created. Workers branch from a
-commit, so anything not committed — including a new file never `git add`ed — does
-not exist for them.
+execute each selected task per `.agent-workflow/EXECUTION.md`, and re-query before
+selecting again. `AUTO.md` routes to the concurrency protocol when
+`max_parallel_tasks` is greater than 1.
 
 Do not invoke `grilling`, ask interactive product questions, or guess missing
 product intent. When a product decision is missing, put the task in the
 configured blocked status with its evidence — that status, not memory, is what
-keeps it out of the next selection round.
+keeps it out of the next selection round — and continue with the other executable
+tasks. Stop the whole run only for a run blocker, as `AUTO.md` defines it.
 
 Report each completed or blocked task using exactly this structure — one block
 per task, in the order they were selected. Field labels may be localized to the

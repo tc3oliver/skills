@@ -353,6 +353,7 @@ A project using `backlog-workflow` receives:
 ├── PLAN.md            /backlog-plan, /backlog-review
 ├── EXECUTION.md       /backlog-run
 ├── AUTO.md            /backlog-auto
+├── PARALLEL.md        only when max_parallel_tasks > 1
 ├── TASK-POLICY.md
 └── PROJECT.md
 
@@ -367,7 +368,9 @@ A project using `backlog-workflow` receives:
 
 Each skill reads `WORKFLOW.md` plus only the phase file it actually runs, so
 planning never loads the merge protocol and execution never loads the review
-checks.
+checks. `PARALLEL.md` is not named by any skill: `AUTO.md` points at it only when
+`max_parallel_tasks` is above 1, so the default sequential run never loads the
+worktree, claim, and merge protocol either.
 
 Small managed entry points are also added to:
 

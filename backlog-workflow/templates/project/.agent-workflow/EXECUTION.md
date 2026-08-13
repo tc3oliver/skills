@@ -1,4 +1,4 @@
-<!-- Managed by backlog-workflow 1.4.1 -->
+<!-- Managed by backlog-workflow 1.5.0 -->
 
 # Single-Task Execution
 
@@ -53,11 +53,21 @@ JIT planning, implementation, and validation. Record the Implementation Plan
 before coding, but do not pause only to ask for another implementation-plan
 approval.
 
-Stop only for a true blocker (see `.agent-workflow/WORKFLOW.md`). This does not
-weaken the safeguards: in manual mode `grilling` is still invoked for unresolved
-product decisions and irreversible choices, and the outcome is recorded per
-"Decision policy" before work continues.
+Stop only for a task blocker (see `.agent-workflow/WORKFLOW.md`). Two situations
+are easy to confuse, and they are handled differently:
+
+- **The task was never ready.** Step 2's Ready Gate check failed. It is not
+  repaired while implementing it and no requirement is invented for it: leave it
+  out of the active status, record exactly what it is missing, and send it back to
+  planning as a task blocker.
+- **New ambiguity appeared after execution legitimately started.** A ready task
+  can still turn out to hide an undecided product question. Under `/backlog-run`,
+  invoke `grilling`, persist the outcome per "Decision policy", point the task's
+  `documentation` at the resulting decision record when that decision is now its
+  authority, and continue. Requirement alignment still belongs to planning; this
+  covers what only became visible here. Under `/backlog-auto` there is no
+  grilling — record the task blocker instead (`.agent-workflow/AUTO.md`).
 
 Stopping on a blocker means step 5's claim is undone: set the task to the blocked
-status and record the evidence, as "True blockers" defines, before reporting
+status and record the evidence, as "Task blockers" defines, before reporting
 `Status: Blocked`. A task left in the active status reads as work in flight.

@@ -112,6 +112,7 @@ def main() -> int:
         TEMPLATE_ROOT / ".agent-workflow/PLAN.md",
         TEMPLATE_ROOT / ".agent-workflow/EXECUTION.md",
         TEMPLATE_ROOT / ".agent-workflow/AUTO.md",
+        TEMPLATE_ROOT / ".agent-workflow/PARALLEL.md",
         TEMPLATE_ROOT / ".agent-workflow/config.yml",
         TEMPLATE_ROOT / ".agent-workflow/TASK-POLICY.md",
         TEMPLATE_ROOT / ".claude/skills/backlog-plan/SKILL.md",
@@ -160,10 +161,14 @@ def main() -> int:
     # Progressive disclosure: each mode reference is loaded only by the skills
     # whose phase needs it. A skill pointing at another phase's reference would
     # put that phase's context back into every run.
+    # PARALLEL.md is reached only through AUTO.md's conditional pointer, so no
+    # skill names it: a sequential `/backlog-auto` run (the default) must not pay
+    # for the worktree protocol.
     phase_references = {
         "PLAN.md": {"backlog-plan", "backlog-review"},
         "EXECUTION.md": {"backlog-run", "backlog-auto"},
         "AUTO.md": {"backlog-auto"},
+        "PARALLEL.md": set(),
     }
     for skill_name in ("backlog-plan", "backlog-review", "backlog-run", "backlog-auto"):
         text = (TEMPLATE_ROOT / f".claude/skills/{skill_name}/SKILL.md").read_text(encoding="utf-8")
@@ -196,44 +201,88 @@ def main() -> int:
     if len(set(roles.values())) != 4:
         raise AssertionError(f"status roles must be distinct statuses: {roles}")
     auto = (TEMPLATE_ROOT / ".agent-workflow/AUTO.md").read_text(encoding="utf-8")
+    parallel = (TEMPLATE_ROOT / ".agent-workflow/PARALLEL.md").read_text(encoding="utf-8")
+    flat_auto = re.sub(r"\s+", " ", auto)
+    flat_parallel = re.sub(r"\s+", " ", parallel)
     if "not-started status" not in auto:
         raise AssertionError("AUTO.md selection must filter on the not-started status")
     if "blocked" not in workflow.lower() or "<blocked status>" not in workflow:
-        raise AssertionError("WORKFLOW.md must define how a true blocker is written to a status")
+        raise AssertionError("WORKFLOW.md must define how a task blocker is written to a status")
 
-    # Backlog.md `autoCommit` defaults to off, so an uncommitted claim sits on the
-    # same task files the workers change and aborts the whole batch merge. The
-    # commit must come before any worktree exists.
-    checkpoint = "Commit the claims before creating any worktree"
-    if checkpoint not in auto:
-        raise AssertionError(f"AUTO.md must instruct: {checkpoint!r}")
-    if auto.index(checkpoint) > auto.index("git worktree add"):
-        raise AssertionError("AUTO.md must commit the batch claims before creating worktrees")
-    if "git add backlog && git commit" not in auto:
-        raise AssertionError("AUTO.md must show the claim commit, not just describe it")
-    if "autoCommit" not in auto:
-        raise AssertionError("AUTO.md must explain the autoCommit default the checkpoint exists for")
+    # One task stopping and the whole run stopping are different outcomes; the
+    # earlier "true blocker" wording conflated them.
+    if "## Task blockers" not in workflow:
+        raise AssertionError("WORKFLOW.md must define task blockers")
+    for heading in ("### Task blocker", "### Run blocker"):
+        if heading not in auto:
+            raise AssertionError(f"AUTO.md must distinguish {heading[4:]!r} from the other")
+    for path in iter_template_files():
+        if path.suffix == ".md" and "true blocker" in path.read_text(encoding="utf-8").lower():
+            raise AssertionError(
+                f"stale 'true blocker' wording in {path.relative_to(TEMPLATE_ROOT)} — "
+                f"use task blocker or run blocker"
+            )
 
-    # Workers branch from a commit, so uncommitted source work in the base tree is
-    # invisible to them — silently, when the changed files do not overlap. A
-    # parallel batch must refuse to start against a dirty tracked source tree.
-    flat_auto = re.sub(r"\s+", " ", auto)
-    precondition = "no staged, modified, deleted, renamed, or untracked non-ignored files"
-    if precondition not in flat_auto:
-        raise AssertionError(f"AUTO.md must state the parallel precondition: {precondition!r}")
-    check = "git status --porcelain --untracked-files=normal -- . ':(exclude)backlog'"
-    if check not in auto:
-        raise AssertionError(f"AUTO.md must show the precondition check verbatim: {check!r}")
-    if flat_auto.index(precondition) > flat_auto.index('backlog task edit <TASK-ID> -s "<active'):
-        raise AssertionError("AUTO.md must check the clean-source precondition before claiming")
-    if "Do not stash, commit, discard, or otherwise modify the user's working changes" not in flat_auto:
-        raise AssertionError("AUTO.md must leave the user's in-progress work alone")
+    # Progressive disclosure: the parallel protocol is reached only through a
+    # conditional pointer, and its mechanics must not leak back into AUTO.md.
+    pointer = "Read `.agent-workflow/PARALLEL.md` before claiming anything"
+    if pointer not in flat_auto:
+        raise AssertionError(f"AUTO.md must point at the parallel reference: {pointer!r}")
+    if "max_parallel_tasks" not in auto or "Greater than 1" not in auto:
+        raise AssertionError("AUTO.md must gate the pointer on max_parallel_tasks > 1")
+    for mechanic in ("git worktree add", "git merge", "git add --"):
+        if mechanic in auto:
+            raise AssertionError(f"parallel mechanic {mechanic!r} belongs in PARALLEL.md, not AUTO.md")
+
+    # Workers branch from a commit, so anything uncommitted in the base tree is
+    # invisible to them — silently, when the changed paths do not overlap. The
+    # whole non-ignored tree is checked: Backlog.md's directory holds the user's
+    # work in progress too, and the claim commit must not sweep it up.
+    precondition = (
+        "the non-ignored working tree must have no staged, modified, deleted, "
+        "renamed, or untracked files"
+    )
+    if precondition not in flat_parallel:
+        raise AssertionError(f"PARALLEL.md must state the precondition: {precondition!r}")
+    check = "git status --porcelain --untracked-files=normal"
+    if check not in parallel:
+        raise AssertionError(f"PARALLEL.md must show the precondition check verbatim: {check!r}")
+    if ":(exclude)" in parallel or "-- ." in parallel:
+        raise AssertionError("PARALLEL.md must not exclude any path from the clean-tree check")
+    if flat_parallel.index(check) > flat_parallel.index('backlog task edit <TASK-ID> -s "<active'):
+        raise AssertionError("PARALLEL.md must check the clean tree before claiming")
+    if "Do not stash, commit, discard, or otherwise modify the user's working changes" not in flat_parallel:
+        raise AssertionError("PARALLEL.md must leave the user's in-progress work alone")
     # Ignored paths are not project state a worker needs; blocking on them would
     # trip on build output and make the precondition unusable.
-    if "Ignored files do not block parallel execution" not in flat_auto:
-        raise AssertionError("AUTO.md must exempt ignored paths from the precondition")
-    if "--ignored" not in auto or "Do not add `--ignored`" not in flat_auto:
-        raise AssertionError("AUTO.md must warn against adding --ignored to the check")
+    if "Ignored files do not block" not in flat_parallel:
+        raise AssertionError("PARALLEL.md must exempt ignored paths from the precondition")
+    if "Do not add `--ignored`" not in flat_parallel:
+        raise AssertionError("PARALLEL.md must warn against adding --ignored to the check")
+
+    # The Backlog.md directory is per-project (`backlog/`, `.backlog/`, custom), so
+    # the claim commit stages the exact task paths the CLI reports — never a
+    # directory, which would also commit the user's unrelated Backlog.md edits.
+    if "backlog task <TASK-ID> --json" not in parallel or ".task.path" not in parallel:
+        raise AssertionError("PARALLEL.md must read each claimed task's path from the CLI JSON")
+    if 'git add -- "' not in parallel:
+        raise AssertionError("PARALLEL.md must stage the exact task paths")
+    for blanket in ("git add backlog", "git add .backlog", "git add -A"):
+        if blanket in parallel:
+            raise AssertionError(f"PARALLEL.md must not stage a whole directory: {blanket!r}")
+    if flat_parallel.index('git add -- "') > flat_parallel.index("git worktree add"):
+        raise AssertionError("PARALLEL.md must commit the batch claims before creating worktrees")
+    if "autoCommit" not in parallel:
+        raise AssertionError("PARALLEL.md must explain the autoCommit default the checkpoint exists for")
+
+    # A blocked worker's branch carries a partial implementation and no completion
+    # evidence; merging it would put unvalidated code on the base branch.
+    if "## Worker contract" not in parallel:
+        raise AssertionError("PARALLEL.md must define the worker outcome contract")
+    if "Its branch is **not** merged" not in parallel:
+        raise AssertionError("PARALLEL.md must refuse to merge a blocked worker's branch")
+    if "Merge only the branches of workers that finished `Done`" not in parallel:
+        raise AssertionError("PARALLEL.md must merge only workers that finished Done")
 
     # The Ready Gate is an execution invariant: /backlog-run never reads PLAN.md,
     # so a gate that only lived there could not stop an unready task.
@@ -286,6 +335,34 @@ def main() -> int:
         raise AssertionError(
             "install.py must prefer the recorded CLI and initialize via the verified command"
         )
+    if "invalid_max_parallel_tasks" not in install_py:
+        raise AssertionError("install.py must validate automatic.max_parallel_tasks")
+    if "insert_block_status" not in install_py:
+        raise AssertionError(
+            "install.py must insert into a block-style statuses list rather than "
+            "re-rendering it, which would drop project-owned comments"
+        )
+    if "backlog_directory" not in install_py:
+        raise AssertionError("install.py must read the Backlog.md directory rather than assume it")
+
+    # The shipped default must satisfy the rule the installer enforces.
+    if not re.search(r"(?m)^  max_parallel_tasks: [1-9]\d*$", config):
+        raise AssertionError("config.yml max_parallel_tasks must default to an integer >= 1")
+
+    # One traceability rule, worded once: an authority in native `documentation`.
+    # "or a recorded technical rationale" was the second, weaker rule that let a
+    # task justify itself.
+    rule = "non-empty native `documentation`"
+    if rule not in workflow:
+        raise AssertionError(f"WORKFLOW.md must state the traceability rule: {rule!r}")
+    for path in iter_template_files():
+        if path.suffix != ".md":
+            continue
+        if "recorded technical rationale" in path.read_text(encoding="utf-8"):
+            raise AssertionError(
+                f"second traceability rule in {path.relative_to(TEMPLATE_ROOT)} — "
+                f"documentation is the only authority"
+            )
 
     print("Package validation passed")
     return 0

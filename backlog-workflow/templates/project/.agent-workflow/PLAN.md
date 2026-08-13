@@ -1,4 +1,4 @@
-<!-- Managed by backlog-workflow 1.4.1 -->
+<!-- Managed by backlog-workflow 1.5.0 -->
 
 # Planning and Decomposition Review
 
@@ -12,7 +12,8 @@ before anything executes it. A task created here should clear it on creation.
 Backlog.md native fields carry what Backlog.md owns; `.agent-workflow/TASK-POLICY.md`
 defines what goes in the description.
 
-- Authoritative source (native `documentation`) or recorded technical rationale
+- Non-empty native `documentation` naming an authoritative requirement source or
+  a persisted decision record (see "Requirement traceability")
 - Goal, scope, and explicit out-of-scope
 - Stable implementation constraints
 - Dependencies (native `dependencies`)
@@ -88,9 +89,11 @@ Run four checks:
    whether the mapped criteria, all passing, would actually demonstrate it.
    Criteria that are vague, unverifiable, or that cover only part of the
    requirement are a gap even though a task exists.
-3. **Scope traceability** — every task's native `documentation` must cite an
-   authoritative source or a decision record. A task citing neither is unsourced
-   work, not a covered requirement.
+3. **Scope traceability** — the same rule execution enforces at the Ready Gate:
+   every task's native `documentation` is non-empty and names an authoritative
+   requirement source or a persisted decision record. A task whose only
+   justification is its own description or notes is unsourced work, not a covered
+   requirement.
 4. **Dependency integrity** — dependency cycles, dependencies on missing or
    archived tasks, and tasks that no valid order can reach are gaps in the plan
    itself.
