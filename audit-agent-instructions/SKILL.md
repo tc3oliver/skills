@@ -1,6 +1,6 @@
 ---
-name: audit-claude-md
-description: 逐條審查並重構 AGENTS.md、CLAUDE.md、agent-facing skills 與 path-scoped rules；名稱為相容性保留。
+name: audit-agent-instructions
+description: 逐條審查並重構 repository 的 agent instruction 檔案——AGENTS.md、CLAUDE.md、nested 與 path-scoped rules、agent-facing skills。當使用者要求 audit、精簡、整理或重構 AGENTS.md、CLAUDE.md、agent 指令或專案規則時使用。舊名 audit-claude-md。
 ---
 
 # 目標
@@ -8,6 +8,9 @@ description: 逐條審查並重構 AGENTS.md、CLAUDE.md、agent-facing skills �
 審查 skill invocation 指定的範圍；未指定時審查整個 repository。
 
 逐條檢視所有 agent-facing 專案指令，直接完成必要的刪除、精簡、改寫及搬移。
+
+`AGENTS.md` 與 `CLAUDE.md` 同為第一級目標，不因本 skill 的舊名而偏重任一方。
+repository 只有其中一種時，就審查存在的那一種。
 
 只修改下列內容，不修改產品程式碼：
 

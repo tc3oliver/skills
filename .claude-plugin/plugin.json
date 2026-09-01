@@ -13,7 +13,7 @@
     "backlog",
     "workflow",
     "task-management",
-    "claude-md",
+    "agent-instructions",
     "audit",
     "debugging",
     "skill-authoring",
@@ -23,7 +23,7 @@
   ],
   "skills": [
     "./backlog-workflow",
-    "./audit-claude-md",
+    "./audit-agent-instructions",
     "./diagnosing-bugs",
     "./writing-for-agents",
     "./skill-optimizer",

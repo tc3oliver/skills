@@ -24,7 +24,7 @@ CLAUDE_ADAPTERS = [
 REPOSITORY_SKILLS = [
     ROOT.parent / name / "SKILL.md"
     for name in (
-        "backlog-workflow", "audit-claude-md", "diagnosing-bugs",
+        "backlog-workflow", "audit-agent-instructions", "diagnosing-bugs",
         "writing-for-agents", "skill-optimizer", "resolving-merge-conflicts",
     )
 ]
@@ -89,6 +89,17 @@ def main() -> int:
     plugin = json.loads((ROOT.parent / ".claude-plugin/plugin.json").read_text(encoding="utf-8"))
     if plugin.get("version") != VERSION:
         raise AssertionError("Claude plugin version must match backlog-workflow VERSION")
+
+    # A renamed skill directory that plugin.json still points at installs nothing,
+    # and the manifest is the only place that breakage would show up.
+    declared = plugin.get("skills")
+    if not isinstance(declared, list) or not declared:
+        raise AssertionError("plugin.json must declare a non-empty skills list")
+    for entry in declared:
+        if not isinstance(entry, str) or not (ROOT.parent / entry / "SKILL.md").is_file():
+            raise AssertionError(f"plugin.json skill path has no SKILL.md: {entry!r}")
+    if {Path(entry).name for entry in declared} != {path.parent.name for path in REPOSITORY_SKILLS}:
+        raise AssertionError("plugin.json skills and REPOSITORY_SKILLS disagree")
 
     seen: set[str] = set()
     for path in PORTABLE_SKILLS:

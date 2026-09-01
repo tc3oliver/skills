@@ -12,7 +12,7 @@ The goal is to make coding agents more predictable: clarify requirements before 
 | Skill                                                     | Description                                                                                                                                                    |
 | --------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | [`backlog-workflow`](backlog-workflow/)                   | My task-driven development workflow built on Backlog.md. Supports requirement planning, decomposition review, single-task execution, autonomous execution, validation, and delivery. |
-| [`audit-claude-md`](audit-claude-md/)                     | Audits `AGENTS.md`, `CLAUDE.md`, agent-facing skills, and related rules; the name is retained for backward compatibility.                                      |
+| [`audit-agent-instructions`](audit-agent-instructions/)   | Audits `AGENTS.md`, `CLAUDE.md`, agent-facing skills, and path-scoped rules. Previously named `audit-claude-md`.                                               |
 | [`diagnosing-bugs`](diagnosing-bugs/)                     | A structured debugging workflow based on reproduction, falsifiable hypotheses, evidence, and regression tests.                                                 |
 | [`writing-for-agents`](writing-for-agents/)               | Guidelines for writing effective `SKILL.md`, `CLAUDE.md`, `AGENTS.md`, and other agent-facing documentation.                                                   |
 | [`skill-optimizer`](skill-optimizer/)                     | Reviews and refactors an existing Skill for routing accuracy, context efficiency, execution reliability, and maintainability.                                  |
@@ -44,7 +44,7 @@ Plugin skills use the namespace:
 
 ```text
 /tc3oliver-skills:backlog-workflow
-/tc3oliver-skills:audit-claude-md
+/tc3oliver-skills:audit-agent-instructions
 /tc3oliver-skills:diagnosing-bugs
 /tc3oliver-skills:writing-for-agents
 /tc3oliver-skills:skill-optimizer
@@ -459,11 +459,10 @@ See [`backlog-workflow/README.md`](backlog-workflow/) for implementation, instal
 
 ## Other Skills
 
-### audit-claude-md
+### audit-agent-instructions
 
-Reviews `AGENTS.md`, `CLAUDE.md`, scoped rules, and agent-facing skills while
-retaining its historical name for compatibility. It gives each rule a concrete
-disposition:
+Reviews `AGENTS.md`, `CLAUDE.md`, scoped rules, and agent-facing skills.
+Previously named `audit-claude-md`. It gives each rule a concrete disposition:
 
 ```text
 keep
@@ -473,7 +472,7 @@ extract into a skill
 delete
 ```
 
-The goal is to prevent `CLAUDE.md` from becoming a permanent collection of stale project knowledge.
+The goal is to prevent `AGENTS.md` and `CLAUDE.md` from becoming a permanent collection of stale project knowledge.
 
 ### diagnosing-bugs
 

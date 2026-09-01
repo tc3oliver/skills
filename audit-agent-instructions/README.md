@@ -1,7 +1,8 @@
-# audit-claude-md
+# audit-agent-instructions
 
-An agent-instruction audit skill that retains its historical
-`audit-claude-md` name for backward compatibility.
+An audit skill for a repository's agent instruction files. Previously named
+`audit-claude-md`; renamed because it treats `AGENTS.md` and `CLAUDE.md` as
+equal first-class targets.
 
 `AGENTS.md`, `CLAUDE.md`, and scoped rules rot. They accumulate directory trees that went stale, progress
 notes from three months ago, rules that only apply to one subdirectory, and
@@ -32,8 +33,8 @@ cannot be verified from the repository is kept and listed for human review.
 ## Usage
 
 ```text
-/audit-claude-md                 # audit the whole repository
-/audit-claude-md packages/web    # audit a subtree
+/audit-agent-instructions                 # audit the whole repository
+/audit-agent-instructions packages/web    # audit a subtree
 ```
 
 Invoke the skill deliberately because it edits agent-facing files.
