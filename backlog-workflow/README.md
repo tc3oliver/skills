@@ -1,7 +1,9 @@
 # backlog-workflow
 
-A Claude Code skill that installs a versioned, task-driven development workflow
-as a **policy and orchestration layer** over [Backlog.md](https://backlog.md).
+An agent-neutral skill that installs a versioned, task-driven development
+workflow as a **policy and orchestration layer** over
+[Backlog.md](https://backlog.md). It supports Claude Code, Codex, and OpenCode
+through a portable core plus compatibility adapters.
 
 ## Architecture
 
@@ -27,7 +29,8 @@ stopped to ask. This workflow puts those boundaries in files the agent must read
 
 ## What you get
 
-`/backlog-workflow apply` installs four project skills and a workflow spec:
+Invoking `backlog-workflow` with `apply` installs four canonical project skills
+and a workflow spec. Claude Code also exposes slash-command adapters:
 
 | Command | What it does |
 |---|---|
@@ -37,7 +40,7 @@ stopped to ask. This workflow puts those boundaries in files the agent must read
 | `/backlog-auto [TASK-ID]` | Automatic execution. Selects dependency-ready tasks deterministically. Only runs when you explicitly ask for it. |
 
 The default mode is manual. "Continue development" does not start automatic
-execution — only an explicit `/backlog-auto` does.
+execution — only an explicit invocation of the `backlog-auto` skill does.
 
 ### Reviewing the decomposition
 
@@ -130,7 +133,7 @@ records the blocked status.
 
 ## Requirements
 
-- Claude Code, for the slash commands
+- A coding agent that can load repository instructions and Agent Skills
 - Node.js with `npx`, for the Backlog.md CLI
 - Python 3.9+, for the installer (no third-party packages).
   Verified on 3.11 and 3.12; 3.9 and 3.10 are supported by syntax but untested.
@@ -172,7 +175,7 @@ Those versions have a defect in the parallel claim protocol:
 Sequential `/backlog-auto` (the default `max_parallel_tasks: 1`) and
 `/backlog-run` are unaffected by all three.
 
-`/backlog-workflow upgrade` installs 1.5.0 in place, adds
+`/backlog-workflow upgrade` installs the current workflow in place, adds
 `.agent-workflow/PARALLEL.md`, and preserves `PROJECT.md`, the status role
 mapping, and `max_parallel_tasks`.
 
@@ -194,10 +197,16 @@ managed files in place and migrates the deprecated `TASK-TEMPLATE.md`.
 
 ## What it writes into your project
 
-Managed by this workflow, replaced on `upgrade`:
+Managed portable core, replaced on `upgrade`:
 
 ```
 .agent-workflow/{VERSION,config.yml,WORKFLOW.md,PLAN.md,EXECUTION.md,AUTO.md,PARALLEL.md,TASK-POLICY.md}
+.agents/skills/{backlog-plan,backlog-review,backlog-run,backlog-auto,grilling}/
+```
+
+Managed Claude Code compatibility adapters, also replaced on `upgrade`:
+
+```
 .claude/skills/{backlog-plan,backlog-review,backlog-run,backlog-auto,grilling}/
 ```
 
@@ -218,10 +227,10 @@ Created once, then yours to maintain:
 .agent-workflow/PROJECT.md       # detected commands, paths, and constraints
 ```
 
-A single managed block is inserted into `CLAUDE.md` (or `.claude/CLAUDE.md` when
-only that one exists) **and** into `AGENTS.md`. `AGENTS.md` is created when
-absent so cross-agent tools discover the workflow. Everything outside the block
-is preserved.
+A canonical managed entry block is inserted into `AGENTS.md`. A separate thin
+compatibility block is inserted into `CLAUDE.md` (or `.claude/CLAUDE.md` when
+only that one exists). Both files are created when absent and everything
+outside each block is preserved.
 
 If a Backlog.md workspace does not exist yet, `apply` creates one
 non-interactively before installing anything.
@@ -240,14 +249,16 @@ other key are left alone, and a project that already has one (`On Hold`,
 status, so this is what stops a blocked task from being picked up again on the
 next round — the guarantee is the status, not the agent remembering.
 
-## Other coding agents
+## Agent compatibility
 
-The slash commands are Claude Code specific; the process is not.
-Everything under `.agent-workflow/` is plain Markdown, and tasks are driven
-through the Backlog.md CLI. Any agent that can read `WORKFLOW.md`, follow its
-routing table to the phase it needs, and run a shell command can follow the same
-workflow. `AGENTS.md` is always
-managed so agents that read it pick up the workflow automatically.
+The portable source of truth is `.agents/skills`, `.agent-workflow`, and
+`AGENTS.md`. `.agents/skills` is the native project skills directory for Codex
+and OpenCode, so those agents discover the installed skills directly; the
+`AGENTS.md` managed block additionally names each skill and when to use it, so
+a plain request routes correctly even without skill discovery. Claude Code
+receives generated `.claude/skills` pointers and a thin `CLAUDE.md` adapter,
+preserving the existing slash-command experience without creating a second
+workflow definition.
 
 ## Development
 

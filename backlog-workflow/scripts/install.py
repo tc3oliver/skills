@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Deterministic installer and auditor for the backlog-workflow Claude skill."""
+"""Deterministic installer and auditor for the portable backlog workflow."""
 
 from __future__ import annotations
 
@@ -15,29 +15,43 @@ import tempfile
 from pathlib import Path, PurePosixPath
 from typing import Iterable
 
-VERSION = "1.5.1"
+VERSION = "1.6.0"
 MANAGED_BEGIN = f"<!-- backlog-workflow:begin version={VERSION} -->"
 MANAGED_END = "<!-- backlog-workflow:end -->"
-MANAGED_BLOCK = f"""{MANAGED_BEGIN}
-## Backlog Task Execution
+AGENTS_MANAGED_BLOCK = f"""{MANAGED_BEGIN}
+## Agent Workflow
 
-- Default workflow mode is manual.
-- Planning: align requirements and decompose into Backlog.md tasks without
-  implementation. In Claude Code use `/backlog-plan`.
-- Review the decomposition against its requirement source before executing:
-  `/backlog-review [requirement source or scope]`. It is read-only and asks
-  before changing any task.
-- Execute one task: `/backlog-run <TASK-ID>`; automatic: `/backlog-auto [TASK-ID]`.
-- Read `.agent-workflow/WORKFLOW.md` for the shared development policy; it routes
-  to the one reference for the stage you are in (`PLAN.md`, `EXECUTION.md`, or
-  `AUTO.md`). `.agent-workflow/PROJECT.md` holds repository configuration.
-- Backlog.md canonical instructions (`backlog instructions ...`) define how
-  Backlog.md is operated; do not duplicate their mechanics. Prefer the Backlog.md
-  CLI (`backlog task ...`) for task mutation; do not parse/rewrite
-  `backlog/tasks/*.md` for normal task operations.
-- Product requirements in the files listed in `.agent-workflow/PROJECT.md` remain
-  authoritative. Do not expose internal autonomous-development mechanics in
-  public README or product documentation.
+This repository uses the task-driven workflow under `.agent-workflow/`.
+
+Authoritative sources:
+
+- Product requirements: repository PRD and specifications
+- Development workflow: `.agent-workflow/WORKFLOW.md`
+- Repository execution configuration: `.agent-workflow/PROJECT.md`
+- Task state and evidence: Backlog.md
+
+Reusable workflows are defined under `.agents/skills/`. Read the relevant skill
+file before executing that workflow:
+
+- `.agents/skills/backlog-plan/SKILL.md` — decompose a requirement into
+  dependency-aware tasks; does not implement product code
+- `.agents/skills/backlog-review/SKILL.md` — check whether the decomposition
+  would satisfy its requirement source; read-only until a fix is approved
+- `.agents/skills/backlog-run/SKILL.md` — execute one explicitly named task
+- `.agents/skills/backlog-auto/SKILL.md` — execute dependency-ready tasks
+  automatically until exhausted or blocked
+- `.agents/skills/grilling/SKILL.md` — resolve open product decisions by
+  interviewing the user one question at a time
+
+Do not reinterpret product requirements or invent missing product decisions.
+{MANAGED_END}"""
+
+CLAUDE_MANAGED_BLOCK = f"""{MANAGED_BEGIN}
+## Claude Code Workflow Adapter
+
+Read `AGENTS.md` and follow the repository workflow it references. Claude Code
+skill entry points are generated under `.claude/skills/`; their authoritative
+portable definitions are under `.agents/skills/`.
 {MANAGED_END}"""
 
 REQUIREMENT_LIST_LIMIT = 30
@@ -54,6 +68,12 @@ MANAGED_FILES = (
     Path(".agent-workflow/AUTO.md"),
     Path(".agent-workflow/PARALLEL.md"),
     Path(".agent-workflow/TASK-POLICY.md"),
+    Path(".agents/skills/backlog-plan/SKILL.md"),
+    Path(".agents/skills/backlog-review/SKILL.md"),
+    Path(".agents/skills/backlog-run/SKILL.md"),
+    Path(".agents/skills/backlog-auto/SKILL.md"),
+    Path(".agents/skills/grilling/SKILL.md"),
+    Path(".agents/skills/grilling/LICENSE"),
     Path(".claude/skills/backlog-plan/SKILL.md"),
     Path(".claude/skills/backlog-review/SKILL.md"),
     Path(".claude/skills/backlog-run/SKILL.md"),
@@ -61,6 +81,8 @@ MANAGED_FILES = (
     Path(".claude/skills/grilling/SKILL.md"),
     Path(".claude/skills/grilling/LICENSE"),
 )
+
+PORTABLE_SKILLS = ("backlog-plan", "backlog-review", "backlog-run", "backlog-auto", "grilling")
 
 # Exact SHA-256 of the managed `.agent-workflow/TASK-TEMPLATE.md` shipped by
 # backlog-workflow 1.0.x. Used only to prove an existing file is our deprecated
@@ -504,11 +526,20 @@ def is_owned_managed_file(root: Path, relative: Path) -> bool:
     text = read_text(path)
     if relative == Path(".agent-workflow/VERSION"):
         return workflow_managed(root) or text.strip() == VERSION
-    if relative == Path(".claude/skills/grilling/LICENSE"):
-        sibling = root / ".claude/skills/grilling/SKILL.md"
-        return sibling.exists() and "Bundled by backlog-workflow" in read_text(sibling)
+    if relative in (
+        Path(".claude/skills/grilling/LICENSE"),
+        Path(".agents/skills/grilling/LICENSE"),
+    ):
+        sibling = path.with_name("SKILL.md")
+        return sibling.exists() and (
+            "Managed by backlog-workflow" in read_text(sibling)
+            or "Bundled by backlog-workflow" in read_text(sibling)
+        )
     if relative == Path(".claude/skills/grilling/SKILL.md"):
-        return "Bundled by backlog-workflow" in text
+        return (
+            "Managed by backlog-workflow" in text
+            or "Bundled by backlog-workflow" in text
+        )
     return "Managed by backlog-workflow" in text
 
 
@@ -539,7 +570,11 @@ def entry_files(root: Path) -> list[Path]:
     return [choose_claude_file(root), root / "AGENTS.md"]
 
 
-def inspect_managed_block(path: Path) -> tuple[str, str | None]:
+def expected_entry_block(root: Path, path: Path) -> str:
+    return AGENTS_MANAGED_BLOCK if path == root / "AGENTS.md" else CLAUDE_MANAGED_BLOCK
+
+
+def inspect_managed_block(path: Path, expected: str) -> tuple[str, str | None]:
     if not path.exists():
         return "missing-file", None
     text = read_text(path)
@@ -550,21 +585,21 @@ def inspect_managed_block(path: Path) -> tuple[str, str | None]:
     if len(begins) != 1 or len(ends) != 1 or begins[0].start() > ends[0].start():
         return "malformed-block", text
     block = text[begins[0].start() : ends[0].end()]
-    return ("clean" if block == MANAGED_BLOCK else "drift"), text
+    return ("clean" if block == expected else "drift"), text
 
 
-def render_entry_file(path: Path) -> str:
+def render_entry_file(path: Path, managed_block: str) -> str:
     if not path.exists():
-        return MANAGED_BLOCK + "\n"
+        return managed_block + "\n"
     text = read_text(path)
     begins = list(re.finditer(r"<!-- backlog-workflow:begin version=[^>]+ -->", text))
     ends = list(re.finditer(re.escape(MANAGED_END), text))
     if not begins and not ends:
         separator = "" if not text or text.endswith("\n\n") else ("\n" if text.endswith("\n") else "\n\n")
-        return text + separator + MANAGED_BLOCK + "\n"
+        return text + separator + managed_block + "\n"
     if len(begins) != 1 or len(ends) != 1 or begins[0].start() > ends[0].start():
         raise InstallError(f"Malformed or duplicate backlog-workflow block in {path}")
-    return text[: begins[0].start()] + MANAGED_BLOCK + text[ends[0].end() :]
+    return text[: begins[0].start()] + managed_block + text[ends[0].end() :]
 
 
 def backlog_workspace_exists(root: Path) -> bool:
@@ -971,7 +1006,7 @@ def render_project_md(root: Path, backlog_cli: str) -> str:
 
 ## Project-specific constraints
 
-- Preserve repository rules from applicable `CLAUDE.md`, `AGENTS.md`, and `.claude/rules/` files.
+- Preserve repository rules from `AGENTS.md` and other applicable agent-facing instruction files.
 - Add only constraints supported by repository evidence.
 
 ## Documentation synchronization
@@ -1151,7 +1186,7 @@ def preflight_conflicts(root: Path) -> list[str]:
         conflicts.append("managed block exists in both CLAUDE.md and .claude/CLAUDE.md")
 
     for entry in entry_files(root):
-        block_state, _ = inspect_managed_block(entry)
+        block_state, _ = inspect_managed_block(entry, expected_entry_block(root, entry))
         if block_state == "malformed-block":
             conflicts.append(f"malformed or duplicate managed block: {entry.relative_to(root).as_posix()}")
     return conflicts
@@ -1231,7 +1266,7 @@ def apply(root: Path, action: str) -> tuple[list[str], list[str]]:
         preserved.append(".agent-workflow/PROJECT.md")
 
     for entry in entry_files(root):
-        rendered = render_entry_file(entry)
+        rendered = render_entry_file(entry, expected_entry_block(root, entry))
         relative = entry.relative_to(root).as_posix()
         if not entry.exists() or read_text(entry) != rendered:
             atomic_write(entry, rendered)
@@ -1286,6 +1321,45 @@ def status_role_drift(root: Path) -> list[str]:
     return drift
 
 
+AGENT_SPECIFIC_PATTERN = re.compile(
+    r"Claude Code|Codex(?:-specific)?|OpenCode|/backlog-(?:plan|review|run|auto|workflow)",
+    re.IGNORECASE,
+)
+
+
+def portability_findings(root: Path) -> list[str]:
+    """Find runtime coupling in canonical policy and broken Claude adapters."""
+    findings: list[str] = []
+    for name in (
+        "WORKFLOW.md", "PLAN.md", "EXECUTION.md", "AUTO.md", "PARALLEL.md",
+        "TASK-POLICY.md",
+    ):
+        path = root / ".agent-workflow" / name
+        if not path.exists():
+            continue
+        match = AGENT_SPECIFIC_PATTERN.search(read_text(path))
+        if match:
+            findings.append(
+                f"agent-specific dependency: .agent-workflow/{name} contains {match.group(0)!r}"
+            )
+
+    for name in PORTABLE_SKILLS:
+        canonical = root / f".agents/skills/{name}/SKILL.md"
+        adapter = root / f".claude/skills/{name}/SKILL.md"
+        if not canonical.exists() or not adapter.exists():
+            continue
+        target = f"../../../.agents/skills/{name}/SKILL.md"
+        if target not in read_text(adapter):
+            findings.append(f"broken Claude adapter target: .claude/skills/{name}/SKILL.md")
+        match = AGENT_SPECIFIC_PATTERN.search(read_text(canonical))
+        if match:
+            findings.append(
+                f"agent-specific canonical skill: .agents/skills/{name}/SKILL.md "
+                f"contains {match.group(0)!r}"
+            )
+    return findings
+
+
 def audit(root: Path, check_documentation: bool = False) -> list[str]:
     drift: list[str] = []
     if not backlog_workspace_exists(root):
@@ -1321,7 +1395,7 @@ def audit(root: Path, check_documentation: bool = False) -> list[str]:
     if has_managed_block(root_claude) and has_managed_block(nested_claude):
         drift.append("managed block exists in both CLAUDE.md and .claude/CLAUDE.md")
     for entry in entry_files(root):
-        block_state, _ = inspect_managed_block(entry)
+        block_state, _ = inspect_managed_block(entry, expected_entry_block(root, entry))
         if block_state != "clean":
             relative = entry.relative_to(root).as_posix()
             drift.append(f"managed block {block_state}: {relative}")
@@ -1336,6 +1410,7 @@ def audit(root: Path, check_documentation: bool = False) -> list[str]:
             drift.append(invalid_parallel)
 
     drift.extend(status_role_drift(root))
+    drift.extend(portability_findings(root))
 
     # Only the explicit `audit` action walks task content: it costs one CLI call
     # per task, and it checks project data rather than managed-file integrity.

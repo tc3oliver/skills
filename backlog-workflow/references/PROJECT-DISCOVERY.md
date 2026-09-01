@@ -86,4 +86,7 @@ Inspect:
 - `AGENTS.md`
 - `.claude/rules/`
 
-Preserve all content outside this workflow's managed block. Report material conflicts rather than deleting them. `apply` manages one block in `CLAUDE.md` (or `.claude/CLAUDE.md`) and one in `AGENTS.md`, creating `AGENTS.md` when absent.
+Preserve all content outside this workflow's managed blocks. Report material
+conflicts rather than deleting them. `apply` manages a canonical entry block in
+`AGENTS.md` and a thin adapter block in `CLAUDE.md` (or `.claude/CLAUDE.md`),
+creating the entry files when absent.

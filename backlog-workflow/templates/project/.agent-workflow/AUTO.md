@@ -1,13 +1,13 @@
-<!-- Managed by backlog-workflow 1.5.1 -->
+<!-- Managed by backlog-workflow 1.6.0 -->
 
 # Autonomous Execution
 
 Read `.agent-workflow/WORKFLOW.md` first, then this file, then
 `.agent-workflow/EXECUTION.md` for how each selected task is executed.
 
-`/backlog-auto <TASK-ID>` executes exactly that task and stops.
+The `backlog-auto` skill with a task ID executes exactly that task and stops.
 
-`/backlog-auto` without a task ID repeatedly selects and executes tasks,
+The `backlog-auto` skill without a task ID repeatedly selects and executes tasks,
 finalizing each fully before selecting again, until no executable task remains or
 a run blocker occurs.
 
@@ -64,10 +64,10 @@ backlog task edit <TASK-ID> -s "<blocked status>" --append-notes "Blocked: <evid
 
 What happens next depends on how this run was invoked:
 
-- **`/backlog-auto <TASK-ID>`** — stop. An explicit task ID always executes
+- **With a task ID** — stop. An explicit task ID always executes
   exactly that task and stops, whether it finished `Done` or `Blocked`; there is
   no "other executable tasks" to continue to.
-- **`/backlog-auto` with no task ID** — continue with the other executable tasks.
+- **Without a task ID** — continue with the other executable tasks.
   That status is what keeps this task out of the next round — selection filters
   on the not-started status, so nothing has to be remembered — and the loop
   re-queries as usual.
@@ -84,7 +84,7 @@ The autonomous run itself cannot continue safely:
   finished correctly
 - a workflow invariant cannot be preserved
 
-Stop `/backlog-auto`, report the blocker with its exact evidence, and change
+Stop autonomous execution, report the blocker with its exact evidence, and change
 nothing else. A run blocker is never written to a task status: it is not that
 task's fault, and parking an arbitrary task would misreport it.
 

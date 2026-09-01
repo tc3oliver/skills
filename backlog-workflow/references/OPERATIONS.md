@@ -15,9 +15,10 @@ Use for both new and existing projects.
   If no candidate verifies, `apply`/`upgrade` fail with a clear "required
   interface" error — `PROJECT.md` is never written with an unverified or
   `not detected` CLI.
-- Install workflow version `1.5.1`.
-- Install the project skills `/backlog-plan`, `/backlog-review`, `/backlog-run`,
-  and `/backlog-auto`. `/backlog-review` is the separate decomposition-review
+- Install workflow version `1.6.0`.
+- Install canonical portable project skills under `.agents/skills`:
+  `backlog-plan`, `backlog-review`, `backlog-run`, and `backlog-auto`.
+  `backlog-review` is the separate decomposition-review
   pass: it checks whether completing the planned tasks would satisfy the
   requirement source, and is read-only until the user approves a fix.
 - Install the workflow policy as `.agent-workflow/WORKFLOW.md` (shared invariants
@@ -27,8 +28,10 @@ Use for both new and existing projects.
   worktree claim/execute/merge protocol). Each skill loads only the phase it
   runs, and `PARALLEL.md` is reached only through `AUTO.md`'s conditional
   pointer, so a sequential run never loads it.
+- Generate thin Claude Code adapters under `.claude/skills`; each points to its
+  matching canonical portable skill and contains no workflow copy.
 - `.agent-workflow/config.yml` sets `automatic.max_parallel_tasks: 1` by
-  default — `/backlog-auto` stays sequential unless the project raises it. The
+  default — the `backlog-auto` skill stays sequential unless the project raises it. The
   value must be an integer of at least 1; anything else blocks `apply`/`upgrade`
   and is reported by `audit`. See "Concurrency" in `.agent-workflow/AUTO.md`.
 - Ensure the Backlog.md project has a status to park blocked tasks in, distinct
@@ -48,11 +51,9 @@ Use for both new and existing projects.
 - Preserve all existing task files, requirement documents, source code, and
   non-managed instructions. Backlog.md configuration is preserved except for the
   one additive `statuses:` change above.
-- Insert or update exactly one managed block in `CLAUDE.md` (or
-  `.claude/CLAUDE.md` when only that one exists) **and** in `AGENTS.md`.
-  `AGENTS.md` is created when absent so cross-agent tools (Codex, Cursor, and
-  others) discover the workflow. All content outside the managed block is
-  preserved.
+- Insert or update exactly one canonical workflow block in `AGENTS.md` and one
+  thin compatibility block in `CLAUDE.md` (or `.claude/CLAUDE.md` when only that
+  one exists). All content outside either managed block is preserved.
 - Install `.agent-workflow/TASK-POLICY.md` (replaces the former
   `TASK-TEMPLATE.md`).
 - Migrate the deprecated managed `.agent-workflow/TASK-TEMPLATE.md`: remove it
@@ -82,9 +83,11 @@ Check:
 - Workflow version
 - Managed file presence and content
 - Default mode
-- Project skill frontmatter
+- Portable skill frontmatter and canonical file completeness
 - Grilling skill presence
-- Managed block count and content in each entry file (`CLAUDE.md`/`.claude/CLAUDE.md` and `AGENTS.md`)
+- Claude adapter targets and canonical/adapter drift
+- Managed block count and role-specific content in each entry file (`CLAUDE.md`/`.claude/CLAUDE.md` and `AGENTS.md`)
+- Agent-specific dependencies in managed `.agent-workflow` policy
 - Project configuration presence
 - Drift or unmanaged-path conflicts
 - Status roles: all four present, each naming a configured Backlog.md status, and
@@ -109,7 +112,9 @@ Return nonzero when drift, missing files, or conflicts exist. Do not repair anyt
 ## upgrade
 
 - Refuse to downgrade a project with a newer workflow version.
-- Replace older managed templates with version `1.5.1`, adding
+- Replace older managed templates with version `1.6.0`, adding the portable
+  `.agents/skills` layer and replacing full managed `.claude/skills` definitions
+  with thin adapters. Also add
   `.agent-workflow/PLAN.md`, `EXECUTION.md`, `AUTO.md`, and `PARALLEL.md` to
   installs that predate them. No file is removed: the phase content moves out of
   `WORKFLOW.md` and `AUTO.md`, both managed templates rewritten in place.

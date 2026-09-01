@@ -4,12 +4,12 @@
     "name": "tc3oliver",
     "url": "https://github.com/tc3oliver"
   },
-  "description": "tc3oliver's Claude Code skills, as an installable plugin.",
+  "description": "Claude Code compatibility plugin for tc3oliver's portable AI coding skills.",
   "plugins": [
     {
       "name": "tc3oliver-skills",
       "source": "./",
-      "description": "Task-driven development workflow (Backlog.md), a CLAUDE.md auditor, a bug-diagnosis loop, a skill-writing reference, and a merge-conflict resolution discipline.",
+      "description": "Portable task-driven workflow and engineering skills, exposed through Claude Code compatibility entry points.",
       "category": "engineering",
       "keywords": [
         "backlog",

@@ -1,6 +1,7 @@
 # AI Coding Skills
 
-A personal collection of skills and development workflows I use with AI coding agents.
+Portable skills and task-driven development workflows for AI coding agents such
+as Claude Code, Codex, and OpenCode.
 
 Some skills are built around my own workflow. Others are adapted from or collected from useful open-source projects, with their original attribution and license preserved.
 
@@ -11,7 +12,7 @@ The goal is to make coding agents more predictable: clarify requirements before 
 | Skill                                                     | Description                                                                                                                                                    |
 | --------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | [`backlog-workflow`](backlog-workflow/)                   | My task-driven development workflow built on Backlog.md. Supports requirement planning, decomposition review, single-task execution, autonomous execution, validation, and delivery. |
-| [`audit-claude-md`](audit-claude-md/)                     | Audits `CLAUDE.md` and related rules for stale, duplicated, misplaced, or overly broad instructions.                                                           |
+| [`audit-claude-md`](audit-claude-md/)                     | Audits `AGENTS.md`, `CLAUDE.md`, agent-facing skills, and related rules; the name is retained for backward compatibility.                                      |
 | [`diagnosing-bugs`](diagnosing-bugs/)                     | A structured debugging workflow based on reproduction, falsifiable hypotheses, evidence, and regression tests.                                                 |
 | [`writing-for-agents`](writing-for-agents/)               | Guidelines for writing effective `SKILL.md`, `CLAUDE.md`, `AGENTS.md`, and other agent-facing documentation.                                                   |
 | [`skill-optimizer`](skill-optimizer/)                     | Reviews and refactors an existing Skill for routing accuracy, context efficiency, execution reliability, and maintainability.                                  |
@@ -27,7 +28,8 @@ Install with the Agent Skills CLI:
 npx skills add tc3oliver/skills
 ```
 
-It can install the skills into supported agents such as Claude Code and Codex.
+It can install the portable skills into supported agents such as Claude Code,
+Codex, and OpenCode.
 
 ### Claude Code Plugin
 
@@ -48,6 +50,63 @@ Plugin skills use the namespace:
 /tc3oliver-skills:skill-optimizer
 /tc3oliver-skills:resolving-merge-conflicts
 ```
+
+## Portable core and compatibility adapters
+
+The repository treats the Agent Skills format and the installed project
+workflow as agent-neutral. A project managed by `backlog-workflow` separates
+responsibility this way:
+
+```text
+Portable core
+  .agents/skills/       canonical project skill definitions
+  .agent-workflow/      development policy
+  AGENTS.md             cross-agent repository entry point
+
+Claude Code adapter
+  .claude/skills/       generated thin pointers to canonical skills
+  CLAUDE.md             generated pointer to AGENTS.md and Claude entry points
+  Claude plugin         optional installation and slash-command UX
+```
+
+`.agents/skills` is the native project skills directory for Codex and OpenCode,
+so those agents discover the installed skills directly. `AGENTS.md` is the
+cross-agent entry point on top of that: its managed block names each canonical
+skill and when to use it, so a plain request routes correctly in any agent that
+reads repository instructions. Slash commands are a Claude Code user interface,
+not part of the workflow protocol.
+
+### Applying the workflow to a project
+
+Installing the package above only makes the skill available. To set up a
+repository, run the installer from the project root — the same script for every
+agent:
+
+```bash
+python3 <skill-dir>/scripts/install.py apply     # install or refresh
+python3 <skill-dir>/scripts/install.py audit     # read-only drift check
+python3 <skill-dir>/scripts/install.py upgrade   # explicit version upgrade
+```
+
+`<skill-dir>` is the installed `backlog-workflow` directory (for a Claude Code
+install, `~/.claude/skills/backlog-workflow`). Claude Code also exposes these as
+`/backlog-workflow apply|audit|upgrade`.
+
+Afterwards, invoke the workflow the way your agent expects:
+
+- **Claude Code** — `/backlog-plan`, `/backlog-review`, `/backlog-run`, `/backlog-auto`
+- **Codex / OpenCode** — by name, for example `Use the backlog-run skill for TASK-12`
+
+The same repository works from any of them; only the invocation syntax differs.
+
+### Updating
+
+Update the package (`npx skills add tc3oliver/skills`, `git pull`, or
+`/plugin update tc3oliver-skills`), then run `upgrade` in each project. Managed
+files are replaced; `PROJECT.md`, Backlog.md tasks, and content outside the
+managed blocks in `AGENTS.md` and `CLAUDE.md` are preserved.
+
+See [`backlog-workflow/INSTALL.md`](backlog-workflow/INSTALL.md) for details.
 
 ---
 
@@ -116,7 +175,8 @@ Delivery
 
 ## Setup
 
-After installing the skill, enter a project and run:
+After installing the skill, enter a project and invoke `backlog-workflow` with
+the `apply` action. In Claude Code the compatibility UX is:
 
 ```text
 /backlog-workflow apply
@@ -131,7 +191,16 @@ The installer discovers project-specific information such as:
 * format / lint / typecheck / test / build commands
 * project-specific constraints
 
-It then installs the project workflow:
+It then installs the canonical project skills:
+
+```text
+backlog-plan
+backlog-review
+backlog-run
+backlog-auto
+```
+
+Claude Code adapters expose the familiar UX:
 
 ```text
 /backlog-plan
@@ -351,13 +420,17 @@ A project using `backlog-workflow` receives:
 ├── TASK-POLICY.md
 └── PROJECT.md
 
-.claude/
+.agents/
 └── skills/
     ├── backlog-plan/
     ├── backlog-review/
     ├── backlog-run/
     ├── backlog-auto/
     └── grilling/
+
+.claude/
+└── skills/
+    └── ... thin Claude Code adapters to `.agents/skills/`
 ```
 
 Each skill reads `WORKFLOW.md` plus only the phase file it actually runs, so
@@ -373,6 +446,9 @@ CLAUDE.md
 AGENTS.md
 ```
 
+`AGENTS.md` is canonical. `CLAUDE.md` is only a compatibility adapter and does
+not duplicate the workflow.
+
 `PROJECT.md` contains repository-specific execution configuration and becomes project-owned after it is created.
 
 Existing tasks, requirements, specifications, documentation, and user-owned instruction content are preserved.
@@ -385,7 +461,9 @@ See [`backlog-workflow/README.md`](backlog-workflow/) for implementation, instal
 
 ### audit-claude-md
 
-Reviews agent instructions and gives each rule a concrete disposition:
+Reviews `AGENTS.md`, `CLAUDE.md`, scoped rules, and agent-facing skills while
+retaining its historical name for compatibility. It gives each rule a concrete
+disposition:
 
 ```text
 keep

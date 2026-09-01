@@ -7,55 +7,8 @@ disable-model-invocation: true
 allowed-tools: Read Glob Grep Bash Edit Write Agent
 ---
 
-<!-- Managed by backlog-workflow 1.5.1 -->
+<!-- Managed by backlog-workflow 1.6.0 -->
 
-# Run Backlog Tasks Automatically
-
-Optional task: `$task_id`
-
-Read before acting:
-
-- `.agent-workflow/WORKFLOW.md`
-- `.agent-workflow/AUTO.md`
-- `.agent-workflow/EXECUTION.md`
-- `.agent-workflow/PROJECT.md`
-- `.agent-workflow/config.yml` (`automatic.max_parallel_tasks`)
-- applicable `CLAUDE.md` and `AGENTS.md` files
-
-Load the Backlog.md canonical instructions using the CLI recorded in
-`.agent-workflow/PROJECT.md`:
-
-```bash
-backlog instructions overview
-backlog instructions task-execution
-backlog instructions task-finalization
-```
-
-When `$task_id` is present, execute only that task and stop.
-
-Otherwise follow `.agent-workflow/AUTO.md`: select with
-`backlog task list --ready --status "<not-started status>" --sort priority --json`,
-execute each selected task per `.agent-workflow/EXECUTION.md`, and re-query before
-selecting again. `AUTO.md` routes to the concurrency protocol when
-`max_parallel_tasks` is greater than 1.
-
-Do not invoke `grilling`, ask interactive product questions, or guess missing
-product intent. When a product decision is missing, put the task in the
-configured blocked status with its evidence — that status, not memory, is what
-keeps it out of the next selection round. With `$task_id` given, stop there: an
-explicit task ID always executes exactly that task and stops, blocked or not.
-Without `$task_id`, continue with the other executable tasks. Stop the whole run
-only for a run blocker, as `AUTO.md` defines it.
-
-Report each completed or blocked task using exactly this structure — one block
-per task, in the order they were selected. Field labels may be localized to the
-user's language; the `Status` value always stays one of `Done`, `Blocked`, or
-`In Progress` in English.
-
-```text
-Execution report
-- Task: <ID and title>
-- Status: <Done|Blocked|In Progress>
-- Changes: <major implementation and synchronized documents>
-- Validation: <AC and required command results plus evidence location>
-```
+Read and follow the canonical repository skill at
+`../../../.agents/skills/backlog-auto/SKILL.md` as the authoritative definition.
+Use `$task_id` as its invocation input.

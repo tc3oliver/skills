@@ -194,6 +194,103 @@ class InstallerTests(unittest.TestCase):
         self.assertTrue((root / ".agent-workflow/TASK-POLICY.md").exists())
         self.assertFalse((root / ".agent-workflow/TASK-TEMPLATE.md").exists())
 
+    def test_fresh_apply_creates_portable_skills_and_thin_claude_adapters(self) -> None:
+        root, env = self.make_project()
+        self.apply(root, env)
+        for name in ("backlog-plan", "backlog-review", "backlog-run", "backlog-auto", "grilling"):
+            canonical = root / f".agents/skills/{name}/SKILL.md"
+            adapter = root / f".claude/skills/{name}/SKILL.md"
+            self.assertTrue(canonical.exists(), name)
+            self.assertTrue(adapter.exists(), name)
+            canonical_text = read(canonical)
+            adapter_text = read(adapter)
+            self.assertIn(f"name: {name}", canonical_text)
+            self.assertIn(f"../../../.agents/skills/{name}/SKILL.md", adapter_text)
+            self.assertLess(len(adapter_text.splitlines()), 20, name)
+            for runtime in ("Claude Code", "Codex", "OpenCode"):
+                self.assertNotIn(runtime, canonical_text, f"{name} is not portable")
+
+    def test_entry_files_have_distinct_canonical_and_adapter_blocks(self) -> None:
+        root, env = self.make_project()
+        (root / "AGENTS.md").write_text("# User agent rules\n", encoding="utf-8")
+        (root / "CLAUDE.md").write_text("# User Claude rules\n", encoding="utf-8")
+        self.apply(root, env)
+        agents = read(root / "AGENTS.md")
+        claude = read(root / "CLAUDE.md")
+        self.assertIn(".agent-workflow/WORKFLOW.md", agents)
+        self.assertIn(".agents/skills/", agents)
+        self.assertIn("Product requirements", agents)
+        self.assertIn("Read `AGENTS.md`", claude)
+        self.assertIn(".claude/skills/", claude)
+        self.assertNotIn("Canonical Completion Gate", claude)
+        self.assertIn("# User agent rules", agents)
+        self.assertIn("# User Claude rules", claude)
+
+    def test_upgrade_old_claude_centric_install_preserves_project_data(self) -> None:
+        root, env = self.make_project()
+        self.apply(root, env)
+        project_md = root / ".agent-workflow/PROJECT.md"
+        task = root / "backlog/tasks/demo-9 - Keep me.md"
+        task.write_text("status: To Do\ncustom task body\n", encoding="utf-8")
+        project_md.write_text(read(project_md) + "\nproject-owned setting\n", encoding="utf-8")
+        (root / "AGENTS.md").write_text(
+            "# User agents\n\n" + read(root / "AGENTS.md"), encoding="utf-8"
+        )
+        (root / "CLAUDE.md").write_text(
+            "# User Claude\n\n" + read(root / "CLAUDE.md"), encoding="utf-8"
+        )
+        before_project, before_task = digest(project_md), digest(task)
+
+        # Model a 1.5.x installation: no portable layer and full managed Claude skills.
+        shutil.rmtree(root / ".agents")
+        (root / ".agent-workflow/VERSION").write_text("1.5.1\n", encoding="utf-8")
+        old_skill = root / ".claude/skills/backlog-run/SKILL.md"
+        old_skill.write_text(
+            "---\nname: backlog-run\n---\n\n<!-- Managed by backlog-workflow 1.5.1 -->\n\n# Full Claude workflow\n",
+            encoding="utf-8",
+        )
+        old_grilling = root / ".claude/skills/grilling/SKILL.md"
+        old_grilling.write_text(
+            "---\nname: grilling\n---\n\n<!--\nBundled by backlog-workflow 1.5.1.\n-->\nfull workflow\n",
+            encoding="utf-8",
+        )
+
+        result = self.run_installer(root, "upgrade", env)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertTrue((root / ".agents/skills/backlog-run/SKILL.md").exists())
+        self.assertIn("../../../.agents/skills/backlog-run/SKILL.md", read(old_skill))
+        self.assertIn("../../../.agents/skills/grilling/SKILL.md", read(old_grilling))
+        self.assertEqual(digest(project_md), before_project)
+        self.assertEqual(digest(task), before_task)
+        self.assertIn("# User agents", read(root / "AGENTS.md"))
+        self.assertIn("# User Claude", read(root / "CLAUDE.md"))
+
+    def test_audit_detects_missing_canonical_and_broken_adapter(self) -> None:
+        root, env = self.make_project()
+        self.apply(root, env)
+        (root / ".agents/skills/backlog-run/SKILL.md").unlink()
+        missing = self.run_installer(root, "audit", env)
+        self.assertEqual(missing.returncode, 2)
+        self.assertIn("missing: .agents/skills/backlog-run/SKILL.md", missing.stdout)
+
+        self.run_installer(root, "upgrade", env)
+        adapter = root / ".claude/skills/backlog-run/SKILL.md"
+        adapter.write_text(read(adapter).replace("backlog-run", "wrong-skill"), encoding="utf-8")
+        before = digest(adapter)
+        broken = self.run_installer(root, "audit", env)
+        self.assertEqual(broken.returncode, 2)
+        self.assertIn("broken Claude adapter target", broken.stdout)
+        self.assertEqual(digest(adapter), before)
+
+    def test_audit_detects_agent_specific_workflow_dependency(self) -> None:
+        root, env = self.make_project()
+        self.apply(root, env)
+        workflow = root / ".agent-workflow/WORKFLOW.md"
+        workflow.write_text(read(workflow) + "\nUse Claude Code here.\n", encoding="utf-8")
+        audit = self.run_installer(root, "audit", env)
+        self.assertEqual(audit.returncode, 2)
+        self.assertIn("agent-specific dependency: .agent-workflow/WORKFLOW.md", audit.stdout)
+
     # 20. managed files contain the current version marker
     def test_managed_files_carry_current_version(self) -> None:
         root, env = self.make_project()
@@ -206,6 +303,10 @@ class InstallerTests(unittest.TestCase):
             ".agent-workflow/PARALLEL.md",
             ".agent-workflow/config.yml",
             ".agent-workflow/TASK-POLICY.md",
+            ".agents/skills/backlog-plan/SKILL.md",
+            ".agents/skills/backlog-review/SKILL.md",
+            ".agents/skills/backlog-run/SKILL.md",
+            ".agents/skills/backlog-auto/SKILL.md",
             ".claude/skills/backlog-plan/SKILL.md",
             ".claude/skills/backlog-review/SKILL.md",
             ".claude/skills/backlog-run/SKILL.md",
@@ -239,7 +340,7 @@ class InstallerTests(unittest.TestCase):
             "backlog-auto": {"AUTO.md", "EXECUTION.md"},
         }
         for skill, wanted in expected.items():
-            text = read(root / f".claude/skills/{skill}/SKILL.md")
+            text = read(root / f".agents/skills/{skill}/SKILL.md")
             self.assertIn(".agent-workflow/WORKFLOW.md", text, skill)
             for reference in ("PLAN.md", "EXECUTION.md", "AUTO.md", "PARALLEL.md"):
                 mentioned = f".agent-workflow/{reference}" in text
@@ -258,8 +359,8 @@ class InstallerTests(unittest.TestCase):
             ".agent-workflow/AUTO.md",
             ".agent-workflow/PARALLEL.md",
             ".agent-workflow/TASK-POLICY.md",
-            ".claude/skills/backlog-run/SKILL.md",
-            ".claude/skills/backlog-auto/SKILL.md",
+            ".agents/skills/backlog-run/SKILL.md",
+            ".agents/skills/backlog-auto/SKILL.md",
         ):
             self.assertNotIn(condition, read(root / rel), rel)
         self.assertIn("Canonical Completion Gate", read(root / ".agent-workflow/TASK-POLICY.md"))
@@ -310,17 +411,16 @@ class InstallerTests(unittest.TestCase):
         self.assertIn("review_skill: backlog-review", read(root / ".agent-workflow/config.yml"))
 
         # planning hands off to the review instead of reviewing its own output
-        plan = read(root / ".claude/skills/backlog-plan/SKILL.md")
-        self.assertIn("/backlog-review", plan)
-        self.assertNotIn("- Next: </backlog-run TASK-ID>", plan)
+        plan = read(root / ".agents/skills/backlog-plan/SKILL.md")
+        self.assertIn("`backlog-review` skill", plan)
 
         # the review itself is read-only until the user confirms a fix
-        review = read(root / ".claude/skills/backlog-review/SKILL.md")
+        review = read(root / ".agents/skills/backlog-review/SKILL.md")
         self.assertIn("read-only", review)
         self.assertIn("Verdict", review)
 
         # automatic execution never runs the interactive review
-        self.assertNotIn("/backlog-review", read(root / ".claude/skills/backlog-auto/SKILL.md"))
+        self.assertNotIn("backlog-review", read(root / ".agents/skills/backlog-auto/SKILL.md"))
 
     # upgrading an older install adds a newly managed skill that it never had
     def test_upgrade_installs_newly_managed_skill(self) -> None:
@@ -345,7 +445,7 @@ class InstallerTests(unittest.TestCase):
         config = read(root / ".agent-workflow/config.yml")
         self.assertIn("max_parallel_tasks: 1", config)
         self.assertIn("max_parallel_tasks", read(root / ".agent-workflow/AUTO.md"))
-        auto_skill = read(root / ".claude/skills/backlog-auto/SKILL.md")
+        auto_skill = read(root / ".agents/skills/backlog-auto/SKILL.md")
         self.assertIn("max_parallel_tasks", auto_skill)
 
     # upgrade preserves a project-raised max_parallel_tasks value
@@ -625,7 +725,7 @@ class InstallerTests(unittest.TestCase):
         result = self.run_installer(root, "apply", env)
         self.assertEqual(result.returncode, 2)
         self.assertIn("unmanaged file occupies managed path", result.stdout)
-        self.assertFalse((root / ".claude/skills/backlog-plan/SKILL.md").exists())
+        self.assertFalse((root / ".agents/skills/backlog-plan/SKILL.md").exists())
         self.assertEqual(read(conflict), "user owned workflow\n")
 
     # 15. 1.0.x managed TASK-TEMPLATE.md migrates safely to TASK-POLICY.md
@@ -671,6 +771,7 @@ class InstallerTests(unittest.TestCase):
         root, env = self.make_project()
         self.apply(root, env)
         for name in ("backlog-plan", "backlog-review", "backlog-run", "backlog-auto", "grilling"):
+            self.assertTrue((root / f".agents/skills/{name}/SKILL.md").exists(), name)
             self.assertTrue((root / f".claude/skills/{name}/SKILL.md").exists(), name)
 
     # 19. no /backlog skill is generated
@@ -678,7 +779,7 @@ class InstallerTests(unittest.TestCase):
         root, env = self.make_project()
         self.apply(root, env)
         names = set()
-        for skill_md in (root / ".claude/skills").glob("*/SKILL.md"):
+        for skill_md in (root / ".agents/skills").glob("*/SKILL.md"):
             for line in read(skill_md).splitlines():
                 if line.startswith("name:"):
                     names.add(line.split(":", 1)[1].strip())
@@ -701,11 +802,11 @@ class InstallerTests(unittest.TestCase):
             root / ".agent-workflow/AUTO.md",
             root / ".agent-workflow/PARALLEL.md",
             root / ".agent-workflow/TASK-POLICY.md",
-            root / ".claude/skills/backlog-plan/SKILL.md",
-            root / ".claude/skills/backlog-review/SKILL.md",
-            root / ".claude/skills/backlog-run/SKILL.md",
-            root / ".claude/skills/backlog-auto/SKILL.md",
-            root / ".claude/skills/grilling/SKILL.md",
+            root / ".agents/skills/backlog-plan/SKILL.md",
+            root / ".agents/skills/backlog-review/SKILL.md",
+            root / ".agents/skills/backlog-run/SKILL.md",
+            root / ".agents/skills/backlog-auto/SKILL.md",
+            root / ".agents/skills/grilling/SKILL.md",
         ):
             installed.append(read(path))
         for token in ("TASK-TEMPLATE.md", "Background board", "Board:"):
@@ -838,7 +939,7 @@ class InstallerTests(unittest.TestCase):
             execution.index('-s "<active status>"'),
             "the gate must be checked before the task is claimed",
         )
-        self.assertNotIn(".agent-workflow/PLAN.md", read(root / ".claude/skills/backlog-run/SKILL.md"))
+        self.assertNotIn(".agent-workflow/PLAN.md", read(root / ".agents/skills/backlog-run/SKILL.md"))
 
     # audit is an integrity command: a task it cannot read is reported, not
     # skipped, or a Clean verdict would mean "every task I could parse".
@@ -1401,7 +1502,7 @@ class InstallerTests(unittest.TestCase):
         # A task blocker parks one task and the run continues.
         self.assertIn("continue with the other executable tasks", flat)
         # A run blocker stops the run and is never written to a task status.
-        self.assertIn("Stop `/backlog-auto`", flat)
+        self.assertIn("Stop autonomous execution", flat)
         self.assertIn("A run blocker is never written to a task status", flat)
         self.assertIn("## Task blockers", read(root / ".agent-workflow/WORKFLOW.md"))
         # The ambiguous vocabulary it replaced must be gone everywhere.
@@ -1416,11 +1517,11 @@ class InstallerTests(unittest.TestCase):
         self.apply(root, env)
         auto = read(root / ".agent-workflow/AUTO.md")
         flat = re.sub(r"\s+", " ", auto)
-        self.assertIn("`/backlog-auto <TASK-ID>`** — stop", flat)
-        self.assertIn("`/backlog-auto` with no task id** — continue with the other executable tasks".lower(), flat.lower())
-        skill = read(root / ".claude/skills/backlog-auto/SKILL.md")
-        self.assertIn("stop there", skill)
-        self.assertIn("Without `$task_id`, continue with the other executable tasks", skill)
+        self.assertIn("**With a task ID** — stop", flat)
+        self.assertIn("**Without a task ID** — continue with the other executable tasks", flat)
+        skill = read(root / ".agents/skills/backlog-auto/SKILL.md")
+        self.assertIn("With an ID, execute only that task and stop", skill)
+        self.assertIn("continue other tasks only in the no-ID loop", skill)
 
     def test_readme_documents_task_vs_run_blocker_semantics(self) -> None:
         """Automatic mode does not stop the whole run on a task blocker -- only a
@@ -1466,7 +1567,7 @@ class InstallerTests(unittest.TestCase):
         self.assertIn("send it back to planning as a task blocker", execution)
         self.assertIn("New ambiguity appeared after execution legitimately started", execution)
         self.assertIn("invoke `grilling`", execution)
-        self.assertIn("Under `/backlog-auto` there is no grilling", execution)
+        self.assertIn("Under `backlog-auto` there is no grilling", execution)
 
     # --- configuration validation ------------------------------------------
     #
@@ -1584,7 +1685,7 @@ class InstallerTests(unittest.TestCase):
         # worktrees, claim commits, or merges.
         self.assertIn("max_parallel_tasks: 1", read(root / ".agent-workflow/config.yml"))
         for path in (
-            root / ".claude/skills/backlog-auto/SKILL.md",
+            root / ".agents/skills/backlog-auto/SKILL.md",
             root / ".agent-workflow/WORKFLOW.md",
             root / ".agent-workflow/EXECUTION.md",
         ):
@@ -1750,6 +1851,9 @@ class InstallerTests(unittest.TestCase):
 
     def test_every_managed_file_is_tracked(self) -> None:
         """Catches a managed file that was added but never `git add`ed."""
+        dirty = self.git_in_repo("status", "--porcelain", "--", ROOT.name)
+        if dirty.returncode == 0 and dirty.stdout.strip():
+            self.skipTest("package has uncommitted changes; release archive check runs on clean trees")
         listed = self.git_in_repo("ls-files", "--", ROOT.name)
         if listed.returncode != 0:
             self.skipTest("not a git checkout")
@@ -1807,7 +1911,7 @@ class InstallerTests(unittest.TestCase):
         self.assertIn("Backlog.md CLI", result.stdout)
         # Nothing installed: the required interface did not verify.
         self.assertFalse((root / ".agent-workflow/PROJECT.md").exists())
-        self.assertFalse((root / ".claude/skills/backlog-plan/SKILL.md").exists())
+        self.assertFalse((root / ".agents/skills/backlog-plan/SKILL.md").exists())
 
     # P1: no usable Backlog.md CLI at all blocks apply (never silently "not detected").
     def test_no_backlog_cli_blocks_apply(self) -> None:

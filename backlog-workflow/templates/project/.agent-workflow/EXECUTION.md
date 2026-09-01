@@ -1,13 +1,13 @@
-<!-- Managed by backlog-workflow 1.5.1 -->
+<!-- Managed by backlog-workflow 1.6.0 -->
 
 # Single-Task Execution
 
 Read `.agent-workflow/WORKFLOW.md` first. This file defines how one task is
-executed — by `/backlog-run`, and by `/backlog-auto` once it has selected a task.
+executed — by the `backlog-run` skill, and by `backlog-auto` after selection.
 
 ## Without a task ID
 
-`/backlog-run` with no argument lists dependency-ready tasks
+The `backlog-run` skill with no task ID lists dependency-ready tasks
 (`backlog task list --ready --status "<not-started status>" --sort priority --json`)
 and stops. It modifies no task and no code.
 
@@ -47,8 +47,8 @@ and stops. It modifies no task and no code.
 Backlog.md canonical task-execution instructions may recommend presenting the
 Implementation Plan and waiting for explicit approval before implementing.
 
-This workflow defines a different boundary on purpose: invoking `/backlog-run
-<TASK-ID>`, or selecting the task under `/backlog-auto`, authorizes it through
+This workflow defines a different boundary on purpose: invoking the `backlog-run`
+skill with a task ID, or selecting the task under `backlog-auto`, authorizes it through
 JIT planning, implementation, and validation. Record the Implementation Plan
 before coding, but do not pause only to ask for another implementation-plan
 approval.
@@ -61,11 +61,11 @@ are easy to confuse, and they are handled differently:
   out of the active status, record exactly what it is missing, and send it back to
   planning as a task blocker.
 - **New ambiguity appeared after execution legitimately started.** A ready task
-  can still turn out to hide an undecided product question. Under `/backlog-run`,
+  can still turn out to hide an undecided product question. Under `backlog-run`,
   invoke `grilling`, persist the outcome per "Decision policy", point the task's
   `documentation` at the resulting decision record when that decision is now its
   authority, and continue. Requirement alignment still belongs to planning; this
-  covers what only became visible here. Under `/backlog-auto` there is no
+  covers what only became visible here. Under `backlog-auto` there is no
   grilling — record the task blocker instead (`.agent-workflow/AUTO.md`).
 
 Stopping on a blocker means step 5's claim is undone: set the task to the blocked

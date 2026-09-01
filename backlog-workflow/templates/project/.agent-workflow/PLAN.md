@@ -1,9 +1,9 @@
-<!-- Managed by backlog-workflow 1.5.1 -->
+<!-- Managed by backlog-workflow 1.6.0 -->
 
 # Planning and Decomposition Review
 
-Read `.agent-workflow/WORKFLOW.md` first. This file covers `/backlog-plan` and
-`/backlog-review`.
+Read `.agent-workflow/WORKFLOW.md` first. This file covers the `backlog-plan` and
+`backlog-review` skills.
 
 ## Authoring a ready task
 
@@ -25,7 +25,7 @@ A task should fit one reviewable change.
 
 ## Planning
 
-`/backlog-plan` performs requirement alignment and decomposition only.
+The `backlog-plan` skill performs requirement alignment and decomposition only.
 
 1. Load `backlog instructions overview` and `backlog instructions task-creation`.
 2. Read the requirement sources, the requirement matrix when applicable,
@@ -50,7 +50,7 @@ function-level implementation, write product code, or set any task to an active
 status.
 
 Report and stop. Planning does not review its own decomposition — hand off to
-`/backlog-review`.
+the `backlog-review` skill.
 
 ### Planning is complete when
 
@@ -64,13 +64,13 @@ Anything that cannot be satisfied is reported, not worked around.
 
 ## Decomposition review
 
-`/backlog-review [requirement source or scope]` answers one question: **if every
+The `backlog-review` skill answers one question: **if every
 task in scope were completed to its Acceptance Criteria, would the requirement
 source be satisfied?**
 
 It is a separate pass on purpose — the context that produced a decomposition is
 the worst one to audit it — and it can be re-run whenever tasks or requirements
-change, not only right after `/backlog-plan`.
+change, not only right after the `backlog-plan` skill.
 
 Scope defaults to the requirement sources recorded in `.agent-workflow/PROJECT.md`
 and every non-archived task citing them; an argument narrows it to one source,
@@ -107,7 +107,7 @@ Evidence rules:
 - When the requirement source is itself too ambiguous to judge, quote the exact
   wording and record it as undetermined. Do not guess, and do not invoke
   `grilling` during review — unresolved product intent goes back to
-  `/backlog-plan`.
+  the `backlog-plan` skill.
 - Report `Undetermined` when any in-scope requirement is undecidable, even if
   everything else is covered.
 
@@ -119,7 +119,7 @@ rules above (reading `.agent-workflow/TASK-POLICY.md` before authoring any task
 content), then re-run the four checks and report again. On refusal, or when the
 fix needs product intent no source settles, stop with every task unchanged.
 
-`/backlog-auto` never invokes this review: it is a user-triggered manual gate, and
+The `backlog-auto` skill never invokes this review: it is a user-triggered manual gate, and
 its question-and-wait step has no place in an autonomous loop.
 
 ### Review is complete when

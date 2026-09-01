@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
+import json
 import re
 import subprocess
 import sys
@@ -8,13 +9,24 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 TEMPLATE_ROOT = ROOT / "templates" / "project"
-SKILLS = [
+PORTABLE_SKILLS = [
     ROOT / "SKILL.md",
-    TEMPLATE_ROOT / ".claude/skills/backlog-plan/SKILL.md",
-    TEMPLATE_ROOT / ".claude/skills/backlog-review/SKILL.md",
-    TEMPLATE_ROOT / ".claude/skills/backlog-run/SKILL.md",
-    TEMPLATE_ROOT / ".claude/skills/backlog-auto/SKILL.md",
-    TEMPLATE_ROOT / ".claude/skills/grilling/SKILL.md",
+    TEMPLATE_ROOT / ".agents/skills/backlog-plan/SKILL.md",
+    TEMPLATE_ROOT / ".agents/skills/backlog-review/SKILL.md",
+    TEMPLATE_ROOT / ".agents/skills/backlog-run/SKILL.md",
+    TEMPLATE_ROOT / ".agents/skills/backlog-auto/SKILL.md",
+    TEMPLATE_ROOT / ".agents/skills/grilling/SKILL.md",
+]
+CLAUDE_ADAPTERS = [
+    TEMPLATE_ROOT / f".claude/skills/{name}/SKILL.md"
+    for name in ("backlog-plan", "backlog-review", "backlog-run", "backlog-auto", "grilling")
+]
+REPOSITORY_SKILLS = [
+    ROOT.parent / name / "SKILL.md"
+    for name in (
+        "backlog-workflow", "audit-claude-md", "diagnosing-bugs",
+        "writing-for-agents", "skill-optimizer", "resolving-merge-conflicts",
+    )
 ]
 VERSION = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
 
@@ -74,8 +86,12 @@ def main() -> int:
     if not re.fullmatch(r"\d+\.\d+\.\d+", VERSION):
         raise AssertionError(f"VERSION file is not semver: {VERSION!r}")
 
+    plugin = json.loads((ROOT.parent / ".claude-plugin/plugin.json").read_text(encoding="utf-8"))
+    if plugin.get("version") != VERSION:
+        raise AssertionError("Claude plugin version must match backlog-workflow VERSION")
+
     seen: set[str] = set()
-    for path in SKILLS:
+    for path in PORTABLE_SKILLS:
         data = frontmatter(path)
         name = data.get("name")
         if not isinstance(name, str) or not name:
@@ -88,16 +104,38 @@ def main() -> int:
         if len(path.read_text(encoding="utf-8").splitlines()) > 500:
             raise AssertionError(f"SKILL.md exceeds 500 lines: {path}")
 
-    for name in ("backlog-workflow", "backlog-plan", "backlog-review", "backlog-run", "backlog-auto"):
-        path = next(path for path in SKILLS if frontmatter(path).get("name") == name)
-        if frontmatter(path).get("disable-model-invocation") is not True:
-            raise AssertionError(f"{name} must be user-triggered only")
+    for path in PORTABLE_SKILLS:
+        data = frontmatter(path)
+        extra = set(data) - {"name", "description"}
+        if extra:
+            raise AssertionError(f"portable skill has runtime-specific frontmatter {sorted(extra)}: {path}")
+        text = path.read_text(encoding="utf-8")
+        for runtime in ("Claude Code", "Codex", "OpenCode"):
+            if runtime in text:
+                raise AssertionError(f"portable skill depends on {runtime}: {path}")
 
-    grilling = next(path for path in SKILLS if frontmatter(path).get("name") == "grilling")
-    if frontmatter(grilling).get("user-invocable") is not False:
-        raise AssertionError("grilling must be model-invoked only")
-    if frontmatter(grilling).get("disable-model-invocation") is True:
-        raise AssertionError("grilling cannot disable model invocation")
+    repository_names: set[str] = set()
+    for path in REPOSITORY_SKILLS:
+        data = frontmatter(path)
+        extra = set(data) - {"name", "description"}
+        if extra:
+            raise AssertionError(
+                f"repository portable skill has runtime-specific frontmatter {sorted(extra)}: {path}"
+            )
+        name = data.get("name")
+        if not isinstance(name, str) or not name or name in repository_names:
+            raise AssertionError(f"invalid or duplicate repository skill name: {name!r}")
+        repository_names.add(name)
+
+    for path in CLAUDE_ADAPTERS:
+        data = frontmatter(path)
+        name = data.get("name")
+        target = f"../../../.agents/skills/{name}/SKILL.md"
+        text = path.read_text(encoding="utf-8")
+        if target not in text:
+            raise AssertionError(f"Claude adapter has wrong canonical target: {path}")
+        if len(text.splitlines()) >= 20:
+            raise AssertionError(f"Claude adapter is not thin: {path}")
 
     config = (TEMPLATE_ROOT / ".agent-workflow/config.yml").read_text(encoding="utf-8")
     if "default_mode: manual" not in config:
@@ -115,6 +153,10 @@ def main() -> int:
         TEMPLATE_ROOT / ".agent-workflow/PARALLEL.md",
         TEMPLATE_ROOT / ".agent-workflow/config.yml",
         TEMPLATE_ROOT / ".agent-workflow/TASK-POLICY.md",
+        TEMPLATE_ROOT / ".agents/skills/backlog-plan/SKILL.md",
+        TEMPLATE_ROOT / ".agents/skills/backlog-review/SKILL.md",
+        TEMPLATE_ROOT / ".agents/skills/backlog-run/SKILL.md",
+        TEMPLATE_ROOT / ".agents/skills/backlog-auto/SKILL.md",
         TEMPLATE_ROOT / ".claude/skills/backlog-plan/SKILL.md",
         TEMPLATE_ROOT / ".claude/skills/backlog-review/SKILL.md",
         TEMPLATE_ROOT / ".claude/skills/backlog-run/SKILL.md",
@@ -171,7 +213,7 @@ def main() -> int:
         "PARALLEL.md": set(),
     }
     for skill_name in ("backlog-plan", "backlog-review", "backlog-run", "backlog-auto"):
-        text = (TEMPLATE_ROOT / f".claude/skills/{skill_name}/SKILL.md").read_text(encoding="utf-8")
+        text = (TEMPLATE_ROOT / f".agents/skills/{skill_name}/SKILL.md").read_text(encoding="utf-8")
         if ".agent-workflow/WORKFLOW.md" not in text:
             raise AssertionError(f"{skill_name} must read the shared WORKFLOW.md")
         for reference, allowed in phase_references.items():
@@ -187,6 +229,16 @@ def main() -> int:
     # No installed template may carry removed 1.0 behavior.
     for path in iter_template_files():
         assert_no_forbidden(path.read_text(encoding="utf-8"), f"template {path.relative_to(TEMPLATE_ROOT)}")
+
+    runtime_pattern = re.compile(
+        r"Claude Code|Codex(?:-specific)?|OpenCode|/backlog-(?:plan|review|run|auto|workflow)",
+        re.IGNORECASE,
+    )
+    for name in ("WORKFLOW.md", "PLAN.md", "EXECUTION.md", "AUTO.md", "PARALLEL.md", "TASK-POLICY.md"):
+        path = TEMPLATE_ROOT / ".agent-workflow" / name
+        match = runtime_pattern.search(path.read_text(encoding="utf-8"))
+        if match:
+            raise AssertionError(f"agent-specific workflow dependency {match.group(0)!r}: {path}")
 
     if (TEMPLATE_ROOT / "README.md").exists():
         raise AssertionError("target template must not include README.md")

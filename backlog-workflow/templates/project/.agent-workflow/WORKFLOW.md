@@ -1,4 +1,4 @@
-<!-- Managed by backlog-workflow 1.5.1 -->
+<!-- Managed by backlog-workflow 1.6.0 -->
 
 # Backlog Development Workflow
 
@@ -11,20 +11,17 @@ Read this file, then the one reference for the mode you are actually running.
 
 | Mode | Entry point | Read next |
 |---|---|---|
-| Planning | `/backlog-plan <requirement, topic, or document path>` | `.agent-workflow/PLAN.md` |
-| Decomposition review | `/backlog-review [requirement source or scope]` | `.agent-workflow/PLAN.md` |
-| Single-task execution | `/backlog-run <TASK-ID>` | `.agent-workflow/EXECUTION.md` |
-| Autonomous execution | `/backlog-auto [TASK-ID]` | `.agent-workflow/AUTO.md`, then `.agent-workflow/EXECUTION.md` |
+| Planning | `backlog-plan` skill | `.agent-workflow/PLAN.md` |
+| Decomposition review | `backlog-review` skill | `.agent-workflow/PLAN.md` |
+| Single-task execution | `backlog-run` skill with a task ID | `.agent-workflow/EXECUTION.md` |
+| Autonomous execution | `backlog-auto` skill, optionally with a task ID | `.agent-workflow/AUTO.md`, then `.agent-workflow/EXECUTION.md` |
 
 Do not read a mode reference you are not running.
 
 The default mode is manual: planning and execution are separate user-triggered
 stages. That does not mean waiting for approval after every engineering step.
-Autonomous execution starts only through `/backlog-auto`; "continue development"
-does not start it.
-
-The slash commands are Claude Code entry points. Any coding agent can follow the
-same process by reading this file plus the mode reference it needs.
+Autonomous execution starts only through an explicit invocation of the
+`backlog-auto` skill; "continue development" does not start it.
 
 ## Responsibility boundary
 
@@ -83,7 +80,7 @@ MCP and never registers an MCP server; it must run with only the CLI available.
 - Backlog.md decision records (`backlog decision create`) — a decision reached
   through `grilling`, authoritative from the moment it is written.
 - `.agent-workflow/PROJECT.md` — repository-specific commands, paths, constraints.
-- `CLAUDE.md` and `AGENTS.md` — workflow entry points and project rules.
+- `AGENTS.md` — the canonical repository workflow entry point and project rules.
 
 A task must not silently introduce, remove, or reinterpret a product requirement.
 Resolve conflicts in the authoritative source before implementation.
@@ -123,7 +120,7 @@ Before any task enters the active status, verify it has:
 A task missing any of these is not executable. Missing product intent is a
 blocker; engineering detail determinable from repository evidence is not. This
 gate is checked at execution because a task can reach the board without ever
-passing through `/backlog-plan`.
+passing through the `backlog-plan` skill.
 
 A task that fails the gate is not repaired while implementing it. It stays out of
 the active status and goes back to planning as a task blocker. Ambiguity that
@@ -180,8 +177,8 @@ The gate travels with each task as Backlog.md Definition of Done items:
 - `Documentation and Requirement Matrix are synchronized when applicable`
 - `Validation evidence is recorded in the task`
 
-`/backlog-plan` adds them at creation with one repeatable `--dod` per item.
-Before starting work, `/backlog-run` and `/backlog-auto` read `definitionOfDone`
+The `backlog-plan` skill adds them at creation with one repeatable `--dod` per item.
+Before starting work, the `backlog-run` and `backlog-auto` skills read `definitionOfDone`
 from `backlog task <TASK-ID> --json` and append any missing item with `backlog
 task edit <TASK-ID> --dod "<item>"`, so a task created before this binding, or
 outside the workflow, cannot bypass the gate.
@@ -212,7 +209,7 @@ On a task blocker, put the task in the blocked status and record why:
 backlog task edit <TASK-ID> -s "<blocked status>" --append-notes "Blocked: <evidence>"
 ```
 
-The status is what carries the blocked state forward — `/backlog-auto` selects on
+The status is what carries the blocked state forward — the `backlog-auto` skill selects on
 the not-started status, so a task parked in the blocked status is out of the next
 round by construction, with nothing to remember. Reporting `Status: Blocked`
 without writing the status leaves the task selectable.

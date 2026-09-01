@@ -1,24 +1,21 @@
 ---
 name: audit-claude-md
-description: 逐條審查並重構專案的 CLAUDE.md、nested CLAUDE.md 與 path-scoped rules，移除過時、重複、容易自行發現或作用範圍錯誤的內容。
-disable-model-invocation: true
-argument-hint: "[審查路徑，預設為 repository root]"
-allowed-tools: Read Glob Grep Bash Edit Write Agent Task
+description: 逐條審查並重構 AGENTS.md、CLAUDE.md、agent-facing skills 與 path-scoped rules；名稱為相容性保留。
 ---
 
 # 目標
 
-審查 `$ARGUMENTS` 指定範圍；未指定時審查整個 repository。
+審查 skill invocation 指定的範圍；未指定時審查整個 repository。
 
-逐條檢視所有 Claude 專案指令，直接完成必要的刪除、精簡、改寫及搬移。
+逐條檢視所有 agent-facing 專案指令，直接完成必要的刪除、精簡、改寫及搬移。
 
 只修改下列內容，不修改產品程式碼：
 
-* `CLAUDE.md`
-* `.claude/CLAUDE.md`
-* 子目錄中的 `CLAUDE.md`
+* `AGENTS.md` 與子目錄中的 `AGENTS.md`
+* `CLAUDE.md`、`.claude/CLAUDE.md` 與子目錄中的 `CLAUDE.md`
 * `.claude/rules/**/*.md`
-* 必要時新增或調整 `.claude/skills/*/SKILL.md`
+* 必要時新增或調整 canonical `.agents/skills/*/SKILL.md`
+* `.claude/skills/*/SKILL.md` 僅作為 compatibility adapter 檢查與修正
 
 不要修改 `CLAUDE.local.md`，除非使用者明確指定。
 
@@ -26,14 +23,17 @@ allowed-tools: Read Glob Grep Bash Edit Write Agent Task
 
 先找出並閱讀：
 
-1. 所有 `CLAUDE.md`
+1. 所有 `AGENTS.md` 與 `CLAUDE.md`
 2. `.claude/rules/**/*.md`
 3. `CLAUDE.md` 使用 `@` 引入的檔案
-4. 相關 `SKILL.md`，用來檢查重複流程
+4. `.agents/skills` 的 canonical `SKILL.md` 與 tool-specific adapters
 5. 支援或反駁現有規則的程式碼、設定、測試及文件
-6. 若存在 `AGENTS.md`（或其他 agent 的指令檔），一併閱讀但**不修改**：只用來偵測與 `CLAUDE.md` 重複或矛盾的規則
+6. 其他 agent 的指令檔，用來偵測重複或矛盾規則
 
-`AGENTS.md` 等非 Claude 指令檔不在本 skill 的修改範圍。發現內容與 `CLAUDE.md` 衝突時，列入最終回報的「發現的衝突」，由使用者決定如何處理。
+共享規則以 `AGENTS.md` 為 canonical entry；`CLAUDE.md` 僅保留 Claude Code
+compatibility 與真正 Claude-specific 的規則。若 repository 使用
+`.agents/skills`，完整 procedure 以該處為 canonical，`.claude/skills` 不得
+複製第二份內容。
 
 必須檢視每一個段落與 bullet，不得只檢查標題。
 
@@ -45,7 +45,7 @@ allowed-tools: Read Glob Grep Bash Edit Write Agent Task
 
 1. 這條規則是否適用於此作用範圍內的大部分工作？
 2. 幾個月後是否仍可能成立？
-3. Claude 是否能從目前程式碼、設定、測試或權威文件中快速且無歧義地找到？
+3. 執行中的 coding agent 是否能從目前程式碼、設定、測試或權威文件中快速且無歧義地找到？
 4. 即使可以找到，重新探索是否成本高、容易誤判或出錯代價高？
 5. 規則是否具體、可執行、可驗證？
 6. 是否與其他指令重複、衝突或描述不同版本的事實？
@@ -55,9 +55,9 @@ allowed-tools: Read Glob Grep Bash Edit Write Agent Task
 
 若資訊藏得深、存在多種看似合理的做法、涉及重要不變式，或錯誤選擇會造成重大問題，應保留精簡後的規則。
 
-符合下列任一條件，且已用 Glob/Grep 搜尋仍無法判斷資訊是否可自行找到時，最多使用一個 Explore 子代理進行獨立搜尋：審查範圍內有 5 份以上 `CLAUDE.md` 與 rules 檔案，或該規則牽涉的程式碼分散在 3 個以上頂層目錄。
+符合下列任一條件，且已使用可用的 repository search 仍無法判斷資訊是否可自行找到時，可在 agent runtime 支援 delegation 時委派一次獨立搜尋：審查範圍內有 5 份以上 instruction/rules 檔案，或該規則牽涉的程式碼分散在 3 個以上頂層目錄。
 
-不符合上述條件時，直接用 Glob/Grep/Read 自行查證。不要使用子代理重複驗證已完成的分析。
+不符合上述條件時，直接使用可用的檔案閱讀與搜尋能力自行查證。不要重複委派已完成的分析。
 
 # 處置類型
 
@@ -65,7 +65,7 @@ allowed-tools: Read Glob Grep Bash Edit Write Agent Task
 
 ## KEEP_ROOT
 
-保留在根目錄 `CLAUDE.md`：
+保留在根目錄 `AGENTS.md`；只有 Claude-specific 規則留在 `CLAUDE.md`：
 
 * 幾乎所有工作都會用到
 * 長期穩定
@@ -77,14 +77,16 @@ allowed-tools: Read Glob Grep Bash Edit Write Agent Task
 
 只適用特定目錄或模組：
 
-* 目錄級背景與不變式放至該目錄的 `CLAUDE.md`
+* 跨 agent 的目錄級背景與不變式放至該目錄的 `AGENTS.md`
+* Claude-specific 目錄規則才放至該目錄的 `CLAUDE.md`
 * 檔案類型或 glob 規則放至 `.claude/rules/*.md`，並設定 `paths`
 
 例如，僅適用 Web 的規則不得留在根目錄。
 
 ## MOVE_SKILL
 
-以下內容移至 `.claude/skills/<name>/SKILL.md`：
+以下內容移至 `.agents/skills/<name>/SKILL.md`；若 Claude Code 需要 entry
+point，再建立薄的 `.claude/skills/<name>/SKILL.md` adapter：
 
 * 多步驟操作流程
 * 定期維護工作
@@ -92,17 +94,15 @@ allowed-tools: Read Glob Grep Bash Edit Write Agent Task
 * Deployment、migration、release 或 audit 流程
 * 只有特定任務才需要的詳細指令
 
-預設將具有副作用或成本較高的流程設定為：
-
-```yaml
-disable-model-invocation: true
-```
+具有副作用或成本較高的流程預設為明確使用者觸發；若 runtime 需要專用
+invocation metadata，將該設定放在 tool-specific adapter，不放進 canonical
+skill 本體。
 
 ## MOVE_DOC
 
 詳細背景、設計說明、歷史紀錄或長篇參考資料移至正式文件。
 
-`CLAUDE.md` 只保留：
+`AGENTS.md` 或 tool-specific adapter 只保留：
 
 * 何時需要查閱
 * 權威文件路徑
@@ -124,7 +124,7 @@ disable-model-invocation: true
 
 刪除：
 
-* Claude 已具備的一般程式設計常識
+* coding agent 已具備的一般程式設計常識
 * 可從標準設定快速且唯一推導的資訊
 * 完整目錄樹、套件清單或依賴版本快照
 * 當前測試數量、migration 數量、短期進度或日期
@@ -179,7 +179,7 @@ disable-model-invocation: true
 * 路徑、命令及識別字使用反引號
 * 避免重複 README、架構文件與產品文件
 * 不保留「目前」、「現在」、「近期」等容易過期的描述
-* 根目錄及每份 nested `CLAUDE.md` 各自目標控制在 200 行內
+* 根目錄及每份 nested `AGENTS.md`／`CLAUDE.md` 各自目標控制在 200 行內
 * 行數以「該檔案被載入時實際進入 context 的內容」計算：自身內容加上它 `@import` 的檔案。搬進 import 檔不算縮短，因為兩者同時載入
 * 將只適用特定路徑的規則搬到該路徑的 nested `CLAUDE.md`，是本 skill 期望的結果，不是規避行數。nested 檔案只在處理該路徑時才載入，確實降低其他工作的 context
 * 不為了達到行數限制而犧牲重要的隱性知識
@@ -193,7 +193,7 @@ disable-model-invocation: true
 2. 將每條內容拆成原子規則。
 3. 使用程式碼、設定、測試及文件確認其正確性。
 4. 判斷每條規則的處置類型。
-5. 檢查 root、nested rules 與 Skills 之間的重複和衝突。
+5. 檢查 root、nested rules、canonical Skills 與 adapters 之間的重複和衝突。
 6. 直接修改相關檔案。
 7. 確認搬移後沒有遺失重要限制。
 8. 檢查 Markdown 與 YAML frontmatter 格式。
@@ -226,7 +226,6 @@ disable-model-invocation: true
 4. 發現的衝突或過時資訊
 5. Enforcement gaps
 6. 待人工確認項目
-7. 每份 `CLAUDE.md` 修改前後的行數；本次新建的檔案標示為「新建」並只列最終行數
+7. 每份 `AGENTS.md`／`CLAUDE.md` 修改前後的行數；本次新建的檔案標示為「新建」並只列最終行數
 
 若不需要修改，明確說明已檢查的範圍及沒有修改的原因。
-

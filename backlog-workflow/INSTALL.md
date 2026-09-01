@@ -36,49 +36,111 @@ git archive HEAD backlog-workflow | tar -x -C "$HOME\.claude\skills"
 
 If `~/.claude/skills` did not exist when Claude Code started, restart Claude Code once.
 
-From a new or existing project:
+## Applying the workflow to a project
+
+The installer is a plain Python script, so every agent uses the same three
+actions. Run them from the project root:
+
+```bash
+python3 <skill-dir>/scripts/install.py apply     # install or refresh
+python3 <skill-dir>/scripts/install.py audit     # read-only drift check
+python3 <skill-dir>/scripts/install.py upgrade   # explicit version upgrade
+```
+
+`<skill-dir>` is where the package was installed — `~/.claude/skills/backlog-workflow`
+for a Claude Code install, or the cloned `backlog-workflow` directory. Add
+`--project <path>` to target a repository other than the working directory.
+
+`apply` requires a working Backlog.md CLI and fails with the repository
+unchanged if none verifies. It is idempotent: re-running a current install
+reports `Clean` and writes nothing.
+
+### Claude Code
+
+The same actions are exposed as slash commands:
 
 ```text
 /backlog-workflow apply
-```
-
-Read-only drift check:
-
-```text
 /backlog-workflow audit
-```
-
-Explicit workflow upgrade:
-
-```text
 /backlog-workflow upgrade
 ```
 
-Default manual flow:
+After an install or upgrade that touched `.claude/skills`, run `/reload-skills`
+or start a new session so the adapters are picked up. Then use the workflow
+through its slash commands:
 
 ```text
 /backlog-plan <requirement or PRD path>
 /backlog-review [requirement or PRD path]
 /backlog-run <TASK-ID>
+/backlog-auto [TASK-ID]
 ```
 
-Explicit automatic flow:
+### Codex and OpenCode
+
+Run the installer with `python3` as shown above; there is no runtime-specific
+install step. `.agents/skills` is the native project skills directory for both
+Codex and OpenCode, so the installed skills are discovered automatically — the
+canonical layer is not a compatibility shim for them, it is their normal
+location.
+
+Invoke a workflow by name, the way you invoke any other skill:
 
 ```text
-/backlog-auto
-/backlog-auto <TASK-ID>
+Use the backlog-plan skill for docs/prd.md
+Use the backlog-run skill for TASK-12
 ```
 
-## Other coding agents
+If an agent does not pick the skill up, name the file directly
+(`Follow .agents/skills/backlog-run/SKILL.md for TASK-12`); the `AGENTS.md`
+managed block also lists each skill and when to use it, so a plain request like
+"plan this requirement" routes correctly.
 
-The slash commands are Claude Code specific, but the process is not. `apply`
-installs `.agent-workflow/WORKFLOW.md` and `.agent-workflow/PROJECT.md`, which are
-plain Markdown, and drives tasks through the Backlog.md CLI. Any agent that can
-read those files and run a shell command can follow the same workflow.
+`.claude/` is ignored by these agents; slash commands are a Claude Code
+interface, not part of the protocol.
 
-`apply` manages one block in `CLAUDE.md` (or `.claude/CLAUDE.md`) and one block in
-`AGENTS.md`. `AGENTS.md` is created when absent, so agents that read it pick up
-the workflow automatically — no manual opt-in required.
+### Switching agents on the same repository
+
+No migration or re-install is needed. `.agents/skills`, `.agent-workflow`,
+`AGENTS.md`, and Backlog.md task state are shared, so a project planned in
+Claude Code can be executed in OpenCode or Codex and back. Only the invocation
+syntax differs.
+
+## Updating
+
+Update the package first, then refresh the project:
+
+```bash
+npx skills add tc3oliver/skills          # Agent Skills CLI
+git pull                                 # or, from a clone
+```
+
+Claude Code plugin users update with `/plugin update tc3oliver-skills`.
+
+Then, in each project using the workflow:
+
+```bash
+python3 <skill-dir>/scripts/install.py upgrade
+```
+
+Upgrades replace only managed files. `.agent-workflow/PROJECT.md`, Backlog.md
+tasks and configuration, and any content outside the managed blocks in
+`AGENTS.md` and `CLAUDE.md` are preserved. A 1.5.x install is migrated in place:
+the canonical `.agents/skills` layer is created and the previously full
+`.claude/skills` files are replaced by thin adapters. Run `audit` afterwards to
+confirm a clean state.
+
+## Agent compatibility
+
+The portable core consists of `.agents/skills`, `.agent-workflow`, and
+`AGENTS.md`. Agents enter through the `AGENTS.md` managed block, which names
+each canonical skill and when to use it, so Codex and OpenCode can use the
+workflow without runtime-specific skill discovery. Claude Code adds a
+compatibility layer: `.claude/skills` generated adapters, `CLAUDE.md`, and the
+optional plugin/slash-command UX.
+
+`apply` manages separate safe-update blocks in `AGENTS.md` and `CLAUDE.md` (or
+`.claude/CLAUDE.md`). Content outside the blocks remains user-owned.
 
 ## Backlog interface
 

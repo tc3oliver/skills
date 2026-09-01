@@ -1,17 +1,12 @@
 ---
 name: backlog-workflow
 description: Install, audit, or upgrade the versioned Backlog.md workflow in the current project. Installs the requirement-planning, decomposition-review, single-task-execution, and explicit autonomous-execution skills as a policy/orchestration layer over Backlog.md.
-argument-hint: "[apply|audit|upgrade]"
-arguments: action
-disable-model-invocation: true
-allowed-tools: Read Glob Grep Bash Edit Write Skill
 ---
 
 # Backlog Workflow Manager
 
-Action: `$action`
-
-Use `apply` when the action is empty. Accept only `apply`, `audit`, or `upgrade`.
+Use the action supplied with the skill invocation. Default to `apply`; accept
+only `apply`, `audit`, or `upgrade`.
 
 ## Architecture
 
@@ -27,9 +22,10 @@ This package is a **policy + orchestration layer** over Backlog.md:
 - **PROJECT.md** = repository-specific configuration.
 - **PRD/spec** = product truth.
 
-`apply` installs exactly four project skills: `/backlog-plan` (requirement
-planning), `/backlog-review` (decomposition review), `/backlog-run` (single-task
-execution), and `/backlog-auto` (explicit autonomous execution).
+`apply` installs four portable project skills: `backlog-plan` (requirement
+planning), `backlog-review` (decomposition review), `backlog-run` (single-task
+execution), and `backlog-auto` (explicit autonomous execution). Tool-specific
+invocation UX is a compatibility layer, not workflow protocol.
 
 Backlog.md canonical instructions are the single source of truth for Backlog
 mechanics. This workflow does not duplicate them.
@@ -53,16 +49,17 @@ Read these before acting:
 4. Run the bundled installer:
 
 ```bash
-python3 "${CLAUDE_SKILL_DIR}/scripts/install.py" "$action" --project "<project-root>"
+python3 "<skill-dir>/scripts/install.py" "<action>" --project "<project-root>"
 ```
 
-Use `python` instead of `python3` only when that is the available interpreter.
+Resolve `<skill-dir>` as the directory containing this `SKILL.md`. Use `python`
+instead of `python3` only when that is the available interpreter.
 
 5. For `apply` or `upgrade`, review the generated `.agent-workflow/PROJECT.md` against repository evidence and correct only inaccurate detected facts. Preserve valid project-specific additions.
 6. Validate with:
 
 ```bash
-python3 "${CLAUDE_SKILL_DIR}/scripts/install.py" audit --project "<project-root>"
+python3 "<skill-dir>/scripts/install.py" audit --project "<project-root>"
 ```
 
 7. Report the operation using the exact compact format from `references/OPERATIONS.md`.
