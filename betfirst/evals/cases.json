@@ -67,6 +67,24 @@
       "scenario": "No per-call token usage is exposed to the agent while the user asks how much a bet saved",
       "expected": "REPORT_UNKNOWN",
       "must": "Report token usage as unavailable and make no savings claim"
+    },
+    {
+      "id": "bounded-single-model-probe",
+      "scenario": "A single read-only model invocation has a credible 8-second timeout, no external writes, and can cheaply falsify a costly hypothesis",
+      "expected": "BET_IF_DECISIVE",
+      "must": "Judge the enforceable bound, evidence and downside rather than forbidding all model calls"
+    },
+    {
+      "id": "unbounded-live-probe",
+      "scenario": "An LLM API call may hang indefinitely, the tool offers no enforceable timeout, and the test is not naturally bounded",
+      "expected": "NORMAL_OR_SPLIT",
+      "must": "Never label an unbounded call a cheap bet; use a bounded mock, fixture, or normal investigation"
+    },
+    {
+      "id": "decisive-refutation",
+      "scenario": "A six-second read-only measurement refutes the proposed implementation but changes the next action",
+      "expected": "BET_THEN_NORMAL",
+      "must": "Preserve the refutation as useful evidence, do not count it as a probe-quality failure or repeat the hypothesis"
     }
   ]
 }
