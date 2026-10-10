@@ -14,6 +14,7 @@ The goal is to make coding agents more predictable: clarify requirements before 
 | [`backlog-workflow`](backlog-workflow/)                   | My task-driven development workflow built on Backlog.md. Supports requirement planning, decomposition review, single-task execution, autonomous execution, validation, and delivery. |
 | [`audit-agent-instructions`](audit-agent-instructions/)   | Audits `AGENTS.md`, `CLAUDE.md`, agent-facing skills, and path-scoped rules. Previously named `audit-claude-md`.                                               |
 | [`diagnosing-bugs`](diagnosing-bugs/)                     | A structured debugging workflow based on reproduction, falsifiable hypotheses, evidence, and regression tests.                                                 |
+| [`betfirst`](betfirst/)                                 | Cost-aware, reversible micro-experiments: make cheap bets, win big, cut losses quickly. Experimental; no verified cost savings yet.                           |
 | [`writing-for-agents`](writing-for-agents/)               | Guidelines for writing effective `SKILL.md`, `CLAUDE.md`, `AGENTS.md`, and other agent-facing documentation.                                                   |
 | [`skill-optimizer`](skill-optimizer/)                     | Reviews and refactors an existing Skill for routing accuracy, context efficiency, execution reliability, and maintainability.                                  |
 | [`resolving-merge-conflicts`](resolving-merge-conflicts/) | Resolves merge and rebase conflicts by understanding the intent of both sides before modifying the conflict.                                                   |
@@ -46,6 +47,7 @@ Plugin skills use the namespace:
 /tc3oliver-skills:backlog-workflow
 /tc3oliver-skills:audit-agent-instructions
 /tc3oliver-skills:diagnosing-bugs
+/tc3oliver-skills:betfirst
 /tc3oliver-skills:writing-for-agents
 /tc3oliver-skills:skill-optimizer
 /tc3oliver-skills:resolving-merge-conflicts
@@ -473,6 +475,19 @@ delete
 ```
 
 The goal is to prevent `AGENTS.md` and `CLAUDE.md` from becoming a permanent collection of stale project knowledge.
+
+### betfirst
+
+**Make Cheap Bets. Win Big. Lose Small.** A lightweight cost-aware policy for
+coding tasks. When a tiny, falsifiable, reversible experiment can avoid broad
+investigation, try it and verify; otherwise follow the normal workflow. A
+failed bet stops early, preserves evidence and never sacrifices final tests.
+
+Claude Code plugin: `/tc3oliver-skills:betfirst`. Pi: `/skill:betfirst`
+when installed via the portable Agent Skills directory. See
+[`betfirst/README.md`](betfirst/README.md) for installation, theory, safety,
+examples, and an experimental A/B evaluation protocol. **No measured speedup or
+token reduction is claimed yet.**
 
 ### diagnosing-bugs
 
