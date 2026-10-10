@@ -47,8 +47,9 @@ Logs can contain task text, code, provider responses, or secrets. Keep --output 
 Each run has a separate workspace, prompt, raw CLI stdout/stderr and an outcome.json containing acceptance result, timeout, protected tests integrity, and wall time. The parent directory contains a manifest, metadata and a CSV.
 
     python3 betfirst/scripts/analyze_runs.py /tmp/betfirst-claude-pilot/measured-runs.csv
+    python3 betfirst/experiments/report.py /tmp/betfirst-claude-pilot
 
-For the existing analyzer on main, you get Baseline/Efficiency and Baseline/BetFirst comparisons. Once PR #3's analyzer is merged, you also get BetFirst vs Efficiency, the comparison that isolates the added decision policy. Only compare equal task/replicate pairs and disclose acceptance rate alongside costs.
+The new pilot reporter directly contrasts **BetFirst vs Efficiency-only**, includes pass counts and flags incomplete usage. It refuses to compute savings from synthetic mock output. For the existing analyzer on main, you get Baseline/Efficiency and Baseline/BetFirst comparisons. Once PR #3's analyzer is merged, you also get BetFirst vs Efficiency, the comparison that isolates the added decision policy. Only compare equal task/replicate pairs and disclose acceptance rate alongside costs.
 
 Record input/output/cache token fields separately and actual provider USD cost when exposed. If a backend version omits a field, it stays blank. Pi message_end assistant usage is summed once per response; streaming updates/turn_end duplicates are deliberately ignored. Claude uses the final structured response and provider-reported costs.
 
