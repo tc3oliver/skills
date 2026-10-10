@@ -171,6 +171,7 @@ def execute(suite: Path, output: Path, driver: str, model: str | None,
         "synthetic": driver == "mock", "timeout": timeout,
         "claude_launcher": claude_launcher if driver == "claude" else None,
         "suite_sha256": hashlib.sha256(suite.read_bytes()).hexdigest(),
+        "fixture_hashes": {t["id"]: hashes(suite.parent / t["fixture"]) for t in tasks},
         "skill_sha256": hashlib.sha256(skill.encode("utf-8")).hexdigest(),
         "note": "Mock exercises harness only, not agent performance or savings."
     }, indent=2) + "\n", encoding="utf-8")
