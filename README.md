@@ -14,7 +14,7 @@ The goal is to make coding agents more predictable: clarify requirements before 
 | [`backlog-workflow`](backlog-workflow/)                   | My task-driven development workflow built on Backlog.md. Supports requirement planning, decomposition review, single-task execution, autonomous execution, validation, and delivery. |
 | [`audit-agent-instructions`](audit-agent-instructions/)   | Audits `AGENTS.md`, `CLAUDE.md`, agent-facing skills, and path-scoped rules. Previously named `audit-claude-md`.                                               |
 | [`diagnosing-bugs`](diagnosing-bugs/)                     | A structured debugging workflow based on reproduction, falsifiable hypotheses, evidence, and regression tests.                                                 |
-| [`betfirst`](betfirst/)                                 | Cost-aware, reversible micro-experiments: make cheap bets, win big, cut losses quickly. Experimental; no verified cost savings yet.                           |
+| [`betfirst`](betfirst/)                                 | **Make cheap bets. Win big. Lose small.** Cost-aware, reversible probes with bounded downside. [EN](betfirst/README.md) / [繁體中文](betfirst/README.zh-TW.md). Experimental. |
 | [`writing-for-agents`](writing-for-agents/)               | Guidelines for writing effective `SKILL.md`, `CLAUDE.md`, `AGENTS.md`, and other agent-facing documentation.                                                   |
 | [`skill-optimizer`](skill-optimizer/)                     | Reviews and refactors an existing Skill for routing accuracy, context efficiency, execution reliability, and maintainability.                                  |
 | [`resolving-merge-conflicts`](resolving-merge-conflicts/) | Resolves merge and rebase conflicts by understanding the intent of both sides before modifying the conflict.                                                   |
@@ -477,6 +477,12 @@ delete
 The goal is to prevent `AGENTS.md` and `CLAUDE.md` from becoming a permanent collection of stale project knowledge.
 
 ### betfirst
+
+[English](betfirst/README.md) · [繁體中文](betfirst/README.zh-TW.md)
+
+<a href="betfirst/README.md">
+  <img src="betfirst/assets/hero.svg" alt="BetFirst — Make Cheap Bets. Win Big. Lose Small." width="840">
+</a>
 
 **Make Cheap Bets. Win Big. Lose Small.** A lightweight cost-aware policy for
 coding tasks. When a tiny, falsifiable, reversible experiment can avoid broad
