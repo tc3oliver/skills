@@ -31,9 +31,13 @@ Claude Code plugin:
 
 Installed plugin Skills appear as `/tc3oliver-skills:backlog`, `/tc3oliver-skills:betfirst`, etc. Pi and other compatible agents load the portable `SKILL.md` directly.
 
+## Composing Skills
+
+Backlog (durable work), BetFirst (optional cheap probes), and [Claude Team Kit](https://github.com/tc3oliver/claude-team-kit) (explicit native teams) can run independently or together. No new router, installer or shared runtime is required. See the concise [composition contract](docs/COMPOSITION.md) for ownership, optional handoff, and stopping rules.
+
 ## Backlog v2
 
-Backlog is a **small persistence layer**, not an execution orchestrator. The skill does not activate on ordinary coding work; it records and resumes tasks only when the user wants persistent work tracking. A standard-library Python CLI manages `.backlog/tasks/` and `.backlog/archive/YYYY-MM/`. The ready queue reads only task metadata, and `show ID` retrieves one full task.
+Backlog is a **small persistence layer**, not an execution orchestrator. The skill does not activate on ordinary coding work; it records and resumes tasks only when the user wants persistent work tracking. A standard-library Python CLI manages `.backlog/tasks/` and `.backlog/archive/{done,cancelled}/YYYY-MM/`. The ready queue reads only task metadata, and `show ID` retrieves one full task.
 
 ```text
 /backlog add "Build OAuth login"

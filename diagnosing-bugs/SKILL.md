@@ -9,6 +9,8 @@ description: Diagnosis loop for hard bugs and performance regressions. Use when 
 
 A discipline for hard bugs. Skip phases only when explicitly justified.
 
+**Skill selection:** This is a standalone, agent-neutral debugging method. For an explicit `ctk:debug` request or debugging delegated inside a CTK team, use that CTK debugging flow instead of stacking both full diagnosis protocols. A Backlog task can supply Goal/AC/Handoff without changing this feedback loop; report findings to its owner, not directly to persistent task state. BetFirst may shorten an existing diagnostic probe, never replace reproduction or regression validation.
+
 When exploring the codebase, read `CONTEXT.md` (if it exists) to get a clear mental model of the relevant modules, and check ADRs in the area you're touching.
 
 ## Phase 1 — Build a feedback loop
