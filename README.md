@@ -111,7 +111,7 @@ managed blocks in `AGENTS.md` and `CLAUDE.md` are preserved.
 See [`backlog-workflow/INSTALL.md`](backlog-workflow/INSTALL.md) for details.
 
 **Versioning:** The Claude Code Plugin is versioned independently in
-`.claude-plugin/plugin.json` (currently `1.7.0`). The
+`.claude-plugin/plugin.json` (currently `1.8.0`). The
 `backlog-workflow/VERSION` file (currently `1.6.0`) versions the workflow
 installer and managed project templates. Adding or updating standalone Skills
 requires a Plugin version bump for installed-plugin upgrades, but does not
