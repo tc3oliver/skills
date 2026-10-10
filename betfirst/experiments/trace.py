@@ -29,6 +29,7 @@ def stream_events(data: str) -> list[dict] | None:
 
 def summarize_trace(data: str, driver: str) -> dict:
     unknown = {
+        "agent_subtype": None, "agent_turns": None, "agent_is_error": None,
         "trace_complete": False, "tool_calls": None,
         "tool_results": None, "tool_errors": None,
         "permission_denials": None, "tools_by_name": None,
@@ -70,6 +71,9 @@ def summarize_trace(data: str, driver: str) -> dict:
     denied = final.get("permission_denials")
     denials = len(denied) if isinstance(denied, list) else None
     return {
+        "agent_subtype": final.get("subtype") if isinstance(final.get("subtype"), str) else None,
+        "agent_turns": final.get("num_turns") if type(final.get("num_turns")) is int else None,
+        "agent_is_error": final.get("is_error") if type(final.get("is_error")) is bool else None,
         "trace_complete": len(events) > 1,
         "tool_calls": len(calls) if len(events) > 1 else None,
         "tool_results": len(results) if len(events) > 1 else None,

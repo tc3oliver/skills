@@ -42,6 +42,18 @@ def report_dir(directory: Path) -> dict:
     with (directory / "measured-runs.csv").open(encoding="utf-8", newline="") as f:
         raw_rows = list(csv.DictReader(f))
     records = load_records(iter_csv(raw_rows))
+    # Reliability fields are optional so legacy v1/v2 CSVs remain readable.
+    def count_pass(field: str, arm: str, pairs: list[tuple]) -> int | None:
+        vals = []
+        for key in pairs:
+            value = next((r.get(field) for r in raw_rows
+                          if r["task_id"] == key[0] and str(r["replicate"]) == str(key[1])
+                          and r["arm"] == arm), None)
+            if value not in ("true", "false"):
+                return None
+            vals.append(value == "true")
+        return sum(vals)
+
     # Optional trace fields from v2; preserve unknown when CLI emits no tool events.
     tool_by_arm = {}
     for r in raw_rows:
@@ -72,6 +84,10 @@ def report_dir(directory: Path) -> dict:
             "candidate_passed": sum(r["passed"] for r in a),
             "control_passed": sum(r["passed"] for r in b),
             "all_pairs_correct": all_both_correct,
+            "candidate_code_accepted": count_pass("code_accepted", candidate, keys),
+            "control_code_accepted": count_pass("code_accepted", control, keys),
+            "candidate_session_success": count_pass("session_success", candidate, keys),
+            "control_session_success": count_pass("session_success", control, keys),
             "tool_calls_candidate": sum(pair[0] for pair in paired_tool_counts) if tools_known else None,
             "tool_calls_control": sum(pair[1] for pair in paired_tool_counts) if tools_known else None,
             "wall_time_saving_fraction": savings(b_time, a_time),
@@ -90,6 +106,7 @@ def report_dir(directory: Path) -> dict:
             "Unmatched runs are not included in paired contrasts.",
             "Missing token/cache/price usage remains null, not zero.",
             "Tool-call counts use unique Claude tool_use IDs, not model self-report; BET labels remain unverified.",
+            "Agent session completion and post-run code acceptance are reported separately when recorded.",
             "A faster candidate is not a quality-equivalent saving unless all paired checks pass.",
             "Observed speedups can reflect model randomness, cold starts, host load or other confounding.",
         ],

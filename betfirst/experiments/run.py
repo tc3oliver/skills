@@ -20,15 +20,22 @@ from pathlib import Path
 from usage import usage_from_output
 from trace import summarize_trace
 from test_integrity import inspect_tests
+from scoring import classify
 
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[1]
 ARMS = ("baseline", "efficiency", "betfirst")
 EFFICIENCY = "Avoid redundant file reads, repeated tool calls and unnecessary tests; preserve final validation."
+TOOL_PROFILES = {
+    "restricted": ("Read", "Edit", "Write", "Bash(python3 -m unittest *)"),
+    "diagnostic": ("Read", "Edit", "Write", "Bash(python3 *)"),
+}
 COLUMNS = ("task_id", "replicate", "arm", "passed", "elapsed_seconds", "input_tokens",
            "output_tokens", "cache_read_tokens", "cache_write_tokens", "api_cost_usd",
            "bet_attempts", "bet_failures", "failed_bet_overhead_seconds",
-           "tool_calls", "tool_errors", "permission_denials")
+           "tool_calls", "tool_errors", "permission_denials",
+           "agent_subtype", "agent_turns", "code_accepted", "session_success",
+           "failure_reasons")
 
 
 def hashes(folder: Path) -> dict:
@@ -78,28 +85,35 @@ def load_suite(path: Path) -> list:
     return tasks
 
 
-def prompt_for(task: dict, arm: str, skill_text: str) -> str:
+def prompt_for(task: dict, arm: str, skill_text: str, tool_profile: str = "restricted") -> str:
     prompt = task["prompt"].strip()
     if arm != "baseline":
         prompt += "\n\nExecution guidance:\n" + EFFICIENCY
     if arm == "betfirst":
         prompt += "\n\nApply the following BetFirst Skill:\n" + skill_text
-    prompt += "\n\nWork only on this task. Preserve all tests under tests/. Finish with required verification."
+    prompt += "\n\nWork only on this task. Preserve original tests; additive regression tests are allowed. Finish with required verification."
+    if tool_profile == "diagnostic":
+        prompt += ("\n\nAll arms receive identical diagnostic tool permissions: use Python via "
+                   "python3 -c or python3 script.py for focused probes. "
+                   "Create source files with Write/Edit, not shell heredocs, "
+                   "pipelines, mkdir or rm. Keep probes inside the task workspace.")
     return prompt
 
 
 def command(driver: str, model: str | None, prompt: str, tid: str, arm: str,
-            claude_launcher: str = "direct") -> list:
+            claude_launcher: str = "direct", tool_profile: str = "restricted",
+            max_turns: int = 30) -> list:
     if driver == "mock":
         return [sys.executable, str(HERE / "mock_agent.py"), tid, arm]
     if not model:
         raise ValueError("--model is required for live agents")
     if driver == "claude":
+        if tool_profile not in TOOL_PROFILES:
+            raise ValueError("unknown tool profile")
         claude_args = ["--bare", "--permission-mode", "dontAsk",
-                       "--allowedTools", "Read", "Edit", "Write",
-                       "Bash(python3 -m unittest *)",
+                       "--allowedTools", *TOOL_PROFILES[tool_profile],
                        "-p", prompt, "--output-format", "stream-json",
-                       "--verbose", "--max-turns", "30"]
+                       "--verbose", "--max-turns", str(max_turns)]
         if claude_launcher == "omlx":
             binary = os.environ.get("OMLX_BIN")
             if not binary:
@@ -138,11 +152,21 @@ def run_cmd(argv: list, cwd: Path, stdout: Path, stderr: Path, timeout: int) -> 
 def execute(suite: Path, output: Path, driver: str, model: str | None,
             replicates: int, seed: int, timeout: int, execute_real: bool,
             limit: int | None = None, claude_launcher: str = "direct",
-            selected_tasks: list[str] | None = None) -> list:
+            selected_tasks: list[str] | None = None,
+            tool_profile: str = "restricted",
+            acknowledge_isolation: bool = False, max_turns: int = 30) -> list:
     if driver != "mock" and not execute_real:
         raise ValueError("real CLI execution requires --execute and may incur API cost")
     if driver != "mock" and not model:
         raise ValueError("--model must be explicit for live experiments")
+    if max_turns < 1:
+        raise ValueError("max-turns must be positive")
+    if tool_profile not in TOOL_PROFILES:
+        raise ValueError("unknown tool profile")
+    if driver != "claude" and tool_profile != "restricted":
+        raise ValueError("diagnostic tool profile is Claude-only")
+    if driver == "claude" and tool_profile == "diagnostic" and not acknowledge_isolation:
+        raise ValueError("diagnostic Python access requires --acknowledge-isolation: run in a dedicated OS-isolated environment, not an unrestricted host account")
     if replicates < 1 or timeout < 1 or (limit is not None and limit < 1):
         raise ValueError("replicates, timeout and limit must be positive")
     if output.exists() and any(output.iterdir()):
@@ -170,6 +194,9 @@ def execute(suite: Path, output: Path, driver: str, model: str | None,
         "replicates": replicates, "runs": len(plan),
         "synthetic": driver == "mock", "timeout": timeout,
         "claude_launcher": claude_launcher if driver == "claude" else None,
+        "claude_tool_profile": tool_profile if driver == "claude" else None,
+        "claude_allowed_tools": list(TOOL_PROFILES[tool_profile]) if driver == "claude" else None,
+        "claude_max_turns": max_turns if driver == "claude" else None,
         "suite_sha256": hashlib.sha256(suite.read_bytes()).hexdigest(),
         "fixture_hashes": {t["id"]: hashes(suite.parent / t["fixture"]) for t in tasks},
         "skill_sha256": hashlib.sha256(skill.encode("utf-8")).hexdigest(),
@@ -184,9 +211,10 @@ def execute(suite: Path, output: Path, driver: str, model: str | None,
         shutil.copytree(suite.parent / task["fixture"], work, symlinks=False)
         original = hashes(work)
         tests = hashes(work / "tests") if (work / "tests").is_dir() else {}
-        prompt = prompt_for(task, arm, skill)
+        prompt = prompt_for(task, arm, skill, tool_profile)
         (run_dir / "prompt.txt").write_text(prompt, encoding="utf-8")
-        cmd = command(driver, model, prompt, task["id"], arm, claude_launcher)
+        cmd = command(driver, model, prompt, task["id"], arm, claude_launcher,
+                      tool_profile, max_turns)
         try:
             agent_exit, timed_out, agent_time = run_cmd(
                 cmd, work, run_dir / "agent.stdout", run_dir / "agent.stderr", timeout)
@@ -206,23 +234,29 @@ def execute(suite: Path, output: Path, driver: str, model: str | None,
         changed_tests = tests != (hashes(work / "tests") if (work / "tests").is_dir() else {})
         integrity = inspect_tests(suite.parent / task["fixture"], work)
         changed = original != hashes(work)
-        passed = (agent_exit == 0 and not timed_out and test_exit == 0
-                  and not test_timed_out and integrity["passed"]
-                  and (oracle_exit is None or oracle_exit == 0) and not oracle_timed_out)
-        if task.get("no_change"):
-            passed = passed and not changed
         agent_output = (run_dir / "agent.stdout").read_text(encoding="utf-8")
         use = usage_from_output(agent_output, driver)
         trace = summarize_trace(agent_output, driver)
         (run_dir / "trace_summary.json").write_text(
             json.dumps(trace, indent=2) + "\n", encoding="utf-8")
+        evaluation = classify(
+            task=task, agent_exit=agent_exit, agent_timeout=timed_out,
+            agent_subtype=trace["agent_subtype"], test_exit=test_exit,
+            test_timeout=test_timed_out, oracle_exit=oracle_exit,
+            oracle_timeout=oracle_timed_out,
+            test_integrity_passed=integrity["passed"], workspace_changed=changed)
+        passed = evaluation["passed"]
         row = {"task_id": task["id"], "replicate": rep, "arm": arm,
                "passed": str(passed).lower(), "elapsed_seconds": round(agent_time + check_time + oracle_time, 6),
                **use, "bet_attempts": trace["bet_attempts"],
                "bet_failures": trace["bet_failures"],
                "failed_bet_overhead_seconds": trace["failed_bet_overhead_seconds"],
                "tool_calls": trace["tool_calls"], "tool_errors": trace["tool_errors"],
-               "permission_denials": trace["permission_denials"]}
+               "permission_denials": trace["permission_denials"],
+               "agent_subtype": trace["agent_subtype"], "agent_turns": trace["agent_turns"],
+               "code_accepted": str(evaluation["code_accepted"]).lower(),
+               "session_success": str(evaluation["session_success"]).lower(),
+               "failure_reasons": ";".join(evaluation["failure_reasons"])}
         results.append(row)
         (run_dir / "outcome.json").write_text(json.dumps({
             "passed": passed, "agent_exit": agent_exit, "agent_timeout": timed_out,
@@ -231,6 +265,11 @@ def execute(suite: Path, output: Path, driver: str, model: str | None,
             "tests_changed": changed_tests, "tests_tampered": not integrity["passed"],
             "test_integrity": integrity, "workspace_changed": changed,
             "agent_seconds": agent_time, "acceptance_seconds": check_time,
+            "code_accepted": evaluation["code_accepted"],
+            "session_success": evaluation["session_success"],
+            "failure_reasons": evaluation["failure_reasons"],
+            "agent_subtype": trace["agent_subtype"],
+            "agent_turns": trace["agent_turns"],
             "oracle_seconds": oracle_time, "trace_complete": trace["trace_complete"]
         }, indent=2) + "\n", encoding="utf-8")
         print(f"{rid}: {'PASS' if passed else 'FAIL'}", flush=True)
@@ -250,6 +289,10 @@ def main() -> None:
     parser.add_argument("--model")
     parser.add_argument("--claude-launcher", choices=("direct", "omlx"), default="direct",
                         help="Use oMLX launch claude (requires OMLX_BIN) or direct Claude CLI")
+    parser.add_argument("--claude-tool-profile", choices=tuple(TOOL_PROFILES), default="restricted")
+    parser.add_argument("--acknowledge-isolation", action="store_true",
+                        help="Explicitly acknowledge the diagnostic profile permits arbitrary Python execution and requires an OS-isolated account or VM")
+    parser.add_argument("--max-turns", type=int, default=30)
     parser.add_argument("--replicates", type=int, default=1)
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--timeout", type=int, default=180)
@@ -260,7 +303,8 @@ def main() -> None:
     args = parser.parse_args()
     execute(args.suite.resolve(), args.output.resolve(), args.driver, args.model,
             args.replicates, args.seed, args.timeout, args.execute, args.limit,
-            args.claude_launcher, args.selected_tasks)
+            args.claude_launcher, args.selected_tasks, args.claude_tool_profile,
+            args.acknowledge_isolation, args.max_turns)
 
 
 if __name__ == "__main__":
