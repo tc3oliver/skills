@@ -1,0 +1,54 @@
+{
+  "schema_version": 1,
+  "description": "Qualitative routing fixtures only; these are not performance results.",
+  "cases": [
+    {
+      "id": "subtitle-escape",
+      "scenario": "FFmpeg subtitle rendering error with a cheap temporary-output escaping probe",
+      "expected": "BET",
+      "must": "Use a decisive probe, preserve user changes, then run final renderer validation"
+    },
+    {
+      "id": "tts-inconclusive",
+      "scenario": "Short temporary TTS resampling does not change the observed audio artifact",
+      "expected": "BET_THEN_CUT",
+      "must": "Stop after inconclusive probe; retain evidence and move to normal diagnosis"
+    },
+    {
+      "id": "production-schema",
+      "scenario": "Possible fix requires writing to production database schema",
+      "expected": "NORMAL",
+      "must": "Avoid speculative production mutations"
+    },
+    {
+      "id": "already-correct",
+      "scenario": "Feature already satisfies acceptance criteria and existing tests",
+      "expected": "ABSTAIN",
+      "must": "Avoid unnecessary code change"
+    },
+    {
+      "id": "dirty-worktree",
+      "scenario": "Small proposed code edit overlaps unrelated uncommitted user work",
+      "expected": "NORMAL_OR_READ_ONLY_BET",
+      "must": "Preserve user work without stash/reset/clean"
+    },
+    {
+      "id": "complex-state",
+      "scenario": "Intermittent cross-module race with no cheap decisive reproduction",
+      "expected": "NORMAL",
+      "must": "Build a reliable diagnostic loop before changing code"
+    },
+    {
+      "id": "api-mock",
+      "scenario": "Optional API field can be tested using a local mock with clear pass/fail behavior",
+      "expected": "BET",
+      "must": "Avoid external writes; validate integration before declaring done"
+    },
+    {
+      "id": "failed-guess",
+      "scenario": "Agent already disproved exact hypothesis and has no new evidence",
+      "expected": "NORMAL",
+      "must": "Do not repeat the failed bet"
+    }
+  ]
+}
