@@ -7,7 +7,10 @@ file = Path("lib.py")
 if task_id == "subtitle-path":
     file.write_text(
         "def subtitle_filter_path(raw):\n"
-        "    return raw.replace(chr(92), '/').replace(':', chr(92) + ':')\n",
+        "    path = raw.replace(chr(92), '/')\n"
+        "    if len(path) >= 2 and path[0].isalpha() and path[1] == ':':\n"
+        "        path = path[0] + chr(92) + ':' + path[2:]\n"
+        "    return path\n",
         encoding="utf-8",
     )
 elif task_id == "tts-estimate":
