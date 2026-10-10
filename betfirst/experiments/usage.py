@@ -9,7 +9,13 @@ def usage_from_output(data: str, driver: str) -> dict:
     result = dict.fromkeys(FIELDS)
     try:
         if driver == "claude":
-            obj = json.loads(data.strip())
+            # JSON result (v1) or verbose stream-json with a terminal result.
+            try:
+                obj = json.loads(data.strip())
+            except ValueError:
+                events = [json.loads(line) for line in data.splitlines() if line.strip()]
+                obj = next((e for e in reversed(events) if
+                            isinstance(e, dict) and e.get("type") == "result"), None)
             if not isinstance(obj, dict):
                 return result
             usage = obj.get("usage") or {}
