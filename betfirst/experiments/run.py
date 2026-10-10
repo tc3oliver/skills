@@ -19,6 +19,7 @@ import time
 from pathlib import Path
 from usage import usage_from_output
 from trace import summarize_trace
+from test_integrity import inspect_tests
 
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[1]
@@ -202,9 +203,10 @@ def execute(suite: Path, output: Path, driver: str, model: str | None,
                 [sys.executable, str(oracle_path)], work,
                 run_dir / "oracle.stdout", run_dir / "oracle.stderr", timeout)
         changed_tests = tests != (hashes(work / "tests") if (work / "tests").is_dir() else {})
+        integrity = inspect_tests(suite.parent / task["fixture"], work)
         changed = original != hashes(work)
         passed = (agent_exit == 0 and not timed_out and test_exit == 0
-                  and not test_timed_out and not changed_tests
+                  and not test_timed_out and integrity["passed"]
                   and (oracle_exit is None or oracle_exit == 0) and not oracle_timed_out)
         if task.get("no_change"):
             passed = passed and not changed
@@ -225,7 +227,8 @@ def execute(suite: Path, output: Path, driver: str, model: str | None,
             "passed": passed, "agent_exit": agent_exit, "agent_timeout": timed_out,
             "acceptance_exit": test_exit, "acceptance_timeout": test_timed_out,
             "oracle_exit": oracle_exit, "oracle_timeout": oracle_timed_out,
-            "tests_changed": changed_tests, "workspace_changed": changed,
+            "tests_changed": changed_tests, "tests_tampered": not integrity["passed"],
+            "test_integrity": integrity, "workspace_changed": changed,
             "agent_seconds": agent_time, "acceptance_seconds": check_time,
             "oracle_seconds": oracle_time, "trace_complete": trace["trace_complete"]
         }, indent=2) + "\n", encoding="utf-8")
