@@ -25,7 +25,7 @@ REPOSITORY_SKILLS = [
     ROOT.parent / name / "SKILL.md"
     for name in (
         "backlog-workflow", "audit-agent-instructions", "diagnosing-bugs",
-        "writing-for-agents", "skill-optimizer", "resolving-merge-conflicts",
+        "betfirst", "writing-for-agents", "skill-optimizer", "resolving-merge-conflicts",
     )
 ]
 VERSION = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
@@ -82,13 +82,20 @@ def iter_template_files() -> list[Path]:
     return [p for p in TEMPLATE_ROOT.rglob("*") if p.is_file()]
 
 
+def validate_plugin_version(plugin: dict) -> str:
+    """The Plugin is released independently from backlog-workflow templates."""
+    version = plugin.get("version")
+    if not isinstance(version, str) or not re.fullmatch(r"\d+\.\d+\.\d+", version):
+        raise AssertionError("Claude plugin version must be semantic X.Y.Z")
+    return version
+
+
 def main() -> int:
     if not re.fullmatch(r"\d+\.\d+\.\d+", VERSION):
         raise AssertionError(f"VERSION file is not semver: {VERSION!r}")
 
     plugin = json.loads((ROOT.parent / ".claude-plugin/plugin.json").read_text(encoding="utf-8"))
-    if plugin.get("version") != VERSION:
-        raise AssertionError("Claude plugin version must match backlog-workflow VERSION")
+    validate_plugin_version(plugin)
 
     # A renamed skill directory that plugin.json still points at installs nothing,
     # and the manifest is the only place that breakage would show up.

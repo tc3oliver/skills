@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="710" viewBox="0 0 1200 710" role="img" aria-labelledby="title desc">
+  <title id="title">BetFirst decision policy: SPOT, CAP, BET, WIN or CUT LOSS</title>
+  <desc id="desc">At a meaningful uncertainty, check for a cheap test, safe rollback and large upside. If the bet is justified, run a minimal experiment. A verified win continues to final validation; a failed bet cuts loss and returns to normal analysis. If no change is needed, abstain.</desc>
+  <defs>
+    <linearGradient id="paper" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#101B2C"/><stop offset="1" stop-color="#0D1323"/></linearGradient>
+    <linearGradient id="warm" x1="0" y1="0" x2="1" y2="0"><stop stop-color="#FFB75B"/><stop offset="1" stop-color="#FFE19A"/></linearGradient>
+    <marker id="arrow" markerWidth="9" markerHeight="9" refX="7" refY="4" orient="auto" markerUnits="strokeWidth"><path d="M1 1L7 4L1 7" stroke="#8FA7C7" stroke-width="1.5" fill="none" stroke-linejoin="round"/></marker>
+    <marker id="arrowGreen" markerWidth="9" markerHeight="9" refX="7" refY="4" orient="auto" markerUnits="strokeWidth"><path d="M1 1L7 4L1 7" stroke="#43DEBA" stroke-width="1.5" fill="none" stroke-linejoin="round"/></marker>
+    <marker id="arrowAmber" markerWidth="9" markerHeight="9" refX="7" refY="4" orient="auto" markerUnits="strokeWidth"><path d="M1 1L7 4L1 7" stroke="#FFC77C" stroke-width="1.5" fill="none" stroke-linejoin="round"/></marker>
+  </defs>
+  <rect width="1200" height="710" rx="20" fill="url(#paper)"/>
+  <text x="58" y="58" fill="#FFCD80" font-family="Inter, system-ui, -apple-system, sans-serif" font-weight="750" font-size="15" letter-spacing="2.7">BETFIRST / THE DECISION POLICY</text>
+  <text x="58" y="98" fill="#EEF5FF" font-family="Inter, system-ui, -apple-system, sans-serif" font-weight="760" font-size="30">One small bet. An explicit exit.</text>
+  <path d="M300 227H365" stroke="#8FA7C7" stroke-width="2.5" marker-end="url(#arrow)" fill="none"/>
+  <path d="M180 310V399" stroke="#8FA7C7" stroke-width="2.5" marker-end="url(#arrow)" fill="none"/>
+  <path d="M822 225H910" stroke="#8FA7C7" stroke-width="2.5" marker-end="url(#arrow)" fill="none"/>
+  <path d="M590 339V407" stroke="#8FA7C7" stroke-width="2.5" marker-end="url(#arrow)" fill="none"/>
+  <path d="M590 508V546H493V567" stroke="#43DEBA" stroke-width="2.5" marker-end="url(#arrowGreen)" fill="none"/>
+  <path d="M590 546H853V567" stroke="#FFC77C" stroke-width="2.5" marker-end="url(#arrowAmber)" fill="none"/>
+  <g font-family="Inter, system-ui, -apple-system, sans-serif" font-weight="700" font-size="13">
+    <text x="315" y="214" fill="#93A9C7">check</text>
+    <text x="189" y="369" fill="#93A9C7">no work</text>
+    <text x="838" y="210" fill="#93A9C7">no</text>
+    <text x="605" y="378" fill="#E2B675">yes</text>
+    <text x="468" y="537" fill="#65E7C5">WIN</text>
+    <text x="866" y="537" fill="#FFCE90">LOSS</text>
+  </g>
+  <rect x="55" y="148" width="245" height="161" rx="18" fill="#1B2A40" stroke="#54708F" stroke-width="1.5"/>
+  <text x="77" y="184" fill="#9DC3ED" font-family="Inter, system-ui, -apple-system, sans-serif" font-size="14" font-weight="750" letter-spacing="1.5">01 / SPOT</text>
+  <text x="77" y="225" fill="#F6F9FF" font-family="Inter, system-ui, -apple-system, sans-serif" font-size="23" font-weight="720">Uncertainty</text>
+  <text x="77" y="259" fill="#AFC1D9" font-family="Inter, system-ui, -apple-system, sans-serif" font-size="16">Is there work to do?</text>
+  <rect x="365" y="132" width="457" height="207" rx="20" fill="#1B2C41" stroke="#6792A5" stroke-width="1.5"/>
+  <text x="392" y="166" fill="#9BC5DE" font-family="Inter, system-ui, -apple-system, sans-serif" font-size="14" font-weight="800" letter-spacing="1.5">02 / CAP THE LOSS</text>
+  <text x="392" y="203" fill="#F6F9FF" font-family="Inter, system-ui, -apple-system, sans-serif" font-size="24" font-weight="760">Is this a good bet?</text>
+  <g font-family="Inter, system-ui, -apple-system, sans-serif" font-size="16" fill="#CAD9EA">
+    <circle cx="401" cy="239" r="4" fill="#FFCD7C"/><text x="416" y="245">Cheap, falsifiable probe</text>
+    <circle cx="401" cy="273" r="4" fill="#FFCD7C"/><text x="416" y="279">Reversible, bounded downside</text>
+    <circle cx="401" cy="307" r="4" fill="#FFCD7C"/><text x="416" y="313">Large investigation avoided if right</text>
+  </g>
+  <rect x="910" y="170" width="239" height="109" rx="17" fill="#212A39" stroke="#6E7F99" stroke-width="1.4"/>
+  <text x="933" y="205" fill="#B6C8E0" font-family="Inter, system-ui, -apple-system, sans-serif" font-size="15" font-weight="800" letter-spacing="1">NORMAL</text>
+  <text x="933" y="238" fill="#E9EFF9" font-family="Inter, system-ui, -apple-system, sans-serif" font-size="16">Investigate carefully</text>
+  <rect x="55" y="399" width="245" height="88" rx="17" fill="#1D2A3A" stroke="#6783A0" stroke-width="1.4"/>
+  <text x="77" y="433" fill="#C4D6ED" font-family="Inter, system-ui, -apple-system, sans-serif" font-size="15" font-weight="800" letter-spacing="1">ABSTAIN</text>
+  <text x="77" y="459" fill="#D1DEEF" font-family="Inter, system-ui, -apple-system, sans-serif" font-size="15">No change needed</text>
+  <rect x="452" y="409" width="280" height="98" rx="18" fill="#382C23" stroke="#F7BE70" stroke-width="2"/>
+  <text x="478" y="446" fill="#FFDA9F" font-family="Inter, system-ui, -apple-system, sans-serif" font-size="15" font-weight="800" letter-spacing="1.2">03 / PLACE THE BET</text>
+  <text x="478" y="482" fill="#FFF5E4" font-family="Inter, system-ui, -apple-system, sans-serif" font-size="21" font-weight="730">One decisive probe</text>
+  <rect x="361" y="570" width="263" height="104" rx="18" fill="#12372F" stroke="#43DEBA" stroke-width="1.8"/>
+  <text x="385" y="605" fill="#6EECCD" font-family="Inter, system-ui, -apple-system, sans-serif" font-size="15" font-weight="800" letter-spacing="1.1">WIN BIG</text>
+  <text x="385" y="633" fill="#EDFDF7" font-family="Inter, system-ui, -apple-system, sans-serif" font-size="16">Keep evidence; verify</text>
+  <text x="385" y="655" fill="#B1D9CE" font-family="Inter, system-ui, -apple-system, sans-serif" font-size="14">Skip unnecessary analysis</text>
+  <rect x="690" y="570" width="328" height="104" rx="18" fill="#35271F" stroke="#F7BE70" stroke-width="1.8"/>
+  <text x="716" y="605" fill="#FFD396" font-family="Inter, system-ui, -apple-system, sans-serif" font-size="15" font-weight="800" letter-spacing="1.1">CUT LOSS</text>
+  <text x="716" y="633" fill="#FFF3E8" font-family="Inter, system-ui, -apple-system, sans-serif" font-size="16">Stop; preserve evidence</text>
+  <text x="716" y="655" fill="#E9CDB3" font-family="Inter, system-ui, -apple-system, sans-serif" font-size="14">Safely restore; fall back to NORMAL</text>
+</svg>
