@@ -24,5 +24,10 @@ jobs:
         run: python3 -m unittest discover -s backlog/tests -v
       - name: Validate BetFirst analyzer
         run: python3 -m unittest discover -s betfirst/tests -v
+      - name: Validate BetFirst controlled experiment runner
+        if: runner.os != 'Windows'
+        run: |
+          python3 -m unittest discover -s betfirst/experiments/tests
+          python3 betfirst/experiments/run.py --driver mock --timeout 15 --output "$RUNNER_TEMP/betfirst-harness-smoke"
       - name: Validate portable Skills and plugin registration
         run: python3 scripts/validate_plugin.py
