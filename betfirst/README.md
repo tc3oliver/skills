@@ -13,7 +13,7 @@
 **Claude Code first · Pi compatible · No additional runtime dependencies**
 
 > [!IMPORTANT]
-> **Experimental v0.1.** This is a decision policy, not a measured speedup. **No token, time, or cost savings are claimed yet.** Read the [evaluation protocol](evals/README.md) before drawing performance conclusions.
+> **Experimental v0.2.** This is a decision policy, not a measured speedup. **No token, time, or cost savings are claimed yet.** Read the [evaluation protocol](evals/README.md) before drawing performance conclusions.
 
 ## Try it in 30 seconds
 
@@ -159,8 +159,9 @@ The analyzer reports paired time, gross-token and USD-cost savings, with `null` 
 
 ## Roadmap
 
-- **v0.1 (this Skill):** portable policy, bounded failure, qualitative cases, repeatable analysis protocol.
-- **v0.2:** collect real Claude Code and Pi task sessions, quantify false/missed bets and fallback overhead, compare against baseline and efficiency control.
+- **v0.1:** portable policy, bounded failure, qualitative cases, repeatable analysis protocol.
+- **v0.2 (this Skill):** read-only-first probes, bounded stoppable bets and recognizing useful refutations. The [uncontrolled field log](evals/field-notes/signalforge-video.md) (20 bets, one project, no control) has **five unresolved timing discrepancies**: reported durations total 1,355 s versus timestamp spans totaling 1,594 s. The [auditor](scripts/summarize_bet_log.py) exposes both without calling either verified cost. See the [changelog](CHANGELOG.md).
+- **v0.3 (next):** run the [controlled experiment plan](evals/next-experiment.md) (10–12 single-agent smoke tasks, then 30+ paired and repeated tasks) with Baseline / Efficiency / BetFirst, independent acceptance and real token telemetry. **Not done yet.**
 - **v1.0:** publish reproducible cross-task results; only add runtime instrumentation or enforcement where measured failures justify it.
 
 ## Share and contribute

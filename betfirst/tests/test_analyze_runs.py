@@ -38,6 +38,20 @@ class AnalyzeRunsTests(unittest.TestCase):
         self.assertEqual(output["arms"]["betfirst"]["bet_failures"], 1)
         self.assertEqual(output["arms"]["betfirst"]["passed"], 1)
 
+    def test_betfirst_vs_efficiency_is_the_policy_control(self):
+        rows = parsed(
+            "A,1,baseline,true,100,100,100,0,0,2.0,,,\n"
+            "A,1,efficiency,true,75,75,75,0,0,1.5,,,\n"
+            "A,1,betfirst,true,45,45,45,0,0,0.9,1,0,0\n"
+        )
+        output = report(rows)["comparisons"]["betfirst_vs_efficiency"]
+        self.assertEqual(output["matched_pairs"], 1)
+        self.assertEqual(output["control_passed"], 1)
+        self.assertEqual(output["candidate_passed"], 1)
+        self.assertAlmostEqual(output["time_saving_fraction"], 1 - 45 / 75)
+        self.assertAlmostEqual(output["gross_token_saving_fraction"], 1 - 90 / 150)
+        self.assertAlmostEqual(output["api_cost_saving_fraction"], 1 - 0.9 / 1.5)
+
     def test_missing_usage_stays_null(self):
         rows = parsed(
             "A,1,baseline,true,10,,,,,,,,\n"

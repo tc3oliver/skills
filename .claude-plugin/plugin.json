@@ -1,7 +1,7 @@
 {
   "name": "tc3oliver-skills",
-  "description": "Portable task-driven development workflow (Backlog.md), agent-instruction audit, bug diagnosis, cost-aware reversible experiments, skill writing and optimization, and merge-conflict resolution, with Claude Code adapters.",
-  "version": "1.7.0",
+  "description": "Portable persistent backlog tasks, safe cost-aware probes, debugging and agent instruction skills, with Claude Code adapters.",
+  "version": "2.1.0",
   "author": {
     "name": "tc3oliver",
     "url": "https://github.com/tc3oliver"
@@ -21,10 +21,12 @@
     "git",
     "merge-conflicts",
     "cost-optimization",
+    "persistent-tasks",
+    "cross-session-resume",
     "speculative-execution"
   ],
   "skills": [
-    "./backlog-workflow",
+    "./backlog",
     "./audit-agent-instructions",
     "./diagnosing-bugs",
     "./betfirst",
