@@ -1,0 +1,11 @@
+[
+  {"prompt":"Fix the CSS hover state", "activate_backlog":false},
+  {"prompt":"Use BetFirst to probe an FFmpeg path bug", "activate_backlog":false},
+  {"prompt":"Use CTK team to build this new feature", "activate_backlog":false},
+  {"prompt":"Remember to add SSO login next release", "activate_backlog":true, "action":"add"},
+  {"prompt":"What backlog items are ready?", "activate_backlog":true, "action":"next"},
+  {"prompt":"Continue BL-7E18C75F3D31A0B2", "activate_backlog":true, "action":"show"},
+  {"prompt":"Use CTK to finish BL-7E18C75F3D31A0B2", "activate_backlog":true, "action":"show_then_ctk"},
+  {"prompt":"Review the latest changes", "activate_backlog":false},
+  {"prompt":"What did we leave unfinished in the backlog?", "activate_backlog":true, "action":"status"}
+]
