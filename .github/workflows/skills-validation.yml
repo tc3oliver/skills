@@ -10,13 +10,19 @@ permissions:
 
 jobs:
   portable-skills:
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: Test BetFirst analyzer, docs and Plugin release validation
-        run: python3 -m unittest discover -s betfirst/tests
-      - name: Validate portable Skills and Claude plugin manifest
-        run: python3 backlog-workflow/scripts/validate_package.py
+      - name: Validate Backlog CLI and lifecycle
+        run: python3 -m unittest discover -s backlog/tests -v
+      - name: Validate BetFirst analyzer
+        run: python3 -m unittest discover -s betfirst/tests -v
+      - name: Validate portable Skills and plugin registration
+        run: python3 scripts/validate_plugin.py

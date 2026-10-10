@@ -1,574 +1,60 @@
 # AI Coding Skills
 
-Portable skills and task-driven development workflows for AI coding agents such
-as Claude Code, Codex, and OpenCode.
-
-Some skills are built around my own workflow. Others are adapted from or collected from useful open-source projects, with their original attribution and license preserved.
-
-The goal is to make coding agents more predictable: clarify requirements before implementation, keep work scoped, validate with evidence, and stop instead of guessing when important decisions are missing.
+Portable skills for Claude Code, Pi, Codex and OpenCode. Small, composable tools: track work only when needed, explore cheaply when safe, and verify what actually happened.
 
 ## Skills
 
-| Skill                                                     | Description                                                                                                                                                    |
-| --------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [`backlog-workflow`](backlog-workflow/)                   | My task-driven development workflow built on Backlog.md. Supports requirement planning, decomposition review, single-task execution, autonomous execution, validation, and delivery. |
-| [`audit-agent-instructions`](audit-agent-instructions/)   | Audits `AGENTS.md`, `CLAUDE.md`, agent-facing skills, and path-scoped rules. Previously named `audit-claude-md`.                                               |
-| [`diagnosing-bugs`](diagnosing-bugs/)                     | A structured debugging workflow based on reproduction, falsifiable hypotheses, evidence, and regression tests.                                                 |
-| [`betfirst`](betfirst/)                                 | **Make cheap bets. Win big. Lose small.** Cost-aware, reversible probes with bounded downside. [EN](betfirst/README.md) / [繁體中文](betfirst/README.zh-TW.md). Experimental. |
-| [`writing-for-agents`](writing-for-agents/)               | Guidelines for writing effective `SKILL.md`, `CLAUDE.md`, `AGENTS.md`, and other agent-facing documentation.                                                   |
-| [`skill-optimizer`](skill-optimizer/)                     | Reviews and refactors an existing Skill for routing accuracy, context efficiency, execution reliability, and maintainability.                                  |
-| [`resolving-merge-conflicts`](resolving-merge-conflicts/) | Resolves merge and rebase conflicts by understanding the intent of both sides before modifying the conflict.                                                   |
+| Skill | Purpose |
+| --- | --- |
+| [`backlog`](backlog/) | **Persistent coding tasks without Backlog.md.** Ready queue, dependencies, cross-session handoffs, completion evidence; no workflow framework. [EN](backlog/README.md) / [繁體中文](backlog/README.zh-TW.md). |
+| [`betfirst`](betfirst/) | **Make cheap bets. Win big. Lose small.** Bounded reversible probes. [EN](betfirst/README.md) / [繁體中文](betfirst/README.zh-TW.md). |
+| [`audit-agent-instructions`](audit-agent-instructions/) | Audit agent instruction files for duplication, drift and excessive context. |
+| [`diagnosing-bugs`](diagnosing-bugs/) | Evidence-based debugging and regression tests. |
+| [`writing-for-agents`](writing-for-agents/) | Write clear, concise, context-efficient agent instructions. |
+| [`skill-optimizer`](skill-optimizer/) | Improve Skill routing, context use and reliability. |
+| [`resolving-merge-conflicts`](resolving-merge-conflicts/) | Resolve Git conflicts without losing either side's intent. |
 
-## Install
+## Installation
 
-### Agent Skills CLI
-
-Install with the Agent Skills CLI:
+Agent Skills CLI:
 
 ```bash
 npx skills add tc3oliver/skills
 ```
 
-It can install the portable skills into supported agents such as Claude Code,
-Codex, and OpenCode.
-
-### Claude Code Plugin
-
-The repository can also be installed as a Claude Code plugin:
+Claude Code plugin:
 
 ```text
 /plugin marketplace add tc3oliver/skills
 /plugin install tc3oliver-skills
 ```
 
-Plugin skills use the namespace:
+Installed plugin Skills appear as `/tc3oliver-skills:backlog`, `/tc3oliver-skills:betfirst`, etc. Pi and other compatible agents load the portable `SKILL.md` directly.
+
+## Backlog v2
+
+Backlog is a **small persistence layer**, not an execution orchestrator. The skill does not activate on ordinary coding work; it records and resumes tasks only when the user wants persistent work tracking. A standard-library Python CLI manages `.backlog/tasks/` and `.backlog/archive/YYYY-MM/`. The ready queue reads only task metadata, and `show ID` retrieves one full task.
 
 ```text
-/tc3oliver-skills:backlog-workflow
-/tc3oliver-skills:audit-agent-instructions
-/tc3oliver-skills:diagnosing-bugs
-/tc3oliver-skills:betfirst
-/tc3oliver-skills:writing-for-agents
-/tc3oliver-skills:skill-optimizer
-/tc3oliver-skills:resolving-merge-conflicts
+/backlog add "Build OAuth login"
+/backlog next
+/backlog do BL-7E18C75F3D31A0B2
+/backlog status
 ```
 
-## Portable core and compatibility adapters
+Invoke syntax is agent-specific. For direct CLI use and command flags see [Backlog README](backlog/README.md) and [CLI reference](backlog/references/cli.md).
 
-The repository treats the Agent Skills format and the installed project
-workflow as agent-neutral. A project managed by `backlog-workflow` separates
-responsibility this way:
+**Boundaries:** [BetFirst](betfirst/) is responsible for safe, low-cost probes. [Claude Team Kit](https://github.com/tc3oliver/claude-team-kit) owns Agent Teams, bounded workers, reviews and team-local tasks. Backlog does not spawn teams, replicate worker tasks, or override either Skill's verification requirements.
 
-```text
-Portable core
-  .agents/skills/       canonical project skill definitions
-  .agent-workflow/      development policy
-  AGENTS.md             cross-agent repository entry point
+### Legacy backlog-workflow v1.6
 
-Claude Code adapter
-  .claude/skills/       generated thin pointers to canonical skills
-  CLAUDE.md             generated pointer to AGENTS.md and Claude entry points
-  Claude plugin         optional installation and slash-command UX
-```
+The old Backlog.md-dependent `backlog-workflow` was deliberately removed as a breaking change. No automatic migration is performed; existing project data remain untouched. Its source is preserved under Git branch [`archive/backlog-workflow-v1.6.0`](https://github.com/tc3oliver/skills/tree/archive/backlog-workflow-v1.6.0/backlog-workflow).
 
-`.agents/skills` is the native project skills directory for Codex and OpenCode,
-so those agents discover the installed skills directly. `AGENTS.md` is the
-cross-agent entry point on top of that: its managed block names each canonical
-skill and when to use it, so a plain request routes correctly in any agent that
-reads repository instructions. Slash commands are a Claude Code user interface,
-not part of the workflow protocol.
-
-### Applying the workflow to a project
-
-Installing the package above only makes the skill available. To set up a
-repository, run the installer from the project root — the same script for every
-agent:
+## Validation
 
 ```bash
-python3 <skill-dir>/scripts/install.py apply     # install or refresh
-python3 <skill-dir>/scripts/install.py audit     # read-only drift check
-python3 <skill-dir>/scripts/install.py upgrade   # explicit version upgrade
+python3 -m unittest discover -s backlog/tests -v
+python3 -m unittest discover -s betfirst/tests -v
 ```
 
-`<skill-dir>` is the installed `backlog-workflow` directory (for a Claude Code
-install, `~/.claude/skills/backlog-workflow`). Claude Code also exposes these as
-`/backlog-workflow apply|audit|upgrade`.
-
-Afterwards, invoke the workflow the way your agent expects:
-
-- **Claude Code** — `/backlog-plan`, `/backlog-review`, `/backlog-run`, `/backlog-auto`
-- **Codex / OpenCode** — by name, for example `Use the backlog-run skill for TASK-12`
-
-The same repository works from any of them; only the invocation syntax differs.
-
-### Updating
-
-Update the package (`npx skills add tc3oliver/skills`, `git pull`, or
-`/plugin update tc3oliver-skills`), then run `upgrade` in each project. Managed
-files are replaced; `PROJECT.md`, Backlog.md tasks, and content outside the
-managed blocks in `AGENTS.md` and `CLAUDE.md` are preserved.
-
-See [`backlog-workflow/INSTALL.md`](backlog-workflow/INSTALL.md) for details.
-
-**Versioning:** The Claude Code Plugin is versioned independently in
-`.claude-plugin/plugin.json` (currently `1.8.0`). The
-`backlog-workflow/VERSION` file (currently `1.6.0`) versions the workflow
-installer and managed project templates. Adding or updating standalone Skills
-requires a Plugin version bump for installed-plugin upgrades, but does not
-require changing the Backlog Workflow template version.
-
-
----
-
-# backlog-workflow
-
-`backlog-workflow` is the main development workflow in this repository.
-
-It is built on top of **Backlog.md**, but does not replace or reimplement it.
-
-<p align="center">
-  <img
-    src="backlog-workflow/assets/backlog-workflow-flow.png"
-    alt="Backlog Workflow User Flowchart"
-    width="1000"
-  >
-</p>
-
-The responsibility is intentionally separated:
-
-```text
-Backlog.md       = task/workflow engine
-backlog-workflow = development policy & orchestration
-PROJECT.md       = repository-specific configuration
-PRD / Spec       = product source of truth
-```
-
-Backlog.md handles task mechanics such as status, dependencies, Acceptance Criteria, Definition of Done, Implementation Plan, notes, and final summaries.
-
-`backlog-workflow` defines how I want coding agents to plan and execute software development work.
-
-## Why
-
-Giving an agent a requirement and asking it to implement everything directly often creates predictable problems:
-
-* implementation starts before the requirement is clear
-* large requirements become oversized coding sessions
-* implementation plans become stale
-* product behavior is silently reinterpreted
-* dependencies are executed in the wrong order
-* validation commands are guessed
-* documentation is forgotten
-* tasks are marked complete without evidence
-* autonomous execution continues when the agent should stop
-
-`backlog-workflow` separates the development process into explicit stages:
-
-```text
-Requirement
-    ↓
-Task decomposition
-    ↓
-Decomposition review
-    ↓
-Task selection
-    ↓
-Just-in-time implementation planning
-    ↓
-Implementation
-    ↓
-Validation
-    ↓
-Evidence
-    ↓
-Delivery
-```
-
-## Setup
-
-After installing the skill, enter a project and invoke `backlog-workflow` with
-the `apply` action. In Claude Code the compatibility UX is:
-
-```text
-/backlog-workflow apply
-```
-
-The installer discovers project-specific information such as:
-
-* Backlog.md CLI
-* default branch
-* requirement sources
-* setup commands
-* format / lint / typecheck / test / build commands
-* project-specific constraints
-
-It then installs the canonical project skills:
-
-```text
-backlog-plan
-backlog-review
-backlog-run
-backlog-auto
-```
-
-Claude Code adapters expose the familiar UX:
-
-```text
-/backlog-plan
-/backlog-review
-/backlog-run
-/backlog-auto
-```
-
-Workflow maintenance:
-
-```text
-/backlog-workflow audit
-/backlog-workflow upgrade
-```
-
-`audit` is read-only.
-
-`upgrade` updates workflow-managed files while preserving project-owned configuration, requirements, and existing Backlog.md tasks.
-
----
-
-## Manual Workflow
-
-Manual mode is the default.
-
-### 1. Plan
-
-```text
-/backlog-plan docs/PRD.md
-```
-
-The agent reads the authoritative requirements and decomposes them into executable Backlog.md tasks.
-
-Tasks capture stable information, using Backlog.md's own fields wherever it has
-one:
-
-* authoritative requirement source (native `documentation`)
-* Acceptance Criteria, dependencies, priority (native)
-* goal, scope and out-of-scope, constraints, validation requirements
-  (task description)
-
-`/backlog-plan` does not implement product code.
-
-Detailed implementation planning is deliberately postponed until execution so that the plan reflects the **current codebase**, not the state of the repository when the task was originally created.
-
-```text
-/backlog-plan
-    ↓
-define WHAT needs to be done
-
-/backlog-run
-    ↓
-research the current codebase
-    ↓
-decide HOW to implement it
-```
-
-### 2. Review the Decomposition
-
-```text
-/backlog-review docs/PRD.md
-```
-
-Decomposition is where requirements quietly go missing. `/backlog-review` is a
-separate pass that answers one question: **if every task were completed to its
-Acceptance Criteria, would the requirement be satisfied?**
-
-```text
-Requirement coverage       every requirement maps to a task
-Acceptance Criteria        the criteria would actually demonstrate it
-Scope traceability         every task cites an authoritative source
-Dependency integrity       no cycles, no unreachable tasks
-```
-
-It is deliberately not part of `/backlog-plan` — the context that produced a
-decomposition is the worst one to audit it — and it can be re-run whenever tasks
-or requirements change.
-
-The review is read-only: it reports gaps and a proposed fix, then asks before
-creating or editing anything. A requirement too ambiguous to judge is reported
-as `Undetermined` and goes back to `/backlog-plan` rather than being guessed at.
-`/backlog-auto` never runs it.
-
-### 3. Execute One Task
-
-```text
-/backlog-run TASK-42
-```
-
-The agent executes exactly one task:
-
-```text
-Read Task + Requirement
-        ↓
-Check Dependencies
-        ↓
-Inspect Current Codebase
-        ↓
-Write JIT Implementation Plan
-        ↓
-Implement
-        ↓
-Validate
-        ↓
-Record Evidence
-        ↓
-Synchronize Documentation
-        ↓
-PR/MR → CI → Review → Merge
-        ↓
-Done
-        ↓
-STOP
-```
-
-Calling `/backlog-run TASK-ID` authorizes the task through implementation and validation.
-
-The agent does not stop again merely to ask for approval of the Implementation Plan.
-
-It stops when it encounters a real blocker or an unresolved decision that cannot safely be derived from existing requirements or repository evidence.
-
----
-
-## Automatic Workflow
-
-Continuous autonomous execution must be explicitly requested:
-
-```text
-/backlog-auto
-```
-
-The agent repeatedly:
-
-```text
-Query current Backlog.md state
-        ↓
-Find dependency-ready tasks
-        ↓
-Select deterministically by priority
-        ↓
-Complete one task
-        ↓
-Re-query Backlog.md
-        ↓
-Repeat
-```
-
-A specific task can also be executed with:
-
-```text
-/backlog-auto TASK-42
-```
-
-Automatic mode is never enabled by vague instructions such as:
-
-```text
-continue
-keep going
-continue development
-```
-
-Only `/backlog-auto` enables continuous task execution.
-
-Task selection is Backlog.md's own query — `backlog task list --ready --status "<not-started status>" --sort priority --json` — not a dependency graph rebuilt by the agent. `--ready` alone still returns tasks already claimed or blocked, so the status filter is what keeps the loop from re-selecting them.
-
-If product intent is missing or conflicting, automatic mode blocks instead of guessing.
-
----
-
-## Canonical Completion Gate
-
-Defined once, in `.agent-workflow/WORKFLOW.md`, and bound to every task as
-Backlog.md Definition of Done items. A task is complete only when:
-
-1. Acceptance Criteria pass.
-2. Required applicable tests, lint, typecheck, and build checks pass.
-3. Documentation and Requirement Matrix are synchronized when applicable.
-4. Validation evidence is recorded in the task.
-
-Writing code is not enough to mark a task Done.
-
----
-
-## Backlog.md Integration
-
-`backlog-workflow` uses the Backlog.md CLI as its default interface.
-
-Normal task operations go through Backlog.md instead of directly rewriting files under `backlog/tasks/`.
-
-This keeps the responsibilities clean:
-
-```text
-Backlog.md
-    owns task mechanics
-
-backlog-workflow
-    owns development policy
-```
-
-Backlog.md MCP support remains optional and user-managed. `backlog-workflow` does not require or automatically configure MCP.
-
----
-
-## Project Structure
-
-A project using `backlog-workflow` receives:
-
-```text
-.agent-workflow/
-├── VERSION
-├── config.yml
-├── WORKFLOW.md        shared invariants + mode routing
-├── PLAN.md            /backlog-plan, /backlog-review
-├── EXECUTION.md       /backlog-run
-├── AUTO.md            /backlog-auto
-├── PARALLEL.md        only when max_parallel_tasks > 1
-├── TASK-POLICY.md
-└── PROJECT.md
-
-.agents/
-└── skills/
-    ├── backlog-plan/
-    ├── backlog-review/
-    ├── backlog-run/
-    ├── backlog-auto/
-    └── grilling/
-
-.claude/
-└── skills/
-    └── ... thin Claude Code adapters to `.agents/skills/`
-```
-
-Each skill reads `WORKFLOW.md` plus only the phase file it actually runs, so
-planning never loads the merge protocol and execution never loads the review
-checks. `PARALLEL.md` is not named by any skill: `AUTO.md` points at it only when
-`max_parallel_tasks` is above 1, so the default sequential run never loads the
-worktree, claim, and merge protocol either.
-
-Small managed entry points are also added to:
-
-```text
-CLAUDE.md
-AGENTS.md
-```
-
-`AGENTS.md` is canonical. `CLAUDE.md` is only a compatibility adapter and does
-not duplicate the workflow.
-
-`PROJECT.md` contains repository-specific execution configuration and becomes project-owned after it is created.
-
-Existing tasks, requirements, specifications, documentation, and user-owned instruction content are preserved.
-
-See [`backlog-workflow/README.md`](backlog-workflow/) for implementation, installation, and upgrade details.
-
----
-
-## Other Skills
-
-### audit-agent-instructions
-
-Reviews `AGENTS.md`, `CLAUDE.md`, scoped rules, and agent-facing skills.
-Previously named `audit-claude-md`. It gives each rule a concrete disposition:
-
-```text
-keep
-rewrite
-move to narrower scope
-extract into a skill
-delete
-```
-
-The goal is to prevent `AGENTS.md` and `CLAUDE.md` from becoming a permanent collection of stale project knowledge.
-
-### betfirst
-
-[English](betfirst/README.md) · [繁體中文](betfirst/README.zh-TW.md)
-
-<a href="betfirst/README.md">
-  <img src="betfirst/assets/hero.svg" alt="BetFirst — Make Cheap Bets. Win Big. Lose Small." width="840">
-</a>
-
-**Make Cheap Bets. Win Big. Lose Small.** A lightweight cost-aware policy for
-coding tasks. When a tiny, falsifiable, reversible experiment can avoid broad
-investigation, try it and verify; otherwise follow the normal workflow. A
-failed bet stops early, preserves evidence and never sacrifices final tests.
-
-Claude Code plugin: `/tc3oliver-skills:betfirst`. Pi: `/skill:betfirst`
-when installed via the portable Agent Skills directory. See
-[`betfirst/README.md`](betfirst/README.md) for installation, theory, safety,
-examples, and an experimental A/B evaluation protocol. **No measured speedup or
-token reduction is claimed yet.**
-
-### diagnosing-bugs
-
-A disciplined debugging workflow:
-
-```text
-Reproduce
-→ Build a tight feedback loop
-→ Form falsifiable hypotheses
-→ Test one variable at a time
-→ Collect evidence
-→ Fix the correct seam
-→ Add regression coverage
-```
-
-### writing-for-agents
-
-Guidance for writing documents consumed by coding agents, including skills, `CLAUDE.md`, and `AGENTS.md`.
-
-### skill-optimizer
-
-Reviews an existing Skill and improves it along four axes: routing accuracy, context efficiency, execution reliability, and maintainability. Prunes instructions that don't change model behavior, pushes conditional detail behind pointers instead of inlining it, and checks that important steps have observable completion conditions.
-
-### resolving-merge-conflicts
-
-A workflow for understanding the intent behind both sides of a merge or rebase conflict before modifying the conflicted code.
-
----
-
-## Origins & Attribution
-
-This repository is my personal working collection. It is not a claim that every skill or idea originated here.
-
-`backlog-workflow` is built around my own development process and combines Backlog.md with my task planning, execution, blocker, validation, and autonomous-development policies.
-
-Some other skills or ideas are adapted from or collected from open-source work that I find useful.
-
-Material sourced from `mattpocock/skills` retains its original MIT license and attribution:
-
-* `backlog-workflow` bundles the `grilling` skill
-* `diagnosing-bugs`
-* `writing-for-agents`
-* `resolving-merge-conflicts`
-
-Individual skill directories contain their applicable license and attribution information.
-
-## Requirements
-
-`backlog-workflow` requires:
-
-* Backlog.md CLI
-* Python 3
-
-Other requirements depend on the individual skill and coding agent.
-
-## Development
-
-Validate `backlog-workflow` with:
-
-```bash
-cd backlog-workflow
-python3 -m unittest discover -s tests
-python3 scripts/validate_package.py
-```
-
-## License
-
-MIT unless an individual skill contains its own license or attribution notice.
-
-Third-party material retains its original license and attribution.
+MIT license; adaptations and upstream sources retain their original notices.
