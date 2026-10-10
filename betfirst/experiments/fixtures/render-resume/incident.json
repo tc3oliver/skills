@@ -1,0 +1,26 @@
+{
+  "incident": "Nightly news render resumed after worker interruption; output timeline showed duplicate or missing narration despite renderer producing valid clips",
+  "segments": [
+    {
+      "segment_id": "2026-10-10/001",
+      "title": "AI Update",
+      "text": "Hardware announcements"
+    },
+    {
+      "segment_id": "2026-10-10/002",
+      "title": "AI Update",
+      "text": "Model release notes"
+    },
+    {
+      "segment_id": "2026-10-10/003",
+      "title": "Closing",
+      "text": "Summary"
+    }
+  ],
+  "observed_timeline": [
+    "Hardware announcements",
+    "Hardware announcements",
+    "Summary"
+  ],
+  "note": "The queue, renderer and manifest were each suspected. Inspect actual data and reproduce with a minimal deterministic check."
+}
