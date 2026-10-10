@@ -36,6 +36,10 @@ Only active task metadata is returned to `next`; only `show ID` loads one full t
 
 A short `Handoff` saves files, verified progress and next steps. Reopened tasks retain prior evidence in `History` and clear current `Evidence`; replacing checked acceptance criteria requires explicit `--confirm-ac-reset`. `doctor --repair` recovers unambiguous interrupted close/reopen moves. Resuming rechecks the codebase and tests; it never assumes stale output is still valid.
 
+## Optional composition
+
+For a BL-ID combined with an explicit CTK team request, the lead reads the actual task before starting; workers do not write persistent task state. An already `doing` task resumes from Handoff without re-running `start`. There is no dependency on CTK or BetFirst for ordinary use. See [composition rules](../docs/COMPOSITION.md).
+
 ## Boundaries
 
 - [BetFirst](../betfirst/): optional safe, cheap falsifiable probes. It never updates BL lifecycle or skips checks.

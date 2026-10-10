@@ -41,4 +41,6 @@ Read only the context required for a safe probe. Change one variable; run the sm
 
 Respect the repository's task scope, Definition of Done, and testing requirements. When a debugging skill requires a reproducible feedback loop, use BET to **tighten that loop**, not bypass it. Never trade correctness for a faster-looking answer.
 
+If an existing Backlog task or CTK team is involved, treat the task Goal, AC, permissions and file ownership as fixed boundaries. Report the decisive observation and any safe owned changes to the caller/lead; do **not** update persistent task status, check acceptance criteria, spawn workers or duplicate the lead's execution plan. Neither Backlog nor CTK is required to use this skill.
+
 Do not add telemetry, reports, worktrees, or planning artifacts merely to run this skill. Measure performance externally when benchmarking is explicitly requested.
