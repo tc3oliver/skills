@@ -1,4 +1,4 @@
-# BetFirst Benchmark Reliability (stacked on Evaluation v2)
+# BetFirst Benchmark Reliability (follows Evaluation v2)
 
 ## Objective
 
