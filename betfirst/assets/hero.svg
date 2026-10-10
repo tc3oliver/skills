@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="430" viewBox="0 0 1200 430" role="img" aria-labelledby="title desc">
+  <title id="title">BetFirst — Make Cheap Bets. Win Big. Lose Small.</title>
+  <desc id="desc">A dark editorial hero for the BetFirst coding-agent skill. A tiny reversible probe branches into a large win or a bounded loss.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#10182D"/><stop offset=".62" stop-color="#0B1223"/><stop offset="1" stop-color="#111D2F"/></linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="0"><stop stop-color="#FFB454"/><stop offset="1" stop-color="#FFE39E"/></linearGradient>
+    <linearGradient id="green" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#32E5B4"/><stop offset="1" stop-color="#65F0D5"/></linearGradient>
+    <pattern id="grid" width="36" height="36" patternUnits="userSpaceOnUse"><path d="M36 0H0V36" fill="none" stroke="#86A7D7" stroke-opacity=".07" stroke-width="1"/></pattern>
+    <filter id="glow"><feGaussianBlur stdDeviation="24"/></filter>
+  </defs>
+  <rect width="1200" height="430" rx="22" fill="url(#bg)"/>
+  <rect width="1200" height="430" rx="22" fill="url(#grid)"/>
+  <circle cx="1015" cy="138" r="125" fill="#16EAB4" fill-opacity=".08" filter="url(#glow)"/>
+  <circle cx="690" cy="364" r="120" fill="#FFBA60" fill-opacity=".07" filter="url(#glow)"/>
+  <rect x="0" y="0" width="1200" height="5" rx="2" fill="url(#accent)"/>
+  <rect x="66" y="49" width="29" height="29" rx="8" stroke="#FFCF7B" stroke-width="2" fill="#FFCF7B" fill-opacity=".09"/>
+  <path d="M73 64l6 6 9-12" fill="none" stroke="#FFCF7B" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="109" y="69" fill="#C6D3E7" font-family="Inter, ui-sans-serif, system-ui, -apple-system, sans-serif" font-size="16" font-weight="700" letter-spacing="3">AN AGENT SKILL FOR THE DECISIVE</text>
+  <text x="60" y="184" fill="#F8FAFF" font-family="Inter, ui-sans-serif, system-ui, -apple-system, sans-serif" font-size="92" font-weight="850" letter-spacing="-5">Bet</text>
+  <text x="220" y="184" fill="url(#accent)" font-family="Inter, ui-sans-serif, system-ui, -apple-system, sans-serif" font-size="92" font-weight="850" letter-spacing="-5">First</text>
+  <text x="66" y="238" fill="#F0F4FF" font-family="Inter, ui-sans-serif, system-ui, -apple-system, sans-serif" font-size="28" font-weight="650">Make Cheap Bets. Win Big. Lose Small.</text>
+  <text x="67" y="283" fill="#93A9C7" font-family="Inter, ui-sans-serif, system-ui, -apple-system, sans-serif" font-size="17">Less investigation when a tiny, reversible test will do.</text>
+  <g font-family="Inter, ui-sans-serif, system-ui, -apple-system, sans-serif" font-size="13" font-weight="700" letter-spacing="1">
+    <rect x="66" y="330" width="155" height="36" rx="18" fill="#1F3048" stroke="#3A5169"/><text x="86" y="353" fill="#E5EFFC">CLAUDE CODE</text>
+    <rect x="234" y="330" width="64" height="36" rx="18" fill="#1F3048" stroke="#3A5169"/><text x="251" y="353" fill="#E5EFFC">PI</text>
+    <rect x="311" y="330" width="187" height="36" rx="18" fill="#2A251D" stroke="#70522D"/><text x="333" y="353" fill="#FAD79A">EXPERIMENTAL v0.1</text>
+  </g>
+  <g fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M866 200V164Q866 154 876 154H944" stroke="#6B829E" stroke-width="3"/>
+    <path d="M944 154L932 146M944 154L932 162" stroke="#6B829E" stroke-width="3"/>
+    <path d="M866 200V274Q866 284 876 284H944" stroke="#6B829E" stroke-width="3"/>
+    <path d="M944 284L932 276M944 284L932 292" stroke="#6B829E" stroke-width="3"/>
+  </g>
+  <rect x="748" y="181" width="137" height="54" rx="16" fill="#26384C" stroke="#6F97AD" stroke-width="2"/>
+  <circle cx="773" cy="208" r="6" fill="#FFCC7B"/>
+  <text x="791" y="213" fill="#F6FAFF" font-family="Inter, ui-sans-serif, system-ui, -apple-system, sans-serif" font-weight="700" font-size="18">PROBE</text>
+  <rect x="951" y="103" width="193" height="100" rx="18" fill="#102D2A" stroke="#39D7AE" stroke-opacity=".65" stroke-width="2"/>
+  <text x="972" y="139" fill="#6EE7C4" font-family="Inter, ui-sans-serif, system-ui, -apple-system, sans-serif" font-size="17" font-weight="800" letter-spacing="1">WIN BIG ↗</text>
+  <text x="972" y="167" fill="#D0E8DF" font-family="Inter, ui-sans-serif, system-ui, -apple-system, sans-serif" font-size="15">Skip dead-end work</text>
+  <rect x="951" y="238" width="193" height="100" rx="18" fill="#33261D" stroke="#F1B96B" stroke-opacity=".65" stroke-width="2"/>
+  <text x="972" y="275" fill="#FFCD84" font-family="Inter, ui-sans-serif, system-ui, -apple-system, sans-serif" font-size="17" font-weight="800" letter-spacing=".8">LOSE SMALL ↘</text>
+  <text x="972" y="302" fill="#F5DCC0" font-family="Inter, ui-sans-serif, system-ui, -apple-system, sans-serif" font-size="15">Cut loss; fall back</text>
+  <text x="748" y="380" fill="#7890AC" font-family="Inter, ui-sans-serif, system-ui, -apple-system, sans-serif" font-size="13" font-weight="600" letter-spacing="1.6">BOUNDED DOWNSIDE. VERIFIED OUTCOMES.</text>
+</svg>
