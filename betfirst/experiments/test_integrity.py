@@ -52,16 +52,30 @@ def _value_same(left: object, right: object) -> bool:
 
 
 def _body_preserved(old: list[ast.stmt], new: list[ast.stmt], *, in_class: bool) -> bool:
+    # A new method/class bearing an existing name could shadow the protected
+    # implementation despite leaving its original AST in the file.
+    protected = {
+        node.name for node in old
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef))
+    }
+    def valid_extra(node: ast.stmt) -> bool:
+        if not _added_statement(node, in_class=in_class):
+            return False
+        return not (
+            isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef))
+            and node.name in protected
+        )
+
     j = 0
     for expected in old:
         while j < len(new) and not _same_preserved(expected, new[j]):
-            if not _added_statement(new[j], in_class=in_class):
+            if not valid_extra(new[j]):
                 return False
             j += 1
         if j == len(new):
             return False
         j += 1
-    return all(_added_statement(extra, in_class=in_class) for extra in new[j:])
+    return all(valid_extra(extra) for extra in new[j:])
 
 
 def _files(root: Path) -> dict[str, Path]:
