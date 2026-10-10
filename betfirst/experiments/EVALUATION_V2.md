@@ -41,6 +41,8 @@ Use the already-verified local model, server and double-dash oMLX argument separ
       --replicates 1 --timeout 600 --output "$RUN_DIR"
     python3 betfirst/experiments/report.py "$RUN_DIR"
 
+For a shorter exploratory diagnostic-only run, add --task config-scope --task render-resume (six real model runs). Each selected task ID and the selection mode are recorded in manifest.json; label this clearly as a subset, not a five-task result. Do not filter tasks after seeing which arm won.
+
 This executes 15 actual model tasks, randomly ordered with the same model, tools and permissions across arms. The runner uses --bare, stream-json + --verbose for tool envelopes, dontAsk and a narrow Read/Edit/Write/unit-test Bash tool allowlist. It does not enable dangerously-skip-permissions. For an initial short smoke use --limit 3; this covers only the low-uncertainty controls. Run the whole suite to compare difficulty groups.
 
 ## Trace and evidence
