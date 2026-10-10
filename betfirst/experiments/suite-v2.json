@@ -52,7 +52,7 @@
       "id": "config-scope",
       "difficulty": "diagnostic",
       "fixture": "fixtures/config-scope",
-      "prompt": "Production incident: tenants disagree about a feature rollout. An API sometimes returns another tenant's flag value, but each tenant's source configuration is correct. Investigate backend reads, cache behavior and service wiring; repair the root cause. Preserve TTL expiration, false-valued cache entries and backend read efficiency. Do not disable caching. Verify with existing tests.",
+      "prompt": "Production incident: a feature rollout sometimes returns inconsistent values depending on request ordering. See incident.json for anonymized observations. The root cause might involve configuration storage, caching, or service wiring. Investigate and repair without disabling caching; preserve TTL, false-valued cache entries, tenant isolation, and minimal backend reads. Verify with existing tests.",
       "check": [
         "python3",
         "-m",
@@ -67,7 +67,7 @@
       "id": "render-resume",
       "difficulty": "diagnostic",
       "fixture": "fixtures/render-resume",
-      "prompt": "Video pipeline incident: individual renders succeed, but after resuming an interrupted daily news job the output timeline sometimes repeats one clip and silently loses a different clip with the same display title. Investigate segment metadata, manifest keys and the timeline builder. Preserve already-completed renders across retries, render each distinct segment only once after success, keep the caller's order, and never mark a failed render complete.",
+      "prompt": "Video pipeline incident: after an interrupted nightly render, the resumed timeline loses or duplicates a clip despite valid individual render artifacts. See incident.json for the job's segment metadata and timeline observation. Investigate scheduling, rendering, and manifest behavior. Preserve completed work across retries, render each distinct segment exactly once after success, preserve caller order, and never mark failed renders complete.",
       "check": [
         "python3",
         "-m",
