@@ -1,0 +1,45 @@
+{
+  "schema": 1,
+  "tasks": [
+    {
+      "id": "subtitle-path",
+      "fixture": "fixtures/subtitle-path",
+      "prompt": "Fix subtitle_filter_path: Windows-style drive-colon paths must escape the colon with a backslash for the filter expression, while path separators become forward slashes. Preserve POSIX paths.",
+      "check": [
+        "python3",
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "tests"
+      ]
+    },
+    {
+      "id": "tts-estimate",
+      "fixture": "fixtures/tts-estimate",
+      "prompt": "Our measured TTS speaking rate is 5.0 characters/second, not 6.5. Fix estimate_seconds to use this observed rate; it must not alter other behavior.",
+      "check": [
+        "python3",
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "tests"
+      ]
+    },
+    {
+      "id": "already-correct",
+      "fixture": "fixtures/already-correct",
+      "prompt": "Check whether clips_duration already sums all clip lengths correctly. If it does, do not modify anything.",
+      "check": [
+        "python3",
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "tests"
+      ],
+      "no_change": true
+    }
+  ]
+}
