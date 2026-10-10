@@ -18,6 +18,7 @@ import sys
 import time
 from pathlib import Path
 from usage import usage_from_output
+from trace import summarize_trace
 
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[1]
@@ -25,7 +26,8 @@ ARMS = ("baseline", "efficiency", "betfirst")
 EFFICIENCY = "Avoid redundant file reads, repeated tool calls and unnecessary tests; preserve final validation."
 COLUMNS = ("task_id", "replicate", "arm", "passed", "elapsed_seconds", "input_tokens",
            "output_tokens", "cache_read_tokens", "cache_write_tokens", "api_cost_usd",
-           "bet_attempts", "bet_failures", "failed_bet_overhead_seconds")
+           "bet_attempts", "bet_failures", "failed_bet_overhead_seconds",
+           "tool_calls", "tool_errors", "permission_denials")
 
 
 def hashes(folder: Path) -> dict:
@@ -58,6 +60,15 @@ def load_suite(path: Path) -> list:
         if not source.is_relative_to(path.parent.resolve()) or not source.is_dir():
             raise ValueError("fixture must be inside suite directory")
         hashes(source)
+        if "oracle" in task:
+            oracle = task["oracle"]
+            if not isinstance(oracle, str) or Path(oracle).is_absolute() or ".." in Path(oracle).parts:
+                raise ValueError("oracle must be a safe relative path")
+            oracle_path = (path.parent / oracle).resolve()
+            if not oracle_path.is_relative_to(path.parent.resolve()) or not oracle_path.is_file():
+                raise ValueError("oracle must be a file inside the suite directory")
+            if oracle_path.is_relative_to(source):
+                raise ValueError("oracle must not be included in agent fixture")
         if not isinstance(task.get("prompt"), str) or not task["prompt"].strip():
             raise ValueError("task prompt is required")
         check = task.get("check")
@@ -76,14 +87,28 @@ def prompt_for(task: dict, arm: str, skill_text: str) -> str:
     return prompt
 
 
-def command(driver: str, model: str | None, prompt: str, tid: str, arm: str) -> list:
+def command(driver: str, model: str | None, prompt: str, tid: str, arm: str,
+            claude_launcher: str = "direct") -> list:
     if driver == "mock":
         return [sys.executable, str(HERE / "mock_agent.py"), tid, arm]
     if not model:
         raise ValueError("--model is required for live agents")
     if driver == "claude":
-        return ["claude", "--bare", "-p", "--output-format", "json",
-                "--max-turns", "30", "--model", model, prompt]
+        claude_args = ["--bare", "--permission-mode", "dontAsk",
+                       "--allowedTools", "Read", "Edit", "Write",
+                       "Bash(python3 -m unittest *)",
+                       "-p", prompt, "--output-format", "stream-json",
+                       "--verbose", "--max-turns", "30"]
+        if claude_launcher == "omlx":
+            binary = os.environ.get("OMLX_BIN")
+            if not binary:
+                raise ValueError("OMLX_BIN must point at the omlx executable")
+            # The separator is required to avoid oMLX mistaking --tools
+            # and other Claude Code options for oMLX's --tools-profile.
+            return [binary, "launch", "claude", "--model", model, "--", *claude_args]
+        if claude_launcher != "direct":
+            raise ValueError("unsupported Claude launcher")
+        return ["claude", "--model", model, *claude_args]
     if driver == "pi":
         return ["pi", "--no-context-files", "--no-skills", "--no-extensions",
                 "--no-prompt-templates", "--no-session", "-p",
@@ -111,7 +136,7 @@ def run_cmd(argv: list, cwd: Path, stdout: Path, stderr: Path, timeout: int) -> 
 
 def execute(suite: Path, output: Path, driver: str, model: str | None,
             replicates: int, seed: int, timeout: int, execute_real: bool,
-            limit: int | None = None) -> list:
+            limit: int | None = None, claude_launcher: str = "direct") -> list:
     if driver != "mock" and not execute_real:
         raise ValueError("real CLI execution requires --execute and may incur API cost")
     if driver != "mock" and not model:
@@ -132,6 +157,9 @@ def execute(suite: Path, output: Path, driver: str, model: str | None,
         "schema": 1, "driver": driver, "model": model, "seed": seed,
         "replicates": replicates, "runs": len(plan),
         "synthetic": driver == "mock", "timeout": timeout,
+        "claude_launcher": claude_launcher if driver == "claude" else None,
+        "suite_sha256": hashlib.sha256(suite.read_bytes()).hexdigest(),
+        "skill_sha256": hashlib.sha256(skill.encode("utf-8")).hexdigest(),
         "note": "Mock exercises harness only, not agent performance or savings."
     }, indent=2) + "\n", encoding="utf-8")
     results = []
@@ -145,7 +173,7 @@ def execute(suite: Path, output: Path, driver: str, model: str | None,
         tests = hashes(work / "tests") if (work / "tests").is_dir() else {}
         prompt = prompt_for(task, arm, skill)
         (run_dir / "prompt.txt").write_text(prompt, encoding="utf-8")
-        cmd = command(driver, model, prompt, task["id"], arm)
+        cmd = command(driver, model, prompt, task["id"], arm, claude_launcher)
         try:
             agent_exit, timed_out, agent_time = run_cmd(
                 cmd, work, run_dir / "agent.stdout", run_dir / "agent.stderr", timeout)
@@ -153,22 +181,42 @@ def execute(suite: Path, output: Path, driver: str, model: str | None,
             raise RuntimeError("Missing installed agent CLI: " + str(exc.filename)) from exc
         test_exit, test_timed_out, check_time = run_cmd(
             task["check"], work, run_dir / "acceptance.stdout", run_dir / "acceptance.stderr", timeout)
+        # Independent oracle: never copied into the agent's work directory.
+        # Running it after the visible suite prevents an agent from claiming
+        # correctness solely by satisfying the tests it could inspect.
+        oracle_exit, oracle_timed_out, oracle_time = None, False, 0.0
+        if "oracle" in task:
+            oracle_path = (suite.parent / task["oracle"]).resolve()
+            oracle_exit, oracle_timed_out, oracle_time = run_cmd(
+                [sys.executable, str(oracle_path)], work,
+                run_dir / "oracle.stdout", run_dir / "oracle.stderr", timeout)
         changed_tests = tests != (hashes(work / "tests") if (work / "tests").is_dir() else {})
         changed = original != hashes(work)
         passed = (agent_exit == 0 and not timed_out and test_exit == 0
-                  and not test_timed_out and not changed_tests)
+                  and not test_timed_out and not changed_tests
+                  and (oracle_exit is None or oracle_exit == 0) and not oracle_timed_out)
         if task.get("no_change"):
             passed = passed and not changed
-        use = usage_from_output((run_dir / "agent.stdout").read_text(encoding="utf-8"), driver)
+        agent_output = (run_dir / "agent.stdout").read_text(encoding="utf-8")
+        use = usage_from_output(agent_output, driver)
+        trace = summarize_trace(agent_output, driver)
+        (run_dir / "trace_summary.json").write_text(
+            json.dumps(trace, indent=2) + "\\n", encoding="utf-8")
         row = {"task_id": task["id"], "replicate": rep, "arm": arm,
-               "passed": str(passed).lower(), "elapsed_seconds": round(agent_time + check_time, 6),
-               **use, "bet_attempts": None, "bet_failures": None, "failed_bet_overhead_seconds": None}
+               "passed": str(passed).lower(), "elapsed_seconds": round(agent_time + check_time + oracle_time, 6),
+               **use, "bet_attempts": trace["bet_attempts"],
+               "bet_failures": trace["bet_failures"],
+               "failed_bet_overhead_seconds": trace["failed_bet_overhead_seconds"],
+               "tool_calls": trace["tool_calls"], "tool_errors": trace["tool_errors"],
+               "permission_denials": trace["permission_denials"]}
         results.append(row)
         (run_dir / "outcome.json").write_text(json.dumps({
             "passed": passed, "agent_exit": agent_exit, "agent_timeout": timed_out,
             "acceptance_exit": test_exit, "acceptance_timeout": test_timed_out,
+            "oracle_exit": oracle_exit, "oracle_timeout": oracle_timed_out,
             "tests_changed": changed_tests, "workspace_changed": changed,
-            "agent_seconds": agent_time, "acceptance_seconds": check_time
+            "agent_seconds": agent_time, "acceptance_seconds": check_time,
+            "oracle_seconds": oracle_time, "trace_complete": trace["trace_complete"]
         }, indent=2) + "\n", encoding="utf-8")
         print(f"{rid}: {'PASS' if passed else 'FAIL'}", flush=True)
     csv_name = "synthetic-smoke.csv" if driver == "mock" else "measured-runs.csv"
@@ -185,6 +233,8 @@ def main() -> None:
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--driver", choices=("mock", "claude", "pi"), default="mock")
     parser.add_argument("--model")
+    parser.add_argument("--claude-launcher", choices=("direct", "omlx"), default="direct",
+                        help="Use oMLX launch claude (requires OMLX_BIN) or direct Claude CLI")
     parser.add_argument("--replicates", type=int, default=1)
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--timeout", type=int, default=180)
@@ -192,7 +242,7 @@ def main() -> None:
     parser.add_argument("--execute", action="store_true", help="Permit actual provider calls and costs")
     args = parser.parse_args()
     execute(args.suite.resolve(), args.output.resolve(), args.driver, args.model,
-            args.replicates, args.seed, args.timeout, args.execute, args.limit)
+            args.replicates, args.seed, args.timeout, args.execute, args.limit, args.claude_launcher)
 
 
 if __name__ == "__main__":
