@@ -102,6 +102,22 @@ class RunnerV2Tests(unittest.TestCase):
                     self.assertIsNone(trace["tool_calls"])
                     self.assertIsNone(trace["bet_attempts"])
 
+    def test_selected_diagnostic_only_is_recorded_in_manifest(self):
+        suite = EXP / "suite-v2.json"
+        with tempfile.TemporaryDirectory() as d:
+            output = Path(d) / "out"
+            rows = execute(suite, output, "mock", None, 1, 42, 30, False,
+                           selected_tasks=["config-scope"])
+            self.assertEqual(len(rows), 3)
+            self.assertTrue(all(row["passed"] == "true" for row in rows))
+            manifest = json.loads((output / "manifest.json").read_text())
+            self.assertEqual(manifest["task_selection"], "explicit")
+            self.assertEqual(manifest["selected_task_ids"], ["config-scope"])
+        with tempfile.TemporaryDirectory() as d:
+            with self.assertRaisesRegex(ValueError, "duplicate or unknown"):
+                execute(suite, Path(d) / "out", "mock", None, 1, 42, 30, False,
+                        selected_tasks=["nonexistent"])
+
     def test_diagnostic_oracles_are_initially_red(self):
         suite = EXP / "suite-v2.json"
         tasks = load_suite(suite)
