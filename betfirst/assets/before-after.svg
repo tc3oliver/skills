@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="496" viewBox="0 0 1200 496" role="img" aria-labelledby="title desc">
+  <title id="title">Conventional broad exploration versus the BetFirst bounded-probe approach</title>
+  <desc id="desc">An illustrative side-by-side comparison. Conventional development may read files and investigate before testing; BetFirst looks for a cheap decisive probe, cuts loss when disproven, and still performs normal final validation. No numerical speedup is claimed.</desc>
+  <defs>
+    <linearGradient id="background" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#101A2B"/><stop offset="1" stop-color="#101425"/></linearGradient>
+    <linearGradient id="highlight" x1="0" y1="0" x2="1" y2="0"><stop stop-color="#FFD18A"/><stop offset="1" stop-color="#FFAD55"/></linearGradient>
+  </defs>
+  <rect width="1200" height="496" rx="20" fill="url(#background)"/>
+  <text x="54" y="57" fill="#E9F2FF" font-family="Inter, system-ui, -apple-system, sans-serif" font-size="27" font-weight="780">Same task. Different route to evidence.</text>
+  <text x="54" y="84" fill="#92A7C4" font-family="Inter, system-ui, -apple-system, sans-serif" font-size="15">Illustrative workflows — not measured time or token savings.</text>
+  <rect x="54" y="113" width="522" height="310" rx="19" fill="#192335" stroke="#48596D" stroke-width="1.5"/>
+  <rect x="624" y="113" width="522" height="310" rx="19" fill="#132B2B" stroke="#3EC9AD" stroke-opacity=".68" stroke-width="1.6"/>
+  <text x="83" y="158" fill="#C1D0E2" font-family="Inter, system-ui, -apple-system, sans-serif" font-size="15" font-weight="800" letter-spacing="2">BROAD EXPLORATION</text>
+  <text x="655" y="158" fill="#6CE8CA" font-family="Inter, system-ui, -apple-system, sans-serif" font-size="15" font-weight="800" letter-spacing="2">BETFIRST / IF THE BET IS GOOD</text>
+  <path d="M100 204V353" stroke="#7287A0" stroke-width="2" stroke-dasharray="4 9"/>
+  <g font-family="Inter, system-ui, -apple-system, sans-serif">
+    <circle cx="100" cy="201" r="10" fill="#3B4B5E" stroke="#99ABC1"/>
+    <circle cx="100" cy="250" r="10" fill="#3B4B5E" stroke="#99ABC1"/>
+    <circle cx="100" cy="299" r="10" fill="#3B4B5E" stroke="#99ABC1"/>
+    <circle cx="100" cy="348" r="10" fill="#3B4B5E" stroke="#99ABC1"/>
+    <text x="129" y="208" fill="#E6EDF8" font-size="18" font-weight="670">Read broadly</text>
+    <text x="129" y="257" fill="#E6EDF8" font-size="18" font-weight="670">Trace dependencies</text>
+    <text x="129" y="306" fill="#E6EDF8" font-size="18" font-weight="670">Investigate possibilities</text>
+    <text x="129" y="355" fill="#E6EDF8" font-size="18" font-weight="670">Finally run the test</text>
+  </g>
+  <rect x="655" y="188" width="459" height="56" rx="12" fill="#234439" stroke="#4FD6B7" stroke-opacity=".55"/>
+  <circle cx="681" cy="216" r="8" fill="#72EACB"/>
+  <text x="703" y="222" fill="#F1FFFA" font-family="Inter, system-ui, -apple-system, sans-serif" font-size="18" font-weight="740">Tiny, reversible probe first</text>
+  <path d="M884 245V275H771V290M884 275H1001V290" stroke="#83BCB0" stroke-width="2.2" fill="none"/>
+  <rect x="655" y="293" width="232" height="58" rx="12" fill="#1B493C" stroke="#42D5AA" stroke-width="1.2"/>
+  <text x="675" y="315" fill="#72EACB" font-family="Inter, system-ui, -apple-system, sans-serif" font-size="12" font-weight="800" letter-spacing="1">IF RIGHT · WIN</text>
+  <text x="675" y="338" fill="#F2FFF9" font-family="Inter, system-ui, -apple-system, sans-serif" font-size="16">Skip dead-end work</text>
+  <rect x="901" y="293" width="213" height="58" rx="12" fill="#493323" stroke="#FFD18A" stroke-width="1.2"/>
+  <text x="920" y="315" fill="#FFD18A" font-family="Inter, system-ui, -apple-system, sans-serif" font-size="12" font-weight="800" letter-spacing="1">IF WRONG · CUT</text>
+  <text x="920" y="338" fill="#FFF4E7" font-family="Inter, system-ui, -apple-system, sans-serif" font-size="16">Fall back quickly</text>
+  <text x="655" y="397" fill="#BDD7D0" font-family="Inter, system-ui, -apple-system, sans-serif" font-size="16" font-weight="630">Then complete the same final validation.</text>
+  <path d="M54 447H1146" stroke="#3E5368" stroke-width="1"/>
+  <text x="600" y="475" fill="url(#highlight)" text-anchor="middle" font-family="Inter, system-ui, -apple-system, sans-serif" font-size="17" font-weight="760">A bet is a shortcut to evidence — never a shortcut around correctness.</text>
+</svg>
