@@ -6,6 +6,8 @@ argument-hint: "[add|next|status|do <BL-ID>|show <BL-ID>]"
 
 # Backlog
 
+Request: $ARGUMENTS (when supported by the agent).
+
 Use this skill **only** for persistent task intent. One-off coding requests proceed normally; do not create tasks just because coding is involved. Never silently start the next task after finishing one. A request for a team alone belongs to CTK, and a request for a cheap experiment belongs to BetFirst.
 
 ## Entry point

@@ -21,16 +21,4 @@ jobs:
       - name: Validate BetFirst analyzer
         run: python3 -m unittest discover -s betfirst/tests -v
       - name: Validate portable Skills and plugin registration
-        run: |
-          python3 - <<'PY'
-          import json
-          from pathlib import Path
-          root = Path('.')
-          plugins = json.loads((root / '.claude-plugin/plugin.json').read_text())
-          entries = plugins['skills']
-          assert './backlog' in entries and './backlog-workflow' not in entries
-          for name in entries:
-              assert (root / name / 'SKILL.md').is_file(), name
-          assert not (root / 'backlog-workflow').exists()
-          print('plugin skill paths valid')
-          PY
+        run: python3 scripts/validate_plugin.py

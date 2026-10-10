@@ -213,22 +213,30 @@ def load_all(folder: Path) -> dict[str, dict]:
 
 
 def verify_dependencies(tasks: dict[str, dict]) -> None:
-    state = {}
-    def visit(ident):
-        if state.get(ident) == 1:
-            raise BacklogError(f'dependency cycle at {ident}')
-        if state.get(ident) == 2:
-            return
-        state[ident] = 1
-        for dep in tasks[ident]['depends']:
+    """Iterative DFS: a long task chain must not overflow Python's call stack."""
+    state: dict[str, int] = {}
+    for origin in tasks:
+        if state.get(origin) == 2:
+            continue
+        stack = [(origin, 0)]
+        while stack:
+            ident, index = stack[-1]
+            state[ident] = 1
+            deps = tasks[ident]['depends']
+            if index == len(deps):
+                state[ident] = 2
+                stack.pop()
+                continue
+            dep = deps[index]
+            stack[-1] = (ident, index + 1)
             if dep not in tasks:
                 raise BacklogError(f'missing dependency {dep} (from {ident})')
             if dep == ident:
                 raise BacklogError(f'self dependency: {ident}')
-            visit(dep)
-        state[ident] = 2
-    for ident in tasks:
-        visit(ident)
+            if state.get(dep) == 1:
+                raise BacklogError(f'dependency cycle at {dep}')
+            if state.get(dep) != 2:
+                stack.append((dep, 0))
 
 
 def ready(task: dict, tasks: dict) -> bool:

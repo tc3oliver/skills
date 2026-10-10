@@ -5,6 +5,9 @@ from pathlib import Path
 import tempfile
 import unittest
 import importlib.util
+import subprocess
+import sys
+from concurrent.futures import ThreadPoolExecutor
 from unittest.mock import patch
 
 SCRIPT = Path(__file__).resolve().parents[1] / 'scripts' / 'backlog.py'
@@ -146,6 +149,39 @@ class BacklogTests(unittest.TestCase):
 
     def test_format_rejects_heading_injection(self):
         self.assertIn('headings', self.call('add', 'bad', '--goal', 'Do it\n## Evidence', '--ac', 'Works', fail=True))
+
+    def test_concurrent_process_adds_are_serialized(self):
+        def create(i):
+            cmd = [sys.executable, str(SCRIPT), '--root', str(self.root), 'add', f'concurrent-{i}', '--goal', 'G', '--ac', 'A']
+            return subprocess.run(cmd, capture_output=True, text=True, timeout=10)
+        with ThreadPoolExecutor(max_workers=8) as pool:
+            results = list(pool.map(create, range(12)))
+        self.assertTrue(all(r.returncode == 0 for r in results), [r.stderr for r in results])
+        self.assertEqual(self.call('list', '--limit', 100)['total'], 12)
+        self.assertEqual(self.call('doctor')['tasks'], 12)
+
+    def test_task_references_survive_resume(self):
+        item = self.call('add', 'Feature', '--goal', 'G', '--ac', 'works', '--ref', 'docs/feature.md')['id']
+        self.call('start', item)
+        self.call('note', item, '--text', 'Next: implement. Source: docs/feature.md')
+        info = self.call('show', item)['markdown']
+        self.assertIn('docs/feature.md', info)
+        self.assertIn('Next: implement', info)
+
+    def test_deep_dependency_chain_does_not_overflow(self):
+        folder = self.root / '.backlog/tasks'
+        previous = None
+        for i in range(1250):
+            ident = 'BL-' + f'{i:016X}'
+            t = dict(id=ident, title=f'Task {i}', status='todo', priority='P2',
+                     depends=[previous] if previous else [], created_at=app.now(), updated_at=app.now(),
+                     sections={name: '' for name in app.SECTIONS})
+            t['sections']['Goal'] = 'G'
+            t['sections']['Acceptance Criteria'] = '- [ ] A'
+            (folder / f'{ident}.md').write_text(app.serialize(t))
+            previous = ident
+        self.assertEqual(self.call('doctor')['tasks'], 1250)
+        self.assertEqual(self.call('next')['total'], 1)
 
     def test_no_external_dependencies_and_legacy_warning(self):
         (self.root / '.agent-workflow').mkdir()
