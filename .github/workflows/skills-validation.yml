@@ -1,0 +1,22 @@
+name: Skills validation
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  portable-skills:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Test BetFirst analyzer
+        run: python3 -m unittest discover -s betfirst/tests
+      - name: Validate portable Skills and Claude plugin manifest
+        run: python3 backlog-workflow/scripts/validate_package.py
