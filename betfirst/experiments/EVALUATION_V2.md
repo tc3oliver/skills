@@ -58,3 +58,29 @@ Local model api_cost_usd is a provider-reported **estimate**, not actual local c
 No automatic bet_attempts / bet_failures are claimed: an ordinary test is not automatically a BET, and tool envelopes do not reveal agent intent. Review trace labels independently per review-protocol.md. Preserve slow, failed, and low-uncertainty tasks; don't cherry-pick successes. Repeat with independent seeds before a larger held-out 10–12 and then 30+ task study.
 
 CI does NOT run a live Qwen session; its pass result only qualifies the harness and fixtures.
+
+
+## Test integrity policy v2 and existing-run regrading
+
+Original evaluation v2 marked any changed file under tests/ as a failure. In the real two-diagnostic-task pilot that falsely rejected three valid *additive* regression-test contributions even though visible and independent oracle suites passed.
+
+New grading rule:
+- Keep original test AST statements and original test method bodies intact; edits/deletions, shadowed original test names, test symlinks and changed non-Python assets fail.
+- **Permit additive tests:** new test_ methods inside existing classes, new unittest.TestCase classes, and new test_*.py modules. Existing test file may also add imports; comments/whitespace are not meaningful AST changes.
+- Independent oracles still must pass; agent failures (nonzero exit), timeouts and no-change controls still fail normally.
+- outcome.json distinguishes tests_changed (any changes), tests_tampered (prohibited changes), and test_integrity (added/extended/tampered/deleted paths).
+- This protects existing checks but is **not a hostile-code sandbox**; an additive test can still have side effects. Use trusted coding tasks and independent oracles.
+
+**Regrade an already-finished six-run pilot without rerunning Qwen, visible tests or oracles:**
+
+    python3 betfirst/experiments/regrade.py "$RUN_DIR" \
+      --suite betfirst/experiments/suite-v2.json
+
+    python3 betfirst/experiments/report.py "$RUN_DIR/regraded-v2"
+    cat "$RUN_DIR/regraded-v2/regrade-audit.json"
+
+Regrade verifies the suite SHA and, for newly recorded runs, original fixture hashes. It uses recorded agent/test/oracle statuses and inspects the worktree tests against the frozen fixture. It creates a NEW derived report directory containing revised CSV, manifest with provenance and an audit JSON; the original stdout, artifacts, outcomes and CSV remain untouched. For early runs without recorded fixture hashes, the report explicitly marks fixture verification as unavailable: use the same checked-out fixture revision as the experiment and interpret derived results accordingly.
+
+Six-run diagnostic pilot observation before regrading: config-scope efficiency/betfirst PASS, baseline false FAIL; render-resume all false FAIL; every public and oracle check exited 0. Agent baseline in render-resume exited 1. After applying the new additive-only rubric to the user-observed three additive edits, expected scores are **5 PASS / 1 FAIL**; this historical rerating is not a fresh model trial or an unbiased validation set.
+
+Report results by correctness first and retain any loss due to Claude tool permission denials; lower tool calls or token counts do not prove a BET caused savings.
