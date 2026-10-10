@@ -1,45 +1,69 @@
+<p align="center"><a href="./README.md">English</a> · <a href="./README.zh-TW.md">繁體中文</a></p>
+
+<p align="center">
+  <img src="./assets/hero.svg" alt="BetFirst — Make Cheap Bets. Win Big. Lose Small." width="1000">
+</p>
+
 # BetFirst
 
-> **Make Cheap Bets. Win Big. Lose Small.**
+> **What if your coding agent tested the obvious hypothesis before reading another 20 files?**
 
-**Your coding agent spent ten minutes investigating what a ten-second test could have settled.**
+**Make cheap bets. Win big. Lose small.** BetFirst is a cost-aware execution Skill for coding agents: take a **tiny, falsifiable, reversible bet** when it can eliminate a costly investigation. If it loses, **cut the loss**, preserve evidence, and fall back to normal development.
 
-BetFirst is a small, portable coding-agent Skill that looks for **asymmetric bets**: a tiny, reversible experiment with a potentially large payoff in saved investigation. When a bet loses, it stops quickly, keeps the evidence, and returns to normal development. It does not skip final validation.
+**Claude Code first · Pi compatible · No additional runtime dependencies**
 
-**Claude Code first. Pi compatible. Zero runtime dependencies.**
+> [!IMPORTANT]
+> **Experimental v0.1.** This is a decision policy, not a measured speedup. **No token, time, or cost savings are claimed yet.** Read the [evaluation protocol](evals/README.md) before drawing performance conclusions.
 
-**Status: experimental (v0.1).** The mechanism has a decision-theoretic rationale, but **no BetFirst speedup or token-saving claim is established yet**. See [Evaluation](evals/README.md) for how to measure it.
+## Try it in 30 seconds
+
+With the repository's Claude Code plugin installed (instructions below), invoke `/tc3oliver-skills:betfirst`, then give the agent a real coding task.
+
+```text
+Use BetFirst for this task. If a cheap, reversible probe can settle
+a key uncertainty, take that bet. Stop immediately if it fails or
+becomes inconclusive, preserve my existing work, and finish with
+the normal correctness checks.
+```
+
+**The bet is optional.** If no cheap, decisive, bounded experiment exists, keep working normally.
+
+## Why this exists
+
+Coding agents often pay for broad file reads, dependency tracing and long tool outputs before trying a tiny diagnostic test. Sometimes that investigation is essential. Sometimes a ten-second probe could invalidate the guess first.
+
+**BetFirst targets the second case.** It trades a small, bounded downside for the chance to avoid a much larger investigation.
+
+| BetFirst **is** | BetFirst **is not** |
+| --- | --- |
+| A decision policy for small, falsifiable probes | A command to guess and ship |
+| A way to buy evidence cheaply | Permission to skip required tests |
+| A bounded failure with a normal fallback | A replacement for systematic debugging |
+| Agent-neutral instructions | A new runtime, daemon, or framework |
+
+<p align="center">
+  <img src="./assets/before-after.svg" alt="Illustrative comparison of broad exploration and BetFirst's small-probe path; not benchmark measurements." width="1000">
+</p>
 
 ## The behavior
 
-```text
-Meaningful uncertainty
-         |
-  Cheap falsifiable probe?
-  Safe rollback / bounded downside?
-  Large avoided investigation?
-         |
-      no | yes
-         |  \
-     NORMAL  BET
-                |
-         decisive evidence?
-          /          \
-        WIN         CUT LOSS
-         |              |
-    keep evidence   stop, restore
-    skip dead work  preserve evidence
-         |              |
-         +---- normal correctness gate
-```
+<p align="center">
+  <img src="./assets/decision-flow.svg" alt="BetFirst decision policy: spot a possible bet, cap its downside, run the probe, then win or cut loss." width="1000">
+</p>
 
 **SPOT → CAP → BET → WIN / CUT LOSS.** When there is no actual need to change anything, **ABSTAIN**. A bet is an early diagnostic shortcut, **not** a permission to guess the fix.
 
 Typical opportunities: isolate an FFmpeg argument using a tiny file, test a serializer against one synthetic payload, reproduce a CLI failure with a one-command fixture, or check a narrow build hypothesis.
 
+### When NOT to bet
+
 Bad bets: unbounded testing, destructive Git cleanup, overlapping uncommitted work, production mutations, credentials, remote side effects, and experiments without objective signals. These go through normal analysis instead.
 
+If the task is already satisfied, **ABSTAIN** rather than changing code to manufacture an experiment. A good Skill should know when it has nothing useful to add.
+
 ## Install and use
+
+BetFirst lives in this repository's existing Skill catalog. Install it once through **either** Claude's plugin mechanism **or** a portable Agent Skills installation; avoid loading two copies of the same Skill.
 
 ### Claude Code — plugin (existing repository distribution)
 
@@ -56,7 +80,7 @@ Run `/tc3oliver-skills:betfirst` explicitly, or ask Claude to use BetFirst while
 npx skills add tc3oliver/skills --skill betfirst -g -a claude-code -y
 ```
 
-This route places a canonical global copy in the Agent Skills directory used by the installer. Pi discovers global `~/.agents/skills/` by default; run `/skill:betfirst` in Pi. For Pi-only installations, place the `betfirst/` folder under `~/.pi/agent/skills/betfirst/` instead.
+For Pi, ensure the complete `betfirst/` directory containing `SKILL.md` is installed in a skills directory discovered by your Pi version (commonly `~/.pi/agent/skills/betfirst/` or `~/.agents/skills/betfirst/`). Invoke `/skill:betfirst`. The portable Skill has no Claude-specific commands in its body.
 
 **Choose one Claude installation route** (plugin or Agent Skills CLI) to avoid duplicate entries. Pi and Claude load the same portable `SKILL.md`; there is no runtime-specific fork.
 
@@ -138,6 +162,12 @@ The analyzer reports paired time, gross-token and USD-cost savings, with `null` 
 - **v0.1 (this Skill):** portable policy, bounded failure, qualitative cases, repeatable analysis protocol.
 - **v0.2:** collect real Claude Code and Pi task sessions, quantify false/missed bets and fallback overhead, compare against baseline and efficiency control.
 - **v1.0:** publish reproducible cross-task results; only add runtime instrumentation or enforcement where measured failures justify it.
+
+## Share and contribute
+
+**Find an unexpectedly expensive coding-agent investigation?** Bring a reproducible task with its original repository state, acceptance tests and actual usage logs. Reports of **false bets**, **missed bets**, and **failed stop-losses** are especially valuable. See [evals/README.md](evals/README.md) for the controlled comparison method.
+
+> **The ambition:** Spend less on uncertainty, not less on correctness.
 
 ## License
 
