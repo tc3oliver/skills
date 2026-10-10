@@ -7,8 +7,7 @@ of `evals/README.md` section 1, plus a list of protocol problems the run exposed
 
 Project: a Taiwan-Mandarin daily video pipeline (TTS, image generation, Remotion render, a
 Postgres job store, LLM editorial and review steps). Run: 2026-10-10, one lead agent plus five
-teammates, Claude Code. Every bet was recorded with real start/end timestamps in a JSON log at
-the time it ran; the table below is copied from that log. Numbers are not rounded to look better.
+teammates, Claude Code. The JSON log contains start/end timestamps and separately reported durations. **Five entries disagree**; neither source is silently preferred. The table reproduces the *recorded* durations, not validated probe execution time.
 
 ## Bet log (20 bets)
 
@@ -16,7 +15,7 @@ Raw log: [`signalforge-video-bets.json`](signalforge-video-bets.json). Reproduce
 `python3 betfirst/scripts/summarize_bet_log.py betfirst/evals/field-notes/signalforge-video-bets.json`
 (the unit tests assert these exact numbers).
 
-| id | result | wall time | rollback | fell back to NORMAL | hypothesis (shortened) |
+| id | result | recorded duration (unreconciled) | rollback | fell back to NORMAL | hypothesis (shortened) |
 |---|---|---|---|---|---|
 | BET-1 | success | 23 s | no | no | cut over-long TTS sentence at the last clause punctuation |
 | BET-2 | failure | 0 s | no | no | real narration has sentences long enough for BET-1 to matter |
@@ -39,17 +38,16 @@ Raw log: [`signalforge-video-bets.json`](signalforge-video-bets.json). Reproduce
 | BET-19 | success | 0 s* | no | no | one revision pass applies the critic's findings |
 | BET-19c | success | 0 s* | no | no | the reviser must act on every flagged sentence |
 
-\* finished within one timestamp tick (under 1 s of measured wall time).
+\* A stored duration of `0` does **not** establish a sub-second probe. BET-13, BET-19 and BET-19c have timestamp spans of **87 s, 98 s and 96 s** respectively despite a recorded duration of zero. BET-2 and BET-8 have matching same-second timestamps; sub-second duration still cannot be resolved from second-precision timestamps.
 
-Totals: 14 successes, 6 failures, 1,355 s of bet time, 0 rollbacks, 5 fallbacks to NORMAL.
-Token usage was **unavailable for all 20 bets** (recorded as null, not 0).
+Totals: **14 hypothesis-success labels, 6 hypothesis-failure labels**, 0 recorded rollbacks, 5 recorded fallbacks. The *recorded duration fields* sum to **1,355 s**; the *timestamp spans* sum to **1,594 s**. These are **not interchangeable, reconciled probe costs**, and overlapping spans prevent treating their sum as session wall-clock. Neither figure is evidence of saved time. Token usage is **unavailable for all 20 bets** (recorded as null, not 0).
 
 ## What this supports
 
 - Read-only or offline probes were cheap and changed direction. BET-7 showed that the
   duration constant was wrong before any plan was generated; BET-2 showed a fix was defensive,
   not urgent; BET-10 refuted a single-cause explanation (the cause was an interaction) in 33 s.
-  The four cheapest failed bets (BET-2, 4, 7, 10) were also the most informative.
+  BET-2, BET-7 and BET-10 are inexpensive refutations (recorded 0, 6 and 33 seconds). **BET-4 took 228 seconds** and is a costly counterexample, not a cheap failed bet.
 - No bet needed a rollback. Bets in this log never touched shared state, the production
   database, or other agents' uncommitted files; those cases were routed to NORMAL up front.
 - No failed hypothesis was repeated unchanged. BET-10's failure produced a fallback with a
@@ -66,16 +64,20 @@ Token usage was **unavailable for all 20 bets** (recorded as null, not 0).
 
 ## Protocol deviations observed
 
-1. **The 120 s quick-experiment cap was exceeded 4 times** (BET-4 228 s, BET-15 174 s,
-   BET-16 360 s, BET-18 124 s). Each was a real model run or several live
-   calls, which is not a quick experiment. They should have been routed to NORMAL from the
-   start or split into smaller probes. A cap that is only a guideline in the prompt was not
-   enforced by anything.
+1. **The 120 s quick-experiment cap was exceeded on 4 recorded duration fields** (BET-4 228 s, BET-15 174 s, BET-16 360 s, BET-18 124 s), but only **3 timestamp spans** exceeded 120 seconds (BET-4, BET-15, BET-16). The discrepancy for BET-18 is unresolved. These were long or multi-call runs that required tighter probes or NORMAL routing. The Skill has no mechanism to enforce a runtime timeout by itself.
 2. **Token telemetry was not available to the agent.** The session cost counter was shared by
    six concurrent agents, so it cannot be attributed to any bet. The CSV protocol in
    `evals/README.md` section 3 cannot be filled for this run, and it is not.
 3. **Self-reported pass/fail.** The "success" labels come from the agent's own checks (unit
-   tests, a measurement script, or listening notes from the user), not an independent evaluator.
+   tests, a measurement script, or listening notes from the user), not an independent evaluator. A disproved hypothesis can still yield a valuable, decisive probe; do not interpret 14/20 as an efficiency score.
+4. **Five mismatched duration records.** The source `duration_seconds` and ISO timestamp spans diverge: BET-13 (0/87 s), BET-14 (62/43 s), BET-18 (124/101 s), BET-19 (0/98 s), BET-19c (0/96 s). The origin of each discrepancy is unknown. Preserve the original JSON and audit before calculating economics. `summarize_bet_log.py` reports both measurements and flags their disagreement.
+
+## Next iteration
+
+- Use an isolated **single-agent run per task/arm** to collect real session-level wall time, token categories, API cost and independent acceptance. Avoid treating overlapping multi-agent timestamp spans as independent task costs.
+- When an external harness is available, mark a probe **decisive / inconclusive**, separately from whether the hypothesis was **supported / refuted**. A cheap refutation may be a good decision even if the hypothesis was wrong.
+- Evaluate **false bets**, **missed bets** and **failed cut-losses** from independent traces; record normal completion and cleanup cost in all arms. For v0.3 use paired Baseline / Efficiency / BetFirst runs as specified in [the evaluation protocol](../README.md).
+- Reconcile the five duration mismatches from original execution traces if available; otherwise leave both measurements reported and the economic conclusion **unknown**.
 
 ## Mapping to `cases.json`
 
