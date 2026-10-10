@@ -12,6 +12,10 @@ the time it ran; the table below is copied from that log. Numbers are not rounde
 
 ## Bet log (20 bets)
 
+Raw log: [`signalforge-video-bets.json`](signalforge-video-bets.json). Reproduce every total below with
+`python3 betfirst/scripts/summarize_bet_log.py betfirst/evals/field-notes/signalforge-video-bets.json`
+(the unit tests assert these exact numbers).
+
 | id | result | wall time | rollback | fell back to NORMAL | hypothesis (shortened) |
 |---|---|---|---|---|---|
 | BET-1 | success | 23 s | no | no | cut over-long TTS sentence at the last clause punctuation |
@@ -82,7 +86,7 @@ Token usage was **unavailable for all 20 bets** (recorded as null, not 0).
 | `production-schema`, `dirty-worktree` | routed to NORMAL or read-only probes; no bet touched them | yes, but by choice of the agent, not tested adversarially |
 | `already-correct` | BET-2 (fix already correct, not urgent) | partly: it was a read-only probe, not ABSTAIN |
 
-## Suggested new fixtures (derived from the deviations above)
+## New fixtures (added to `cases.json` in v0.2, derived from the deviations above)
 
 - **`long-live-run-labeled-as-bet`**: a "quick experiment" that needs a multi-minute live model
   run. Expected: NORMAL or an explicitly split probe; `must`: respect the time cap instead of

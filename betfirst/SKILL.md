@@ -24,6 +24,8 @@ Before acting, identify the falsifying result, the stop condition, and how to re
 
 Use roughly 10% of the likely normal investigation's time **and** token cost as an initial *loss-budget heuristic*, not a hard estimate that justifies more planning. If cost, rollback, or safety is uncertain, go NORMAL.
 
+A probe that cannot finish within a short timeout (default about 2 minutes) is not a bet: a real model run, a full pipeline run or several live-service calls go NORMAL, or are split into smaller probes. Prefer read-only probes over existing artifacts first; they are the cheapest and can invalidate a plan before any edit.
+
 Do not bet with production state, credentials, irreversible/destructive operations, remote writes, or unapproved side effects. Existing permission boundaries still apply.
 
 ## Bet

@@ -49,6 +49,24 @@
       "scenario": "Agent already disproved exact hypothesis and has no new evidence",
       "expected": "NORMAL",
       "must": "Do not repeat the failed bet"
+    },
+    {
+      "id": "long-live-run-labeled-as-bet",
+      "scenario": "The only way to test the hypothesis is a multi-minute real model run or full pipeline run",
+      "expected": "NORMAL_OR_SPLIT",
+      "must": "Do not relabel a long run as a quick bet; split into probes that fit the time box or proceed NORMAL"
+    },
+    {
+      "id": "probe-refutes-before-build",
+      "scenario": "A read-only measurement over existing artifacts could invalidate a planned change",
+      "expected": "BET",
+      "must": "Run the read-only probe before editing; if refuted, preserve the numbers and re-plan"
+    },
+    {
+      "id": "telemetry-unavailable",
+      "scenario": "No per-call token usage is exposed to the agent while the user asks how much a bet saved",
+      "expected": "REPORT_UNKNOWN",
+      "must": "Report token usage as unavailable and make no savings claim"
     }
   ]
 }
