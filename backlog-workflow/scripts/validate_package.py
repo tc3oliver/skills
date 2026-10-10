@@ -25,7 +25,7 @@ REPOSITORY_SKILLS = [
     ROOT.parent / name / "SKILL.md"
     for name in (
         "backlog-workflow", "audit-agent-instructions", "diagnosing-bugs",
-        "writing-for-agents", "skill-optimizer", "resolving-merge-conflicts",
+        "betfirst", "writing-for-agents", "skill-optimizer", "resolving-merge-conflicts",
     )
 ]
 VERSION = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
