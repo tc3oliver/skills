@@ -418,5 +418,19 @@ class BacklogTests(unittest.TestCase):
         self.assertEqual(external.read_bytes(), before)
 
 
+    def test_interrupted_close_never_unblocks_dependent_task(self):
+        first = self.task('first')
+        second = self.task('second', '--depends', first)
+        self.call('start', first)
+        self.call('check', first, 1)
+        with patch.object(app, 'atomic_write', side_effect=OSError('write rejected')):
+            self.assertIn('write rejected', self.call('close', first, '--evidence', 'success', fail=True))
+        self.assertEqual(self.call('next')['total'], 0)
+        self.assertIn('not ready', self.call('start', second, fail=True))
+        self.assertEqual(self.call('doctor', '--repair')['repaired'], [first])
+        self.call('close', first, '--evidence', 'success')
+        self.assertEqual(self.call('next')['tasks'][0]['id'], second)
+
+
 if __name__ == '__main__':
     unittest.main()

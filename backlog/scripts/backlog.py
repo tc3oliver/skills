@@ -457,10 +457,13 @@ def verify_dependencies(tasks: dict[str, dict]) -> None:
 def dependency_done(task: dict) -> bool:
     if task['status'] != 'done':
         return False
-    # Treat ignored cache metadata as a hint, not authority: a finished
-    # dependency must have a real, non-symlinked archived task path.
+    # An archived filename/cache entry is NOT proof of completion: the process
+    # may have crashed between rename and the terminal-state atomic write.
+    # Read only referenced dependencies, not the whole archive.
     path = task['path']
-    return path.parent.parent.name == 'done' and path.is_file() and not path.is_symlink()
+    if path.parent.parent.name != 'done' or not path.is_file() or path.is_symlink():
+        return False
+    return read_task(path)['status'] == 'done'
 
 
 def ready(task: dict, tasks: dict) -> bool:
