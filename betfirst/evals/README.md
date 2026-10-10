@@ -16,6 +16,8 @@ For every real coding task, prepare an immutable starting commit, the same accep
 
 Keep the task prompt, tooling, permissions, available files, sandbox, and network conditions constant. Randomize or counterbalance arm order, and repeat tasks to limit stochastic noise. Never run arms over one another's modified checkout. Count unsuccessful runs and all failed bets.
 
+For a controlled `efficiency` arm, use the same small instruction across all tasks: "Avoid redundant file reads, repeated tool calls, and unnecessary tests; preserve required validation." Use that exact instruction **plus** BetFirst in the `betfirst` arm. In Claude Code, exclude the BetFirst plugin/skill from baseline and efficiency harnesses (not merely "don't invoke it"): an auto-discoverable skill description can otherwise contaminate the control group. Keep all other Skills equal.
+
 Start with 10–12 diverse tasks for smoke testing; expand to at least 30 tasks and multiple repetitions before making public performance claims. Include tasks with no reasonable bet, ambiguous probes, dirty worktrees, hard bugs, and cheap decisive tests. The independent acceptance evaluator must not be the coding agent's self-report.
 
 ## 3. Record actual measurements
