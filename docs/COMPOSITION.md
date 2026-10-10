@@ -29,7 +29,7 @@ Backlog, BetFirst and [Claude Team Kit (CTK)](https://github.com/tc3oliver/claud
 
 If a BL-ID and team intent coexist, the lead should retrieve that task through the installed Backlog Skill/CLI **if available**. Read only Task ID, Goal, Acceptance Criteria, References, dependencies, status and concise Handoff. Do not guess an installed Skill path, copy an entire task directory, or silently initialize a backlog from a bare BL-ID.
 
-- `todo` with satisfied dependencies: the lead may start the persistent task before team execution.
+- `todo` with satisfied dependencies: the lead may start the persistent task only **after** CTK preflight, when actual work begins. If the requested team cannot run, leave the BL state unchanged.
 - `doing`: reconcile current repository state with Handoff and continue without calling `start` again.
 - `inbox`, `blocked`, `done` or `cancelled`: do not execute it without resolving that state.
 - Task unavailable: do not fabricate its contents; request its Goal and AC before executing. CTK itself still works independently when a complete ordinary goal is supplied.
