@@ -136,7 +136,8 @@ def run_cmd(argv: list, cwd: Path, stdout: Path, stderr: Path, timeout: int) -> 
 
 def execute(suite: Path, output: Path, driver: str, model: str | None,
             replicates: int, seed: int, timeout: int, execute_real: bool,
-            limit: int | None = None, claude_launcher: str = "direct") -> list:
+            limit: int | None = None, claude_launcher: str = "direct",
+            selected_tasks: list[str] | None = None) -> list:
     if driver != "mock" and not execute_real:
         raise ValueError("real CLI execution requires --execute and may incur API cost")
     if driver != "mock" and not model:
@@ -146,6 +147,14 @@ def execute(suite: Path, output: Path, driver: str, model: str | None,
     if output.exists() and any(output.iterdir()):
         raise ValueError("output exists and is not empty; never overwrite experiment evidence")
     tasks = load_suite(suite)
+    if selected_tasks and limit is not None:
+        raise ValueError("--task and --limit cannot be used together")
+    if selected_tasks:
+        requested = set(selected_tasks)
+        available = {task["id"] for task in tasks}
+        if not requested <= available or len(requested) != len(selected_tasks):
+            raise ValueError("duplicate or unknown --task selection")
+        tasks = [task for task in tasks if task["id"] in requested]
     if limit:
         tasks = tasks[:limit]
     skill = (ROOT / "betfirst" / "SKILL.md").read_text(encoding="utf-8")
@@ -154,7 +163,9 @@ def execute(suite: Path, output: Path, driver: str, model: str | None,
             for rep in range(1, replicates + 1) for arm in ARMS]
     random.Random(seed).shuffle(plan)
     (output / "manifest.json").write_text(json.dumps({
-        "schema": 1, "driver": driver, "model": model, "seed": seed,
+        "schema": 2, "driver": driver, "model": model, "seed": seed,
+        "selected_task_ids": [task["id"] for task in tasks],
+        "task_selection": "explicit" if selected_tasks else ("first_N" if limit else "full_suite"),
         "replicates": replicates, "runs": len(plan),
         "synthetic": driver == "mock", "timeout": timeout,
         "claude_launcher": claude_launcher if driver == "claude" else None,
@@ -239,10 +250,13 @@ def main() -> None:
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--timeout", type=int, default=180)
     parser.add_argument("--limit", type=int)
+    parser.add_argument("--task", action="append", dest="selected_tasks",
+                        help="Select an exact task ID; repeat to select multiple tasks")
     parser.add_argument("--execute", action="store_true", help="Permit actual provider calls and costs")
     args = parser.parse_args()
     execute(args.suite.resolve(), args.output.resolve(), args.driver, args.model,
-            args.replicates, args.seed, args.timeout, args.execute, args.limit, args.claude_launcher)
+            args.replicates, args.seed, args.timeout, args.execute, args.limit,
+            args.claude_launcher, args.selected_tasks)
 
 
 if __name__ == "__main__":
