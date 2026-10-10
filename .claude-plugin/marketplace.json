@@ -9,7 +9,7 @@
     {
       "name": "tc3oliver-skills",
       "source": "./",
-      "description": "Portable task-driven workflow and engineering skills, exposed through Claude Code compatibility entry points.",
+      "description": "Portable task-driven workflow and engineering and cost-aware execution skills, exposed through Claude Code compatibility entry points.",
       "category": "engineering",
       "keywords": [
         "backlog",
@@ -19,7 +19,9 @@
         "debugging",
         "skill-authoring",
         "git",
-        "merge-conflicts"
+        "merge-conflicts",
+        "cost-optimization",
+        "betfirst"
       ]
     }
   ]
