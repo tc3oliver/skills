@@ -98,21 +98,26 @@ def report(records: list[dict]) -> dict:
         }
     by_arm = {arm: {r["key"]: r for r in rows} for arm, rows in groups.items()}
     comparisons = {}
-    for arm in ("efficiency", "betfirst"):
-        keys = sorted(set(by_arm["baseline"]) & set(by_arm[arm]))
+    for candidate_arm, control_arm in (
+        ("efficiency", "baseline"),
+        ("betfirst", "baseline"),
+        ("betfirst", "efficiency"),
+    ):
+        keys = sorted(set(by_arm[control_arm]) & set(by_arm[candidate_arm]))
         if not keys:
             continue
-        base = [by_arm["baseline"][key] for key in keys]
-        candidate = [by_arm[arm][key] for key in keys]
+        base = [by_arm[control_arm][key] for key in keys]
+        candidate = [by_arm[candidate_arm][key] for key in keys]
         b_time = complete_sum(base, "elapsed_seconds")
         c_time = complete_sum(candidate, "elapsed_seconds")
         b_tokens = complete_sum(base, "gross_tokens")
         c_tokens = complete_sum(candidate, "gross_tokens")
         b_cost = complete_sum(base, "api_cost_usd")
         c_cost = complete_sum(candidate, "api_cost_usd")
-        comparisons[f"{arm}_vs_baseline"] = {
+        comparisons[f"{candidate_arm}_vs_{control_arm}"] = {
             "matched_pairs": len(keys),
-            "baseline_passed": sum(r["passed"] for r in base),
+            "control_passed": sum(r["passed"] for r in base),
+            "baseline_passed": sum(r["passed"] for r in base),  # existing output consumers
             "candidate_passed": sum(r["passed"] for r in candidate),
             "time_saving_fraction": savings(b_time, c_time),
             "gross_token_saving_fraction": savings(b_tokens, c_tokens),
