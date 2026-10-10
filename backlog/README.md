@@ -28,13 +28,13 @@ python3 <skill-dir>/scripts/backlog.py --root . status
 python3 <skill-dir>/scripts/backlog.py --root . doctor
 ```
 
-Only active task metadata is returned to `next`; only `show ID` loads one full task. Each task is a separate Markdown file. Completed/cancelled tasks move to monthly archives while preserving dependency history.
+Only active task metadata is returned to `next`; only `show ID` loads one full task. Each task is a separate Markdown file. Completed/cancelled tasks move to monthly status-specific archives (`archive/done/YYYY-MM` or `archive/cancelled/YYYY-MM`) while preserving dependency history. An ignored, disposable `.backlog/.archive-cache.json` accelerates repeat queries; directory signatures invalidate stale metadata, and `doctor` always checks the actual Markdown. Delete the cache at any time to rebuild it.
 
 ## Lifecycle
 
 `inbox → todo → doing → done`, with `blocked` (recover to todo) and `cancelled` (terminal) alternatives. Only `todo` tasks whose dependencies are all `done` appear in the ready queue. Closing requires checked acceptance criteria and actual validation evidence. Unresolved requirements stay `inbox` rather than being invented.
 
-A short `Handoff` saves files, verified progress and next steps. Resuming rechecks the codebase and tests; it never assumes stale output is still valid.
+A short `Handoff` saves files, verified progress and next steps. Reopened tasks retain prior evidence in `History` and clear current `Evidence`; replacing checked acceptance criteria requires explicit `--confirm-ac-reset`. `doctor --repair` recovers unambiguous interrupted close/reopen moves. Resuming rechecks the codebase and tests; it never assumes stale output is still valid.
 
 ## Boundaries
 
@@ -52,5 +52,7 @@ The former `backlog-workflow` depended on the external Backlog.md task engine an
 python3 -m unittest discover -s backlog/tests -v
 python3 -m unittest discover -s betfirst/tests
 ```
+
+CI runs Backlog and existing Skill tests on Linux, macOS, and Windows. Backlog refuses symlinked archive directories; listing historical tasks loads only selected bodies rather than the entire archive. `diagnosing-bugs` remains an independent option for ordinary bugs; CTK is invoked only on explicit team intent.
 
 See [CLI reference](references/cli.md) for the on-disk format, JSON commands, atomicity and concurrency limits.

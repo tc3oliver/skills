@@ -6,6 +6,8 @@ import tempfile
 import unittest
 import importlib.util
 import subprocess
+import os
+import time
 import sys
 from concurrent.futures import ThreadPoolExecutor
 from unittest.mock import patch
@@ -134,8 +136,8 @@ class BacklogTests(unittest.TestCase):
 
     def test_duplicate_across_archive_detected(self):
         item = self.task()
-        archived = self.root / '.backlog/archive/2026-10'
-        archived.mkdir()
+        archived = self.root / '.backlog/archive/done/2026-10'
+        archived.mkdir(parents=True)
         original = (self.root / '.backlog/tasks' / (item+'.md')).read_text()
         (archived / (item+'.md')).write_text(original)
         self.assertIn('duplicate task ID', self.call('doctor', fail=True))
@@ -144,7 +146,10 @@ class BacklogTests(unittest.TestCase):
         item = self.task()
         path = self.root / '.backlog/tasks' / (item+'.md')
         path.unlink()
-        path.symlink_to(self.root / 'missing')
+        try:
+            path.symlink_to(self.root / 'missing')
+        except (OSError, NotImplementedError) as exc:
+            self.skipTest(f'cannot create symlink on this platform: {exc}')
         self.assertIn('symlink task', self.call('doctor', fail=True))
 
     def test_format_rejects_heading_injection(self):
@@ -187,6 +192,230 @@ class BacklogTests(unittest.TestCase):
         (self.root / '.agent-workflow').mkdir()
         self.assertTrue(self.call('doctor')['legacy_present'])
         self.assertNotIn('backlog.md', SCRIPT.read_text())
+
+
+    def test_symlinked_archive_ancestors_never_touch_external_data(self):
+        item = self.task()
+        self.call('start', item)
+        self.call('check', item, 1)
+        self.call('close', item, '--evidence', 'smoke succeeded')
+        folder = self.root / '.backlog/archive/done'
+        month = next(p for p in folder.iterdir() if p.is_dir())
+        original = (month / (item + '.md')).read_bytes()
+        external = self.root / 'external'
+        external.mkdir()
+        (external / (item + '.md')).write_bytes(original)
+        (month / (item + '.md')).unlink()
+        month.rmdir()
+        try:
+            month.symlink_to(external, target_is_directory=True)
+        except (OSError, NotImplementedError) as exc:
+            self.skipTest(f'cannot create directory symlink on this platform: {exc}')
+        self.assertIn('symlink archive directory', self.call('show', item, fail=True))
+        self.assertIn('symlink archive directory', self.call('reopen', item, fail=True))
+        self.assertIn('symlink archive directory', self.call('doctor', '--repair', fail=True))
+        self.assertEqual((external / (item + '.md')).read_bytes(), original)
+
+    def test_symlink_archive_status_directory_rejected(self):
+        status = self.root / '.backlog/archive/done'
+        external = self.root / 'external'
+        external.mkdir()
+        try:
+            status.symlink_to(external, target_is_directory=True)
+        except (OSError, NotImplementedError) as exc:
+            self.skipTest(f'cannot create directory symlink on this platform: {exc}')
+        self.assertIn('symlink archive directory', self.call('next', fail=True))
+
+    def test_close_rename_failure_is_atomic_at_source(self):
+        item = self.task()
+        self.call('start', item)
+        self.call('check', item, 1)
+        source = self.root / '.backlog/tasks' / (item+'.md')
+        old = source.read_bytes()
+        with patch.object(app.os, 'rename', side_effect=OSError('rename rejected')):
+            self.assertIn('rename rejected', self.call('close', item, '--evidence', 'check success', fail=True))
+        self.assertEqual(source.read_bytes(), old)
+        self.assertEqual(self.call('show', item)['task']['status'], 'doing')
+        self.assertTrue(self.call('doctor')['ok'])
+
+    def test_close_write_failure_repaired_without_data_loss(self):
+        item = self.task()
+        self.call('start', item)
+        self.call('check', item, 1)
+        original = self.root / '.backlog/tasks' / (item + '.md')
+        prior = original.read_bytes()
+        with patch.object(app, 'atomic_write', side_effect=OSError('write rejected')):
+            self.assertIn('write rejected', self.call('close', item, '--evidence', 'pass', fail=True))
+        self.assertIn('run doctor --repair', self.call('doctor', fail=True))
+        result = self.call('doctor', '--repair')
+        self.assertEqual(result['repaired'], [item])
+        self.assertEqual(original.read_bytes(), prior)
+        self.assertEqual(self.call('show', item)['task']['status'], 'doing')
+        self.call('close', item, '--evidence', 'pass')
+        self.assertTrue(self.call('doctor')['ok'])
+
+    def test_reopen_rename_failure_preserves_archive(self):
+        item = self.task()
+        self.call('start', item)
+        self.call('check', item, 1)
+        self.call('close', item, '--evidence', 'pass')
+        with patch.object(app.os, 'rename', side_effect=OSError('cannot rename')):
+            self.assertIn('cannot rename', self.call('reopen', item, fail=True))
+        self.assertTrue(self.call('show', item)['archived'])
+        self.assertTrue(self.call('doctor')['ok'])
+
+    def test_reopen_write_failure_repair_retains_prior_evidence(self):
+        item = self.task()
+        self.call('start', item)
+        self.call('check', item, 1)
+        self.call('close', item, '--evidence', 'pytest: 3 passed')
+        with patch.object(app, 'atomic_write', side_effect=OSError('write rejected')):
+            self.assertIn('write rejected', self.call('reopen', item, fail=True))
+        self.assertIn('run doctor --repair', self.call('doctor', fail=True))
+        self.assertEqual(self.call('doctor', '--repair')['repaired'], [item])
+        self.assertTrue(self.call('show', item)['archived'])
+        self.assertIn('pytest: 3 passed', self.call('show', item)['markdown'])
+        self.call('reopen', item)
+        markdown = self.call('show', item)['markdown']
+        self.assertIn('previous validation is historical', markdown)
+        self.assertIn('pytest: 3 passed', markdown)
+        self.assertIn('## Evidence\n\n', markdown)
+        self.assertEqual(self.call('show', item)['task']['status'], 'todo')
+
+    def test_archive_metadata_not_parsed_except_doctor_and_explicit_show(self):
+        item = self.task()
+        self.call('start', item)
+        self.call('check', item, 1)
+        self.call('close', item, '--evidence', 'pass')
+        with patch.object(app, 'read_task', wraps=app.read_task) as reader:
+            self.call('next')
+            self.call('status')
+            self.assertEqual(reader.call_count, 0)
+            result = self.call('list', '--status', 'done', '--limit', 1)
+            self.assertEqual(result['tasks'][0]['title'], 'Example')
+            self.assertEqual(reader.call_count, 1)
+            self.assertTrue(self.call('show', item)['archived'])
+            self.assertEqual(reader.call_count, 2)
+            self.call('doctor')
+            self.assertEqual(reader.call_count, 3)
+
+    def test_archive_directory_status_and_cancelled_dependency(self):
+        first = self.task('first')
+        second = self.task('second', '--depends', first)
+        self.call('cancel', first, '--reason', 'no longer wanted')
+        self.assertEqual(self.call('next')['total'], 0)
+        self.assertEqual(self.call('list', '--status', 'cancelled')['tasks'][0]['title'], 'first')
+        self.assertTrue(self.call('doctor')['ok'])
+        self.call('reopen', first)
+        self.assertEqual(self.call('next')['total'], 1)
+        self.call('start', first)
+        self.call('check', first, 1)
+        self.call('close', first, '--evidence', 'passed')
+        self.assertEqual(self.call('next')['tasks'][0]['id'], second)
+
+    def test_ac_reset_requires_confirmation_and_reports_reset(self):
+        item = self.task()
+        self.call('start', item)
+        self.call('check', item, 1)
+        self.assertIn('checked acceptance criteria', self.call('edit', item, '--ac', 'New behavior', fail=True))
+        self.assertIn('- [x] Works', self.call('show', item)['markdown'])
+        result = self.call('edit', item, '--ac', 'New behavior', '--confirm-ac-reset')
+        self.assertEqual(result['acceptance_reset'], 1)
+        self.assertIn('- [ ] New behavior', self.call('show', item)['markdown'])
+        self.assertIn('all acceptance criteria', self.call('close', item, '--evidence', 'pass', fail=True))
+
+    def test_doing_status_is_priority_sorted(self):
+        low = self.task('low')
+        high = self.task('high', '--priority', 'P0')
+        self.call('start', low)
+        self.call('start', high)
+        self.assertEqual([x['id'] for x in self.call('status')['doing']], [high, low])
+
+    def test_read_accepts_pre_history_task_files(self):
+        item = self.task()
+        path = self.root / '.backlog/tasks' / (item + '.md')
+        data = path.read_text()
+        data = data.replace('## History\n\n', '')
+        path.write_text(data)
+        self.assertEqual(self.call('show', item)['task']['status'], 'todo')
+        self.call('note', item, '--text', 'updated')
+        self.assertIn('## History', path.read_text())
+
+    def test_many_archived_tasks_do_not_expand_context_or_parse_bodies(self):
+        # Stress read path without asserting a machine-dependent timing limit.
+        folder = self.root / '.backlog/archive/done/2026-10'
+        folder.mkdir(parents=True)
+        count = 1200
+        for i in range(count):
+            ident = f'BL-{i:016X}'
+            (folder / f'{ident}.md').write_text('not parsed for next/status')
+        started = time.perf_counter()
+        summary = self.call('status')
+        next_tasks = self.call('next')
+        elapsed = time.perf_counter() - started
+        self.assertEqual(summary['counts']['done'], count)
+        self.assertEqual(next_tasks['total'], 0)
+        self.assertLess(len(json.dumps(summary)), 4096)
+        self.assertLess(len(json.dumps(next_tasks)), 4096)
+        self.assertLess(elapsed, 5, f'archive metadata-only query took {elapsed:.2f}s')
+
+
+    def test_archive_cache_invalidation_and_rebuild(self):
+        self.assertIn('.archive-cache.json', (self.root / '.backlog/.gitignore').read_text())
+        a = self.task('first')
+        self.call('start', a)
+        self.call('check', a, 1)
+        self.call('close', a, '--evidence', 'pass')
+        self.call('status')
+        cache = self.root / '.backlog/.archive-cache.json'
+        self.assertTrue(cache.is_file())
+        self.assertEqual(self.call('status')['counts']['done'], 1)
+        b = self.task('second')
+        self.call('start', b)
+        self.call('check', b, 1)
+        self.call('close', b, '--evidence', 'pass')
+        self.assertEqual(self.call('status')['counts']['done'], 2)
+        cache.write_text('{malformed')
+        self.assertEqual(self.call('status')['counts']['done'], 2)
+        self.assertTrue(self.call('doctor')['ok'])
+        self.call('reopen', b)
+        self.assertEqual(self.call('status')['counts']['done'], 1)
+
+    def test_forged_cache_entry_does_not_unblock_dependency(self):
+        missing = 'BL-' + 'F'*16
+        first = self.task('first')
+        dependent = self.task('dependent', '--depends', first)
+        self.call('start', first)
+        self.call('check', first, 1)
+        self.call('close', first, '--evidence', 'pass')
+        self.call('status')
+        cache = self.root / '.backlog/.archive-cache.json'
+        index = json.loads(cache.read_text())
+        index['records'] = [r for r in index['records'] if r[2] != first]
+        index['records'].append(['done', '2026-10', missing])
+        cache.write_text(json.dumps(index))
+        self.assertIn('missing dependency', self.call('next', fail=True))
+        # Removing the cache restores the actual task's status from the archive.
+        cache.unlink()
+        self.assertEqual(self.call('next')['tasks'][0]['id'], dependent)
+
+    def test_archive_file_symlink_detected_after_cache_is_warm(self):
+        item = self.task()
+        self.call('start', item)
+        self.call('check', item, 1)
+        self.call('close', item, '--evidence', 'pass')
+        self.call('status')
+        path = next((self.root / '.backlog/archive/done').glob('*/' + item + '.md'))
+        external = self.root / 'external.md'
+        before = path.read_bytes()
+        external.write_bytes(before)
+        path.unlink()
+        try:
+            path.symlink_to(external)
+        except (OSError, NotImplementedError) as exc:
+            self.skipTest(f'cannot create file symlink on this platform: {exc}')
+        self.assertIn('symlink task', self.call('next', fail=True))
+        self.assertEqual(external.read_bytes(), before)
 
 
 if __name__ == '__main__':

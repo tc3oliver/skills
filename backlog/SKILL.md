@@ -20,10 +20,10 @@ The CLI is `python3 <this-skill>/scripts/backlog.py --root <repository-root> <co
 - **do BL-ID**: `show`, inspect relevant current code, verify task readiness, `start`, execute *exactly one task* with the user's normal agent workflow, verify each AC, `check ID n` for verified criteria, then `close ID --evidence "actual test/observation and result"`. Do not claim unobserved checks. If interrupted, save a concise pointer-based `note ID --text "completed; remaining; files; last check; next action"`. Block for unresolved product intent, missing dependency, permission or unsafe state using `block ID --reason`. A failed test is not evidence of completion.
 - **resume**: if status is `doing`, use `show` and persisted `Handoff` plus current repository facts; do not re-run `start` or assume a stale test still passes.
 
-Task data are under `.backlog/tasks` and `.backlog/archive/YYYY-MM`. `doctor` validates the graph and storage. The CLI owns state transitions; do not use `git reset --hard`, overwrite uncommitted work, or invent verification commands.
+Task data are under `.backlog/tasks` and `.backlog/archive/{done,cancelled}/YYYY-MM`. `doctor` validates the graph and storage; `doctor --repair` restores only unambiguous interrupted moves. Reopened tasks move previous evidence into historical notes and require fresh verification. Replacing checked AC requires `edit --confirm-ac-reset`. The CLI owns state transitions; do not use `git reset --hard`, overwrite uncommitted work, or invent verification commands.
 
 ## Collaboration boundaries
 
-- **CTK** owns team spawn, parallel scheduling, temporary worker tasks, debugging and risk-based review. On explicit team intent, pass Goal/AC/references to the CTK lead. Only that lead updates the persistent BL task after final integration verification. Never mirror worker tasks into Backlog.
+- **CTK** owns explicitly requested team spawn, parallel scheduling, temporary worker tasks and team-based risk review; use the separate `diagnosing-bugs` Skill for ordinary debugging when appropriate. On explicit team intent, pass Goal/AC/references to the CTK lead. Only that lead updates the persistent BL task after final integration verification. Never mirror worker tasks into Backlog.
 - **BetFirst** owns optional bounded reversible probes. It neither changes task lifecycle nor weakens acceptance checks. Do not auto-invoke or duplicate its Spot/Cap/Bet policy.
 - A `done` Backlog task means all recorded AC are verified and evidence was observed; it is not equivalent to a worker saying it finished.
