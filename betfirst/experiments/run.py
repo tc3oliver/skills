@@ -201,7 +201,7 @@ def execute(suite: Path, output: Path, driver: str, model: str | None,
         use = usage_from_output(agent_output, driver)
         trace = summarize_trace(agent_output, driver)
         (run_dir / "trace_summary.json").write_text(
-            json.dumps(trace, indent=2) + "\\n", encoding="utf-8")
+            json.dumps(trace, indent=2) + "\n", encoding="utf-8")
         row = {"task_id": task["id"], "replicate": rep, "arm": arm,
                "passed": str(passed).lower(), "elapsed_seconds": round(agent_time + check_time + oracle_time, 6),
                **use, "bet_attempts": trace["bet_attempts"],
