@@ -29,5 +29,6 @@ jobs:
         run: |
           python3 -m unittest discover -s betfirst/experiments/tests
           python3 betfirst/experiments/run.py --driver mock --timeout 15 --output "$RUNNER_TEMP/betfirst-harness-smoke"
+          python3 betfirst/experiments/run.py --suite betfirst/experiments/suite-v2.json --driver mock --timeout 30 --output "$RUNNER_TEMP/betfirst-v2-harness-smoke"
       - name: Validate portable Skills and plugin registration
         run: python3 scripts/validate_plugin.py

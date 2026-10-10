@@ -1,0 +1,82 @@
+{
+  "schema": 2,
+  "description": "Pre-registered mixed-difficulty pilot: 3 low-uncertainty controls and 2 multi-module diagnostic tasks; no selected winner.",
+  "tasks": [
+    {
+      "id": "subtitle-path",
+      "difficulty": "low",
+      "fixture": "fixtures/subtitle-path",
+      "prompt": "Fix subtitle_filter_path: Windows-style drive-colon paths must escape the colon with a backslash for the filter expression, while path separators become forward slashes. Preserve POSIX paths.",
+      "check": [
+        "python3",
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "tests"
+      ],
+      "oracle": "oracles/subtitle-path.py"
+    },
+    {
+      "id": "tts-estimate",
+      "difficulty": "low",
+      "fixture": "fixtures/tts-estimate",
+      "prompt": "Our measured TTS speaking rate is 5.0 characters/second, not 6.5. Fix estimate_seconds to use this observed rate; it must not alter other behavior.",
+      "check": [
+        "python3",
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "tests"
+      ],
+      "oracle": "oracles/tts-estimate.py"
+    },
+    {
+      "id": "already-correct",
+      "difficulty": "low",
+      "fixture": "fixtures/already-correct",
+      "prompt": "Check whether clips_duration already sums all clip lengths correctly. If it does, do not modify anything.",
+      "check": [
+        "python3",
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "tests"
+      ],
+      "oracle": "oracles/already-correct.py",
+      "no_change": true
+    },
+    {
+      "id": "config-scope",
+      "difficulty": "diagnostic",
+      "fixture": "fixtures/config-scope",
+      "prompt": "Production incident: a feature rollout sometimes returns inconsistent values depending on request ordering. See incident.json for anonymized observations. The root cause might involve configuration storage, caching, or service wiring. Investigate and repair without disabling caching; preserve TTL, false-valued cache entries, tenant isolation, and minimal backend reads. Verify with existing tests.",
+      "check": [
+        "python3",
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "tests"
+      ],
+      "oracle": "oracles/config-scope.py"
+    },
+    {
+      "id": "render-resume",
+      "difficulty": "diagnostic",
+      "fixture": "fixtures/render-resume",
+      "prompt": "Video pipeline incident: after an interrupted nightly render, the resumed timeline loses or duplicates a clip despite valid individual render artifacts. See incident.json for the job's segment metadata and timeline observation. Investigate scheduling, rendering, and manifest behavior. Preserve completed work across retries, render each distinct segment exactly once after success, preserve caller order, and never mark failed renders complete.",
+      "check": [
+        "python3",
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "tests"
+      ],
+      "oracle": "oracles/render-resume.py"
+    }
+  ]
+}
