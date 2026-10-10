@@ -1,0 +1,27 @@
+{
+  "incident": "Feature flags changed unexpectedly during staggered rollout",
+  "observations": [
+    {
+      "at": "09:02:10",
+      "tenant": "alpha",
+      "flag": "vision",
+      "source": true,
+      "served": true
+    },
+    {
+      "at": "09:02:11",
+      "tenant": "bravo",
+      "flag": "vision",
+      "source": false,
+      "served": true
+    },
+    {
+      "at": "09:03:15",
+      "tenant": "bravo",
+      "flag": "vision",
+      "source": false,
+      "served": false
+    }
+  ],
+  "notes": "Each individual backend lookup matches source; the inconsistency appears in API responses and is load/order dependent. Cache TTL is 60s. Investigate before choosing a fix."
+}
