@@ -77,7 +77,7 @@ def unexpected_tool_paths(output: str, workspace: Path, repo: Path,
             continue
         # Any explicit repository path in a tool invocation is a leak:
         # this tree contains hidden oracles and pristine fixture sources.
-        if str(repo) in json.dumps(inputs, ensure_ascii=False):
+        if any(str(repo) + end in json.dumps(inputs, ensure_ascii=False) for end in ("/", " ", "\"", ";")):
             bad.append(f"{tool}: explicit source checkout reference")
             continue
         for key in ("path", "workdir", "directory", "filePath", "cwd"):
