@@ -172,10 +172,11 @@ def command(driver: str, model: str | None, prompt: str, tid: str, arm: str,
     raise ValueError("unknown driver")
 
 
-def run_cmd(argv: list, cwd: Path, stdout: Path, stderr: Path, timeout: int) -> tuple:
+def run_cmd(argv: list, cwd: Path, stdout: Path, stderr: Path, timeout: int,
+            env: dict[str, str] | None = None) -> tuple:
     t0 = time.perf_counter()
     with stdout.open("w", encoding="utf-8") as out, stderr.open("w", encoding="utf-8") as err:
-        proc = subprocess.Popen(argv, cwd=cwd, stdout=out, stderr=err,
+        proc = subprocess.Popen(argv, cwd=cwd, env=env, stdout=out, stderr=err,
                                 stdin=subprocess.DEVNULL, start_new_session=True)
         expired = False
         try:
@@ -536,9 +537,12 @@ def execute(suite: Path, output: Path, driver: str, model: str | None,
         oracle_exit, oracle_timed_out, oracle_time = None, False, 0.0
         if "oracle" in task:
             oracle_path = (suite.parent / task["oracle"]).resolve()
+            oracle_env = os.environ.copy()
+            oracle_env["PYTHONPATH"] = str(work.resolve()) + os.pathsep + oracle_env.get("PYTHONPATH", "")
             oracle_exit, oracle_timed_out, oracle_time = run_cmd(
                 [sys.executable, str(oracle_path)], work,
-                run_dir / "oracle.stdout", run_dir / "oracle.stderr", check_cap)
+                run_dir / "oracle.stdout", run_dir / "oracle.stderr", check_cap,
+                env=oracle_env)
         changed_tests = tests != (hashes(work / "tests") if (work / "tests").is_dir() else {})
         integrity = inspect_tests(suite.parent / task["fixture"], work)
         changed = original != hashes(work)
