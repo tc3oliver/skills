@@ -1,10 +1,10 @@
 <p align="center"><a href="./README.md">English</a> · <a href="./README.zh-TW.md">繁體中文</a></p>
 
 <p align="center">
-  <img src="./assets/betfirst-v04-animated.svg" alt="BetFirst — Make Cheap Bets. Win Big. Lose Small. A tiny feasibility probe before a costly deep dive." width="1000">
+  <img src="../../media/betfirst/assets/betfirst-v04-animated.svg" alt="BetFirst — Make Cheap Bets. Win Big. Lose Small. A tiny feasibility probe before a costly deep dive." width="1000">
 </p>
 
-<sub>Animated SVG · 126 local runs; paired time comparisons require both arms to PASS. [Full evidence →](./experiments/V04_RELEASE_RESULTS.md)</sub>
+<sub>Animated SVG · 126 local runs; paired time comparisons require both arms to PASS. [Full evidence →](../../research/betfirst/experiments/V04_RELEASE_RESULTS.md)</sub>
 
 # BetFirst
 
@@ -47,10 +47,10 @@ normally. Preserve existing work and complete final verification.
 ## Why bet first?
 
 <p align="center">
-  <img src="./assets/before-after.svg" alt="Conceptual comparison: researching documentation, tracing dependencies and building a PoC before trying an idea, versus testing one bounded feasibility hypothesis first, then either skipping unneeded investigation or stopping safely. Final verification remains required." width="1000">
+  <img src="../../media/betfirst/assets/before-after.svg" alt="Conceptual comparison: researching documentation, tracing dependencies and building a PoC before trying an idea, versus testing one bounded feasibility hypothesis first, then either skipping unneeded investigation or stopping safely. Final verification remains required." width="1000">
 </p>
 
-<sub>Illustrative workflows, **not benchmark measurements**. [Animated concept →](./assets/probe-loop.gif)</sub>
+<sub>Illustrative workflows, **not benchmark measurements**. [Animated concept →](../../media/betfirst/assets/probe-loop.gif)</sub>
 
 A successful bet doesn't magically finish the task. It can make **parts of the preliminary investigation** unnecessary. A failed bet is useful when it cheaply rules out an assumption—and it only stays cheap if the agent actually stops.
 
@@ -79,13 +79,13 @@ LOSE       Stop the probe, keep the error as evidence, investigate
 
 If the experiment could write production data, expose secrets, disturb someone else's changes, or cannot be safely stopped, **go NORMAL**. If nothing needs changing, **ABSTAIN**.
 
-[Decision flow →](./assets/decision-flow.svg) · [Why a small bet can pay off →](./docs/WHY_BETFIRST.md)
+[Decision flow →](../../media/betfirst/assets/decision-flow.svg) · [Why a small bet can pay off →](./docs/WHY_BETFIRST.md)
 
 ## Works with your existing agent
 
 **Claude Code:** Install via the CLI or plugin above. The Skill does not run a second agent or require telemetry.
 
-**Pi:** Install the complete `betfirst/` directory into a Pi-discovered Skill location (for example `~/.pi/agent/skills/betfirst/`) and invoke `/skill:betfirst`. The [portable Skill](./SKILL.md) has no Claude-specific runtime.
+**Pi:** Install the complete `betfirst/` directory into a Pi-discovered Skill location (for example `~/.pi/agent/skills/betfirst/`) and invoke `/skill:betfirst`. The [portable Skill](../../betfirst/SKILL.md) has no Claude-specific runtime.
 
 **Other compatible agents:** They can use the portable `SKILL.md`; automatic discovery depends on the tool. BetFirst works independently of Backlog and Claude Team Kit.
 
@@ -93,13 +93,13 @@ If the experiment could write production data, expose secrets, disturb someone e
 
 **126 local Muse agent runs**, in two different controlled synthetic-task studies. In the first held-out cohort (54 runs), v0.4 passed **18/18** and averaged **13.53s**, versus **18.22s** for Efficiency and **15.37s** for v0.3. In the follow-up ablation (72 runs), v0.4 passed **23/24**; average wall time was **15.25s**, versus **17.93s** for Efficiency (23/24 PASS) and **19.88s** for No-BET (22/24 PASS). Among 22 pairs where both arms passed, v0.4 showed **17.9% lower wall time vs Efficiency** and **18.0% vs No-BET**. 
 
-**Not every bet wins.** Earlier policies were *slower* on simple tasks. Four follow-up Oracle failures shared an ambiguous uppercase-boolean requirement. These experiments do not establish universal speedups or prove that the BET mechanism independently caused the gains. Token data were incomplete. [Full methodology, unfavorable cases and caveats →](./experiments/V04_RELEASE_RESULTS.md) · [History →](./experiments/EXPERIMENT_HISTORY.md)
+**Not every bet wins.** Earlier policies were *slower* on simple tasks. Four follow-up Oracle failures shared an ambiguous uppercase-boolean requirement. These experiments do not establish universal speedups or prove that the BET mechanism independently caused the gains. Token data were incomplete. [Full methodology, unfavorable cases and caveats →](../../research/betfirst/experiments/V04_RELEASE_RESULTS.md) · [History →](../../research/betfirst/experiments/EXPERIMENT_HISTORY.md)
 
 ## Ready to try it?
 
 Give BetFirst your next make-or-break feasibility question. See if one small, safe experiment can save a much bigger investigation.
 
-[Explore decision examples →](./references/examples.md) · [Read the Skill →](./SKILL.md)
+[Explore decision examples →](./examples.md) · [Read the Skill →](../../betfirst/SKILL.md)
 
 **Make Cheap Bets. Win Big. Lose Small.** Spend less finding out *if* something works, without lowering the bar for making it work.
 

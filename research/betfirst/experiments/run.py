@@ -23,7 +23,7 @@ from test_integrity import inspect_tests
 from scoring import classify
 
 HERE = Path(__file__).resolve().parent
-ROOT = HERE.parents[1]
+ROOT = HERE.parents[2]
 ARMS = ("baseline", "efficiency", "betfirst")
 EFFICIENCY = "Avoid redundant file reads, repeated tool calls and unnecessary tests; preserve final validation."
 TOOL_PROFILES = {

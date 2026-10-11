@@ -1,10 +1,10 @@
 <p align="center"><a href="./README.md">English</a> · <a href="./README.zh-TW.md">繁體中文</a></p>
 
 <p align="center">
-  <img src="./assets/betfirst-v04-animated.svg" alt="BetFirst — 小賭一把，贏大、輸小：先以低成本探測可行性，再決定是否投入大量研究。" width="1000">
+  <img src="../../media/betfirst/assets/betfirst-v04-animated.svg" alt="BetFirst — 小賭一把，贏大、輸小：先以低成本探測可行性，再決定是否投入大量研究。" width="1000">
 </p>
 
-<sub>Animated SVG · 126 local runs; paired time comparisons require both arms to PASS. [Full evidence →](./experiments/V04_RELEASE_RESULTS.md)</sub>
+<sub>Animated SVG · 126 local runs; paired time comparisons require both arms to PASS. [Full evidence →](../../research/betfirst/experiments/V04_RELEASE_RESULTS.md)</sub>
 
 # BetFirst
 
@@ -49,10 +49,10 @@ normally. Preserve existing work and complete final verification.
 ## 為什麼要先賭？
 
 <p align="center">
-  <img src="./assets/before-after.svg" alt="概念比較：一般流程可能先查文件、研究、做完整 PoC 才嘗試；BetFirst 先做一個低成本可行性探測，成功跳過不必要的前置工作，失敗停止並正常調查，最後都要正式驗收。" width="1000">
+  <img src="../../media/betfirst/assets/before-after.svg" alt="概念比較：一般流程可能先查文件、研究、做完整 PoC 才嘗試；BetFirst 先做一個低成本可行性探測，成功跳過不必要的前置工作，失敗停止並正常調查，最後都要正式驗收。" width="1000">
 </p>
 
-<sub>這是**概念示意**，不是實際 Benchmark 耗時比較。[動畫示意 →](./assets/probe-loop.gif)</sub>
+<sub>這是**概念示意**，不是實際 Benchmark 耗時比較。[動畫示意 →](../../media/betfirst/assets/probe-loop.gif)</sub>
 
 **賭贏**不代表整個專案已經完成，而是某些前置研究不必再做。**賭輸**也不代表毫無收穫：便宜地推翻錯誤假設，本身就能避免走冤枉路。真正重要的是事先設好停止條件，而且真的停手。
 
@@ -81,13 +81,13 @@ normally. Preserve existing work and complete final verification.
 
 若涉及正式環境寫入、憑證、破壞他人修改或無法停止的實驗，就**不要賭**。需求已經滿足則 **ABSTAIN**，不做無謂修改。
 
-[決策流程 →](./assets/decision-flow.svg) · [背後的方法論 →](./docs/WHY_BETFIRST.md)
+[決策流程 →](../../media/betfirst/assets/decision-flow.svg) · [背後的方法論 →](./docs/WHY_BETFIRST.md)
 
 ## 放進現有的 Coding Agent 就能用
 
 **Claude Code：** 依上方 CLI 或 Plugin 安裝，不需要另外啟動 Agent 或強制蒐集 Telemetry。
 
-**Pi：** 將完整 `betfirst/` 放進 Pi 能探索的 Skill 目錄（例如 `~/.pi/agent/skills/betfirst/`），再執行 `/skill:betfirst`。[核心 Skill](./SKILL.md) 不依賴 Claude 專屬 Runtime。
+**Pi：** 將完整 `betfirst/` 放進 Pi 能探索的 Skill 目錄（例如 `~/.pi/agent/skills/betfirst/`），再執行 `/skill:betfirst`。[核心 Skill](../../betfirst/SKILL.md) 不依賴 Claude 專屬 Runtime。
 
 **其他相容 Agent：** 可使用可攜式 `SKILL.md`；自動探索功能取決於工具。BetFirst 不依賴 Backlog 或 Claude Team Kit。
 
@@ -95,13 +95,13 @@ normally. Preserve existing work and complete final verification.
 
 **兩輪本地 Muse 對照實驗，總共 126 次 Agent 執行。** 第一輪 54 次全部 PASS：v0.4 平均 **13.53 秒**，Efficiency **18.22 秒**，v0.3 **15.37 秒**。第二輪 72 次：v0.4 **23/24 PASS**、平均 **15.25 秒**；Efficiency **23/24 PASS**、平均 **17.93 秒**；No-BET **22/24 PASS**、平均 **19.88 秒**。在雙方均通過的 22 組配對中，v0.4 的總耗時相較 Efficiency 降低 **17.9%**、相較 No-BET 降低 **18.0%**。
 
-**不是每次都贏。** 舊策略在簡單題目曾經更慢；第二輪 4 次 Oracle FAIL 均涉及布林字串大小寫的規格歧義。這些結果不證明所有模型或任務都能加速，也不代表 BET 的獨立因果貢獻已獲證實；Token 遙測仍不完整。[完整數據與限制 →](./experiments/V04_RELEASE_RESULTS.md) · [實驗歷史 →](./experiments/EXPERIMENT_HISTORY.md)
+**不是每次都贏。** 舊策略在簡單題目曾經更慢；第二輪 4 次 Oracle FAIL 均涉及布林字串大小寫的規格歧義。這些結果不證明所有模型或任務都能加速，也不代表 BET 的獨立因果貢獻已獲證實；Token 遙測仍不完整。[完整數據與限制 →](../../research/betfirst/experiments/V04_RELEASE_RESULTS.md) · [實驗歷史 →](../../research/betfirst/experiments/EXPERIMENT_HISTORY.md)
 
 ## 下一個問題，先試一個小賭注
 
 下次遇到需要花很多時間研究的可行性問題，先讓 BetFirst 判斷：有沒有一個安全、便宜的小實驗，就能省下一大段不必要的調查？
 
-[看看決策範例 →](./references/examples.md) · [閱讀核心 Skill →](./SKILL.md)
+[看看決策範例 →](./examples.md) · [閱讀核心 Skill →](../../betfirst/SKILL.md)
 
 **Make Cheap Bets. Win Big. Lose Small.** 把成本省在「搞清楚可不可行」，而不是犧牲「最終做得對不對」。
 
