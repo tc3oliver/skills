@@ -347,9 +347,9 @@ class RunnerTests(unittest.TestCase):
             self.assertEqual(execute(**kw, resume=True), [])
             self.assertEqual(len(list(out.glob("*/outcome.json"))), 0)
 
-    def test_budget_requires_exactly_two_arms(self):
+    def test_budget_requires_at_least_two_arms(self):
         with tempfile.TemporaryDirectory() as d:
-            with self.assertRaisesRegex(ValueError, "exactly two"):
+            with self.assertRaisesRegex(ValueError, "two or three"):
                 execute(
                     EXP / "suite.json", Path(d) / "out",
                     "mock", None, 1, 42, 15, False,
