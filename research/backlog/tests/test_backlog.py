@@ -12,7 +12,7 @@ import sys
 from concurrent.futures import ThreadPoolExecutor
 from unittest.mock import patch
 
-SCRIPT = Path(__file__).resolve().parents[1] / 'scripts' / 'backlog.py'
+SCRIPT = Path(__file__).resolve().parents[3] / 'backlog' / 'scripts' / 'backlog.py'
 spec = importlib.util.spec_from_file_location('backlog_cli', SCRIPT)
 app = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(app)

@@ -38,11 +38,11 @@ A short `Handoff` saves files, verified progress and next steps. Reopened tasks 
 
 ## Optional composition
 
-For a BL-ID combined with an explicit CTK team request, the lead reads the actual task before starting; workers do not write persistent task state. An already `doing` task resumes from Handoff without re-running `start`. There is no dependency on CTK or BetFirst for ordinary use. See [composition rules](../docs/COMPOSITION.md).
+For a BL-ID combined with an explicit CTK team request, the lead reads the actual task before starting; workers do not write persistent task state. An already `doing` task resumes from Handoff without re-running `start`. There is no dependency on CTK or BetFirst for ordinary use. See [composition rules](../COMPOSITION.md).
 
 ## Boundaries
 
-- [BetFirst](../betfirst/): optional safe, cheap falsifiable probes. It never updates BL lifecycle or skips checks.
+- [BetFirst](../../betfirst/): optional safe, cheap falsifiable probes. It never updates BL lifecycle or skips checks.
 - [Claude Team Kit](https://github.com/tc3oliver/claude-team-kit): teams, worker orchestration, reviews and debugging. The CTK lead alone owns persisted BL updates and closes tasks only after integrating/verifying the team output.
 - Ordinary coding without persistent task intent must **not** activate Backlog.
 
@@ -53,10 +53,10 @@ The former `backlog-workflow` depended on the external Backlog.md task engine an
 ## Development
 
 ```bash
-python3 -m unittest discover -s backlog/tests -v
-python3 -m unittest discover -s betfirst/tests
+python3 -m unittest discover -s research/backlog/tests -v
+python3 -m unittest discover -s research/betfirst/tests
 ```
 
 CI runs Backlog and existing Skill tests on Linux, macOS, and Windows. Backlog refuses symlinked archive directories; listing historical tasks loads only selected bodies rather than the entire archive. `diagnosing-bugs` remains an independent option for ordinary bugs; CTK is invoked only on explicit team intent.
 
-See [CLI reference](references/cli.md) for the on-disk format, JSON commands, atomicity and concurrency limits.
+See [CLI reference](../../backlog/references/cli.md) for the on-disk format, JSON commands, atomicity and concurrency limits.

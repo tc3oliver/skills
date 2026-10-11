@@ -27,4 +27,4 @@ Task data are under `.backlog/tasks` and `.backlog/archive/{done,cancelled}/YYYY
 - **BetFirst** owns optional bounded reversible probes. It neither changes task lifecycle nor weakens acceptance checks. Do not auto-invoke or duplicate its Spot/Cap/Bet policy.
 - A `done` Backlog task means all recorded AC are verified and evidence was observed; it is not equivalent to a worker saying it finished.
 
-See [Composition contract](../docs/COMPOSITION.md) only for explicitly combined workflows; standalone use needs no integration setup.
+Standalone use needs no integration setup. For combined workflows, see the repository composition guide (not included in the installed Skill).
