@@ -97,9 +97,11 @@ normally. Preserve existing work and complete final verification.
 
 [完整實驗歷史 →](./experiments/EXPERIMENT_HISTORY.md) · [v3 實驗規格 →](./experiments/V3_PROTOCOL.md)
 
-## 分享 BetFirst
+## 下一個問題，先試一個小賭注
 
-[**X 發文圖片與草稿 →**](./docs/X_MEDIA_KIT.md) · [決策範例](./references/examples.md) · [評估方法](./evals/README.md) · [核心 Skill](./SKILL.md) · [Changelog](./CHANGELOG.md)
+下次遇到需要花很多時間研究的可行性問題，先讓 BetFirst 判斷：有沒有一個安全、便宜的小實驗，就能省下一大段不必要的調查？
+
+[看看決策範例 →](./references/examples.md) · [閱讀核心 Skill →](./SKILL.md)
 
 **Make Cheap Bets. Win Big. Lose Small.** 把成本省在「搞清楚可不可行」，而不是犧牲「最終做得對不對」。
 
