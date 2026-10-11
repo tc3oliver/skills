@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="580" viewBox="0 0 1200 580" role="img" aria-labelledby="title desc">
 <title id="title">Feasibility-first decision: expensive preparation versus a cheap reversible bet</title>
-<desc id="desc">The ordinary route may research documentation, trace the codebase and build a proof of concept before trying the idea. BetFirst looks for a tiny reversible test first; if decisive, it avoids preparation no longer needed, or safely falls back to research. Both routes complete normal verification. Illustration, not timing data.</desc>
+<desc id="desc">When uncertainty is costly, the ordinary route may require documentation, tracing and a proof of concept. BetFirst defaults to direct action and uses a tiny reversible bet selectively; if decisive, it avoids preparation no longer needed, or safely falls back to research. Both routes complete normal verification. Illustration, not timing data.</desc>
 <defs>
 <linearGradient id="bg" x2="1" y2="1"><stop stop-color="#0b1322"/><stop offset="1" stop-color="#15283c"/></linearGradient>
 <linearGradient id="gold" x2="1"><stop stop-color="#ffb74f"/><stop offset="1" stop-color="#ffe2a4"/></linearGradient>
@@ -8,15 +8,15 @@
 <pattern id="grid" width="38" height="38" patternUnits="userSpaceOnUse"><path d="M38 0H0V38" fill="none" stroke="#a5bed9" stroke-opacity=".055"/></pattern>
 </defs><rect width="1200" height="580" rx="20" fill="url(#bg)"/><rect width="1200" height="580" rx="20" fill="url(#grid)"/>
 <g font-family="Inter, -apple-system, BlinkMacSystemFont, Segoe UI, system-ui, sans-serif">
-<text x="48" y="63" font-size="32" font-weight="780" fill="#f5f9ff">What if you tried the idea before researching everything?</text>
+<text x="48" y="63" font-size="32" font-weight="780" fill="#f5f9ff">Bet small only when the upside is worth it.</text>
 <text x="48" y="94" font-size="16" fill="#a6b8d1">Illustrative decision paths — not measured timings or a promise to skip required engineering.</text>
 <rect x="48" y="128" width="1104" height="145" rx="20" fill="#202d43" stroke="#3d536d"/>
-<text x="71" y="157" font-size="16" font-weight="770" fill="#b9c7d9">USUAL PATH</text>
+<text x="71" y="157" font-size="16" font-weight="770" fill="#b9c7d9">COSTLY UNCERTAINTY</text>
 <rect x="70" y="179" width="227" height="57" rx="13" fill="#28394f" stroke="#64798f"/><text x="89" y="213" font-size="20" font-weight="700" fill="#f2f5fb">Read docs</text><path d="M297 208h31" stroke="#8497af" stroke-width="3"/><path d="M320 201l10 7-10 7" fill="none" stroke="#8497af" stroke-width="3"/><rect x="332" y="179" width="227" height="57" rx="13" fill="#28394f" stroke="#64798f"/><text x="351" y="213" font-size="20" font-weight="700" fill="#f2f5fb">Research</text><path d="M559 208h31" stroke="#8497af" stroke-width="3"/><path d="M582 201l10 7-10 7" fill="none" stroke="#8497af" stroke-width="3"/><rect x="594" y="179" width="227" height="57" rx="13" fill="#28394f" stroke="#64798f"/><text x="613" y="213" font-size="20" font-weight="700" fill="#f2f5fb">Build PoC</text><path d="M821 208h31" stroke="#8497af" stroke-width="3"/><path d="M844 201l10 7-10 7" fill="none" stroke="#8497af" stroke-width="3"/><rect x="856" y="179" width="227" height="57" rx="13" fill="#28394f" stroke="#64798f"/><text x="875" y="213" font-size="20" font-weight="700" fill="#f2f5fb">Try idea</text>
 <rect x="48" y="291" width="1104" height="201" rx="20" fill="#132a32" stroke="#398e80"/>
-<text x="71" y="322" font-size="16" font-weight="790" fill="#77edce">BETFIRST / TRY THE CHEAP DECISIVE THING FIRST</text>
+<text x="71" y="322" font-size="16" font-weight="790" fill="#77edce">BETFIRST / NORMAL DEFAULT, OPTIONAL BET</text>
 <rect x="71" y="352" width="235" height="90" rx="17" fill="#4b3828" stroke="#edbb70" stroke-width="2"/>
-<text x="94" y="385" font-size="16" font-weight="800" fill="#ffca7c">SMALL BET</text>
+<text x="94" y="385" font-size="16" font-weight="800" fill="#ffca7c">OPTIONAL BET</text>
 <text x="94" y="414" font-size="19" font-weight="700" fill="#fff2d8">Minimal safe probe</text>
 <path d="M307 397h64" stroke="#c0b9a2" stroke-width="3"/>
 <path d="M362 390l12 7-12 7" stroke="#c0b9a2" stroke-width="3" fill="none"/>

@@ -14,7 +14,7 @@
 
 **如果先賭一把呢？**
 
-BetFirst 讓 Agent 在投入大量前置研究之前，先尋找一個**成本極低、可以推翻假設、能安全回復**的可行性探測。這不是亂猜，而是用很小的成本，換取可能省下大量工作的機會。
+**不是每題都要賭。** BetFirst v0.4 預設直接解題（NORMAL）；只有一個小實驗能避免大量調查時才下注（BET）。已經正確就不修改（ABSTAIN），而且每次修復都必須正式驗收。
 
 | **賭贏：贏大** | **賭輸：輸小** | **不值得賭：別硬賭** |
 | --- | --- | --- |
@@ -22,7 +22,7 @@ BetFirst 讓 Agent 在投入大量前置研究之前，先尋找一個**成本�
 
 **賭的是假設，不是程式正確性。** 後續實作、整合與正式驗收，一樣不能省略。
 
-**Claude Code · Pi · 可攜式 Agent Skill · 實驗性 v0.2 · 不需要額外 Runtime**
+**Claude Code · Pi · OpenCode · 可攜式 Agent Skill · v0.4 · 不需要額外 Runtime**
 
 ## 30 秒，先下一個小賭注
 
@@ -89,13 +89,11 @@ normally. Preserve existing work and complete final verification.
 
 **其他相容 Agent：** 可使用可攜式 `SKILL.md`；自動探索功能取決於工具。BetFirst 不依賴 Backlog 或 Claude Team Kit。
 
-## 初步實驗：賭贏、賭輸都記錄
+## 賭一次真的比較快？讓數據說話
 
-本地 Qwen/oMLX 探索性測試中，BetFirst 在**三道簡單題反而較慢**；在**兩道診斷題、各重複三次**時，相較 Efficiency-only 減少 **33.8% 耗時**與 **38.0% Gross Tokens**，雙方皆 **6/6 PASS**。這些只適用於該小型測試情境，**不是通用或因果加速證明**。
+**兩輪本地 Muse 對照實驗，總共 126 次 Agent 執行。** 第一輪 54 次全部 PASS：v0.4 平均 **13.53 秒**，Efficiency **18.22 秒**，v0.3 **15.37 秒**。第二輪 72 次：v0.4 **23/24 PASS**、平均 **15.25 秒**；Efficiency **23/24 PASS**、平均 **17.93 秒**；No-BET **22/24 PASS**、平均 **19.88 秒**。在雙方均通過的 22 組配對中，v0.4 的總耗時相較 Efficiency 降低 **17.9%**、相較 No-BET 降低 **18.0%**。
 
-另外已預先固定的 **12 題、108 次 Evaluation v3**，**目前尚未公布結果**；正面與負面結果都會呈現。
-
-[完整實驗歷史 →](./experiments/EXPERIMENT_HISTORY.md) · [v3 實驗規格 →](./experiments/V3_PROTOCOL.md)
+**不是每次都贏。** 舊策略在簡單題目曾經更慢；第二輪 4 次 Oracle FAIL 均涉及布林字串大小寫的規格歧義。這些結果不證明所有模型或任務都能加速，也不代表 BET 的獨立因果貢獻已獲證實；Token 遙測仍不完整。[完整數據與限制 →](./experiments/V04_RELEASE_RESULTS.md) · [實驗歷史 →](./experiments/EXPERIMENT_HISTORY.md)
 
 ## 下一個問題，先試一個小賭注
 
