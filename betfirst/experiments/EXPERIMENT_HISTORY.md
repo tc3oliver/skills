@@ -1,4 +1,4 @@
-# BetFirst experiment history (through v2)
+# BetFirst experiment history
 
 Historical figures are provided by the owner from Qwen3.8-27B-oQ4e-mtp through Claude Code + oMLX on M4 Max 64GB. This is an owner-reported study record; private raw traces are not in the repository. **Not evidence that BetFirst yields universal or causal acceleration.**
 
@@ -21,6 +21,10 @@ There were only **two distinct diagnosis tasks**, each repeated. Fixture selecti
 ## v3: new-task final launch study
 
 Twelve newly authored coding tasks and 108 real sessions are planned. As committed, **v3 has not yet run**. See V3_PROTOCOL.md. BetFirst v0.2 is frozen. We commit to release results whether positive or negative, with no mandatory v4.
+
+## v0.4 release follow-up (2026-10-11)
+
+Two held-out synthetic-task Muse studies, 54 and 72 sessions, were completed. See [release report](./V04_RELEASE_RESULTS.md) for PASS rates, matched comparisons, ambiguous cases, and missing telemetry. The earlier v3 protocol remains historical and is not misrepresented as newly run.
 
 ## Limitations retained across versions
 
