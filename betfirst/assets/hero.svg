@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="472" viewBox="0 0 1200 472" role="img" aria-labelledby="title desc">
 <title id="title">BetFirst — Make cheap bets. Win big. Lose small.</title>
-<desc id="desc">Product hero featuring a short glowing evidence path crossing a complex maze. A small reversible probe offers a quicker route to a verified result, with no numerical speedup claim.</desc>
+<desc id="desc">Product hero featuring a short glowing evidence path crossing a complex maze. A cheap reversible bet can eliminate unnecessary investigation; failed bets have bounded losses and final verification remains required.</desc>
 <defs>
   <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#101a2d"/><stop offset=".55" stop-color="#0b1424"/><stop offset="1" stop-color="#0d2430"/></linearGradient>
   <linearGradient id="amber" x1="0" x2="1"><stop stop-color="#f5a94c"/><stop offset="1" stop-color="#ffe0a1"/></linearGradient>
@@ -19,8 +19,8 @@
   <text x="59" y="202" font-size="105" font-weight="820" letter-spacing="-6" fill="#f4f8ff">Bet</text>
   <text x="235" y="202" font-size="105" font-weight="820" letter-spacing="-6" fill="url(#amber)">First</text>
   <text x="65" y="261" font-size="33" font-weight="730" fill="#f6f9ff">Make cheap bets.</text>
-  <text x="65" y="302" font-size="33" font-weight="730" fill="#74ebcd">Skip expensive guesses.</text>
-  <text x="66" y="354" font-size="18" font-weight="520" fill="#a7bbd6">Probe fast. Stop safely. Ship verified code.</text>
+  <text x="65" y="302" font-size="33" font-weight="730" fill="#74ebcd">Win big. Lose small.</text>
+  <text x="66" y="354" font-size="18" font-weight="520" fill="#a7bbd6">Bet on hypotheses. Never on correctness.</text>
   <rect x="66" y="391" width="142" height="36" rx="18" fill="#1c2d42" stroke="#435f7b"/>
   <text x="83" y="414" font-size="13" font-weight="760" letter-spacing=".8" fill="#dbe9f8">CLAUDE CODE</text>
   <rect x="220" y="391" width="61" height="36" rx="18" fill="#1c2d42" stroke="#435f7b"/>

@@ -1,98 +1,113 @@
 <p align="center"><a href="./README.md">English</a> · <a href="./README.zh-TW.md">繁體中文</a></p>
 
 <p align="center">
-  <img src="./assets/hero.svg" alt="BetFirst: Make cheap bets, skip expensive guesses. A small probe finds a verified path through complex exploration." width="1000">
+  <img src="./assets/hero.svg" alt="BetFirst — Make Cheap Bets. Win Big. Lose Small. Bet on hypotheses, never on correctness." width="1000">
 </p>
 
 # BetFirst
 
-### Stop exploring blindly. Test the one thing that matters.
+### Make Cheap Bets. Win Big. Lose Small.
 
-**BetFirst** is a lightweight, cost-aware decision Skill for coding agents. Before diving into a large investigation, it looks for a **small, falsifiable, reversible probe** that could settle the uncertainty. If the probe loses, **stop early** and return to normal debugging.
+**Your coding agent is already making bets.** Every suspected root cause, every file it chooses to read, every fix it tries is a bet that the next step will be worth the cost.
 
-No daemon. No extra agent. No required telemetry. **And no skipped verification.**
+**BetFirst teaches it to bet smarter.**
 
-**Works with Claude Code and Pi** · Portable `SKILL.md` · Experimental v0.2
+Instead of spending a long session chasing a hunch, look for a **small, falsifiable, reversible experiment** that could settle the question first.
 
-## Get started in 30 seconds
+| **WIN BIG** | **LOSE SMALL** | **KNOW WHEN TO FOLD** |
+| :--- | :--- | :--- |
+| A tiny probe eliminates an expensive wrong path. | A failed probe has a clear stopping point and safe fallback. | No good bet? Work normally. Already correct? Don't touch it. |
 
-**Claude Code — portable Skill**
+**Bet on hypotheses. Never on correctness.**
 
-```bash
+Claude Code · Pi · Portable Agent Skill · Experimental v0.2 · No additional runtime
+
+## Place your first bet in 30 seconds
+
+**Install with the Agent Skills CLI:**
+
+~~~bash
 npx skills add tc3oliver/skills --skill betfirst -g -a claude-code -y
-```
+~~~
 
-Then ask your agent:
+Then give your agent a task:
 
-```text
-Use BetFirst to fix this issue. If one cheap, reversible probe could
-resolve the uncertainty, try it first. If not, work normally.
-Preserve my changes and run the required final checks.
-```
+~~~text
+Use BetFirst. Before investigating broadly, look for one cheap,
+falsifiable, reversible bet that could resolve the uncertainty.
+Define what would disprove it and when to stop. If no good bet
+exists, work normally. Preserve my changes and run final checks.
+~~~
 
-Prefer Claude Code plugins? Use `/plugin marketplace add tc3oliver/skills`, then `/plugin install tc3oliver-skills` and invoke `/tc3oliver-skills:betfirst`. **Choose one installation method**, not both.
+**Claude Code plugin instead?** Run `/plugin marketplace add tc3oliver/skills`, then `/plugin install tc3oliver-skills`, and invoke `/tc3oliver-skills:betfirst`. Choose **one** installation method to avoid duplicate Skills.
 
-## What changes?
+## A better way to lose
+
+Most coding-agent workflows talk about successful experiments. **BetFirst is designed for the losing ones, too.** The important question isn't whether a hypothesis was right. It's whether you learned something useful **before the investigation became expensive**.
 
 <p align="center">
-  <img src="./assets/probe-loop.gif" width="760" alt="Illustrative animation: broad exploration checks many steps while BetFirst tries a bounded probe, learns, then verifies. Not a recording or a performance benchmark.">
+  <img src="./assets/probe-loop.gif" width="760" alt="Illustrative workflow animation showing broad exploration compared with BetFirst's shorter bounded probe, learning and verification path. Not an actual model trace or benchmark.">
 </p>
 
-<sub>Illustrative animation of a possible workflow, **not a real Agent trace or measured speedup**. [View static comparison](./assets/before-after.svg).</sub>
+<sub>Conceptual animation—not a recorded session or measured speedup. [Static comparison →](./assets/before-after.svg)</sub>
 
-Instead of always reading another ten files, the agent asks one question:
+### The bet: one hypothesis, two outcomes
 
-> **Can a tiny experiment rule out the expensive wrong path?**
+*Illustrative example, not a benchmark trace.*
 
-| Situation | BetFirst's move |
+~~~text
+BUG         Subtitle rendering fails on Windows drive paths.
+HYPOTHESIS  The drive-colon escaping is wrong.
+BET         Try ONE representative path in an isolated filter call.
+
+WIN         The probe confirms the hypothesis → fix the escaping,
+            then run the required renderer/regression checks.
+
+LOSE        The probe disproves it → stop pursuing that theory,
+            keep the evidence, investigate the next likely cause.
+~~~
+
+**A losing bet isn't a failed task.** A cheap refutation can save you from implementing the wrong fix. A winning bet doesn't let you skip verification.
+
+## Know when to bet. Know when to fold.
+
+**SPOT → CAP → BET → WIN / CUT LOSS**
+
+| Decision | What the agent does |
 | --- | --- |
-| A cheap, safe test can distinguish competing explanations | **BET** — run it with a clear stop condition |
-| The test is risky, ambiguous, or more expensive than just doing the work | **NORMAL** — continue standard development |
-| The behavior already satisfies the request | **ABSTAIN** — leave correct code alone |
-| The bet fails or becomes inconclusive | **CUT LOSS** — keep the evidence, stop probing, proceed normally |
+| **SPOT** | Identify a specific uncertainty worth testing, not just a vague guess. |
+| **CAP** | Set a small time/cost bound, observable outcome and safe exit *before* running the probe. |
+| **BET** | Run the smallest reversible test that can falsify the hypothesis. |
+| **WIN** | Use decisive evidence to avoid unnecessary exploration; finish with normal correctness checks. |
+| **CUT LOSS / FOLD** | Stop when the hypothesis fails or the bet becomes inconclusive; preserve evidence and return to normal debugging. |
+| **NORMAL / ABSTAIN** | Don't force a bet. Investigate normally, or leave already-correct code alone. |
 
-### Example: a subtitle path bug
+**The guardrail:** No production mutations, destructive Git cleanup, credentials, unbounded experiments or skipped acceptance tests. BetFirst is a decision policy—not a license to gamble with user data or ship unverified code.
 
-*Illustrative scenario, not a claimed benchmark run.*
+[See the complete decision flow →](./assets/decision-flow.svg) · [Why this approach makes sense →](./docs/WHY_BETFIRST.md)
 
-```text
-Problem     Subtitle rendering breaks for Windows drive paths.
-Hypothesis  The drive-colon escaping is wrong.
-Probe       Try one representative path with the smallest filter call.
-Observe     Reproduced: the colon needs escaping.
-Fix         Change only the path transformation, then run full validation.
-```
+## Small Skill. No new infrastructure.
 
-The upside is less wasted investigation. The rule is equally important when **not** to bet: never gamble with production writes, credentials, destructive commands, or a test that cannot be bounded.
+**Claude Code:** Use the CLI or plugin setup above. Invoke explicitly or let a compatible Skill-discovery mechanism find it.
 
-## How it works
+**Pi:** Install the complete `betfirst/` directory in a location your Pi version discovers (for example `~/.pi/agent/skills/betfirst/`), then use `/skill:betfirst`. The core [`SKILL.md`](./SKILL.md) is portable and has no Claude-only runtime dependencies.
 
-**SPOT → CAP → BET → WIN / CUT LOSS.**
+**Other compatible coding agents:** Load the portable Skill as instructions; automatic discovery depends on your agent. BetFirst can run independently of Backlog, Claude Team Kit and task-management frameworks.
 
-**SPOT** a concrete uncertainty. **CAP** the possible time and rollback cost. **BET** with one safe, falsifiable probe. **WIN** only with evidence and final tests; otherwise **CUT LOSS** and return to NORMAL. A probe does not replace root-cause analysis or the Definition of Done.
+## Does betting first actually pay off?
 
-[See the complete decision flow →](./assets/decision-flow.svg) · [Understand the reasoning →](./docs/WHY_BETFIRST.md)
+**Sometimes yes. Sometimes no—and that's the point.** In early local Qwen/oMLX tests, BetFirst was **slower on three simple tasks**. But on **two diagnostic tasks, each repeated three times**, it used **33.8% less wall time** and **38.0% fewer gross tokens** than Efficiency-only; both completed **6/6** successfully.
 
-## Fits your existing agent workflow
+These are **exploratory observations**, **not** a universal or causal speedup claim. A larger preregistered **12-task / 108-session v3** study is underway; **results are pending**, and wins *and* losses will be published.
 
-**Claude Code.** Install through the plugin or the Agent Skills CLI above. Invoke it explicitly, or let compatible discovery select it when relevant.
+[Full experiment history →](./experiments/EXPERIMENT_HISTORY.md) · [v3 protocol →](./experiments/V3_PROTOCOL.md)
 
-**Pi.** Put the complete `betfirst/` directory where Pi discovers Skills (for example `~/.pi/agent/skills/betfirst/`), and invoke `/skill:betfirst`. The core `SKILL.md` does not contain Claude-only runtime commands.
+## Make your agent a better bettor
 
-**Other Skill-compatible agents.** Read the portable `SKILL.md` as an agent instruction; actual automatic discovery depends on your agent. BetFirst does not need Backlog, Claude Team Kit, or any specific task manager.
+Install BetFirst, bring one real debugging task, and see whether a small bet can buy a decisive answer. **Win big when the evidence is there. Lose small when it isn't.**
 
-## Early evidence. Full results, not just the wins.
+[Decision examples](./references/examples.md) · [Evaluation protocol](./evals/README.md) · [Source Skill](./SKILL.md) · [Changelog](./CHANGELOG.md)
 
-A small local Qwen/oMLX study found that BetFirst was **slower on three simple tasks**; on **two diagnostic tasks repeated three times**, it used **33.8% less wall time** and **38.0% fewer gross tokens** than Efficiency-only, with both arms passing 6/6. These **exploratory observations are not general speedup or causal claims**.
-
-The larger **12-task / 108-session Evaluation v3** is the final preregistered release study; **results are pending**, and positive or negative outcomes will be published.
-
-[Full experimental history →](./experiments/EXPERIMENT_HISTORY.md) · [v3 protocol →](./experiments/V3_PROTOCOL.md)
-
-## Go deeper
-
-[Decision examples](./references/examples.md) · [Evaluation method](./evals/README.md) · [Source Skill](./SKILL.md) · [Changelog](./CHANGELOG.md)
-
-Have a reproducible case where an agent explores too much—or bets when it shouldn't? Open an issue with the task, expected behavior and observed outcome. **Spend less on uncertainty, never less on correctness.**
+**Make Cheap Bets. Win Big. Lose Small.**
 
 MIT License.
