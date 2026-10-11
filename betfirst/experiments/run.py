@@ -16,6 +16,7 @@ import signal
 import subprocess
 import sys
 import time
+import threading
 from pathlib import Path
 from usage import usage_from_output
 from trace import summarize_trace
@@ -26,6 +27,16 @@ HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[1]
 ARMS = ("baseline", "efficiency", "betfirst")
 EFFICIENCY = "Avoid redundant file reads, repeated tool calls and unnecessary tests; preserve final validation."
+OPENCODE_PERMISSIONS = {
+    "*": "deny", "read": "allow", "glob": "allow", "grep": "allow",
+    "list": "allow", "edit": "allow",
+    "bash": {"*": "deny", "python3 *": "allow"},
+    "external_directory": "deny",
+}
+OPENCODE_CONFIG = {
+    "permission": OPENCODE_PERMISSIONS,
+    "share": "disabled", "instructions": [], "plugin": [],
+}
 TOOL_PROFILES = {
     "restricted": ("Read", "Edit", "Write", "Bash(python3 -m unittest *)"),
     "diagnostic": ("Read", "Edit", "Write", "Bash(python3 *)"),
@@ -128,6 +139,10 @@ def command(driver: str, model: str | None, prompt: str, tid: str, arm: str,
         return ["pi", "--no-context-files", "--no-skills", "--no-extensions",
                 "--no-prompt-templates", "--no-session", "-p",
                 "--mode", "json", "--model", model, prompt]
+    if driver == "opencode":
+        # The runner passes --dir with the fresh fixture path at invocation.
+        return ["opencode", "run", "--agent", "build", "--format", "json",
+                "--model", model, prompt]
     raise ValueError("unknown driver")
 
 
@@ -149,13 +164,80 @@ def run_cmd(argv: list, cwd: Path, stdout: Path, stderr: Path, timeout: int) -> 
     return code, expired, time.perf_counter() - t0
 
 
+def opencode_environment(config_dir: Path) -> dict[str, str]:
+    """Benchmark policy override, not an OS sandbox; isolate at the host layer."""
+    config_dir.mkdir(exist_ok=False)
+    env = os.environ.copy()
+    env.update({
+        "OPENCODE_CONFIG_DIR": str(config_dir),
+        "OPENCODE_CONFIG_CONTENT": json.dumps(OPENCODE_CONFIG),
+        "OPENCODE_PERMISSION": json.dumps(OPENCODE_PERMISSIONS),
+        "OPENCODE_DISABLE_CLAUDE_CODE": "1",
+        "OPENCODE_DISABLE_DEFAULT_PLUGINS": "1",
+        "OPENCODE_DISABLE_LSP_DOWNLOAD": "1",
+        "OPENCODE_DISABLE_AUTOUPDATE": "1",
+        "OPENCODE_AUTO_SHARE": "0",
+    })
+    return env
+
+
+def run_opencode_cmd(argv: list[str], cwd: Path, stdout: Path, stderr: Path,
+                     timeout: int, max_steps: int, env: dict[str, str]) -> tuple:
+    """Capture JSONL while enforcing wall time and OpenCode model-step cap."""
+    started = time.perf_counter()
+    exceeded = threading.Event()
+    steps = [0]
+    with stdout.open("w", encoding="utf-8") as out, stderr.open("w", encoding="utf-8") as err:
+        proc = subprocess.Popen(
+            argv, cwd=cwd, env=env, stdin=subprocess.DEVNULL,
+            stdout=subprocess.PIPE, stderr=err, text=True,
+            errors="replace", start_new_session=True,
+        )
+
+        def drain() -> None:
+            assert proc.stdout is not None
+            for line in proc.stdout:
+                out.write(line)
+                out.flush()
+                try:
+                    event = json.loads(line)
+                except ValueError:
+                    continue
+                if isinstance(event, dict) and event.get("type") == "step_start":
+                    steps[0] += 1
+                    if steps[0] > max_steps:
+                        exceeded.set()
+
+        reader = threading.Thread(target=drain, daemon=True)
+        reader.start()
+        timed_out = False
+        turn_limited = False
+        while proc.poll() is None:
+            if exceeded.is_set():
+                turn_limited = True
+                break
+            if time.perf_counter() - started >= timeout:
+                timed_out = True
+                break
+            time.sleep(0.05)
+        if timed_out or turn_limited:
+            try:
+                os.killpg(proc.pid, signal.SIGKILL)
+            except ProcessLookupError:
+                pass
+        proc.wait()
+        reader.join(timeout=3)
+    return proc.returncode, timed_out, time.perf_counter() - started, turn_limited
+
+
 def execute(suite: Path, output: Path, driver: str, model: str | None,
             replicates: int, seed: int, timeout: int, execute_real: bool,
             limit: int | None = None, claude_launcher: str = "direct",
             selected_tasks: list[str] | None = None,
             tool_profile: str = "restricted",
             acknowledge_isolation: bool = False, max_turns: int = 30,
-            resume: bool = False, stop_after: int | None = None) -> list:
+            resume: bool = False, stop_after: int | None = None,
+            selected_arms: list[str] | None = None) -> list:
     if driver != "mock" and not execute_real:
         raise ValueError("real CLI execution requires --execute and may incur API cost")
     if driver != "mock" and not model:
@@ -166,10 +248,12 @@ def execute(suite: Path, output: Path, driver: str, model: str | None,
         raise ValueError("max-turns must be positive")
     if tool_profile not in TOOL_PROFILES:
         raise ValueError("unknown tool profile")
-    if driver != "claude" and tool_profile != "restricted":
-        raise ValueError("diagnostic tool profile is Claude-only")
-    if driver == "claude" and tool_profile == "diagnostic" and not acknowledge_isolation:
+    if driver not in ("claude", "opencode") and tool_profile != "restricted":
+        raise ValueError("diagnostic tool profile requires Claude or OpenCode")
+    if driver in ("claude", "opencode") and tool_profile == "diagnostic" and not acknowledge_isolation:
         raise ValueError("diagnostic Python access requires --acknowledge-isolation: run in a dedicated OS-isolated environment, not an unrestricted host account")
+    if driver == "opencode" and not acknowledge_isolation:
+        raise ValueError("OpenCode requires --acknowledge-isolation: permissions are NOT an OS sandbox")
     if replicates < 1 or timeout < 1 or (limit is not None and limit < 1):
         raise ValueError("replicates, timeout and limit must be positive")
     if resume:
@@ -177,6 +261,9 @@ def execute(suite: Path, output: Path, driver: str, model: str | None,
             raise ValueError("resume requires existing manifest.json")
     elif output.exists() and any(output.iterdir()):
         raise ValueError("output exists and is not empty; never overwrite experiment evidence")
+    arms = tuple(selected_arms) if selected_arms is not None else ARMS
+    if not arms or len(arms) != len(set(arms)) or any(a not in ARMS for a in arms):
+        raise ValueError("select distinct known --arm values")
     tasks = load_suite(suite)
     if selected_tasks and limit is not None:
         raise ValueError("--task and --limit cannot be used together")
@@ -191,18 +278,21 @@ def execute(suite: Path, output: Path, driver: str, model: str | None,
     skill = (ROOT / "betfirst" / "SKILL.md").read_text(encoding="utf-8")
     output.mkdir(parents=True, exist_ok=True)
     plan = [(task, rep, arm) for task in tasks
-            for rep in range(1, replicates + 1) for arm in ARMS]
+            for rep in range(1, replicates + 1) for arm in arms]
     random.Random(seed).shuffle(plan)
     manifest = {
         "schema": 3, "driver": driver, "model": model, "seed": seed,
         "selected_task_ids": [task["id"] for task in tasks],
         "task_selection": "explicit" if selected_tasks else ("first_N" if limit else "full_suite"),
-        "replicates": replicates, "runs": len(plan),
+        "replicates": replicates, "runs": len(plan), "selected_arms": list(arms),
         "synthetic": driver == "mock", "timeout": timeout,
         "claude_launcher": claude_launcher if driver == "claude" else None,
         "claude_tool_profile": tool_profile if driver == "claude" else None,
         "claude_allowed_tools": list(TOOL_PROFILES[tool_profile]) if driver == "claude" else None,
         "claude_max_turns": max_turns if driver == "claude" else None,
+        "opencode_max_steps": max_turns if driver == "opencode" else None,
+        "opencode_config_sha256": (hashlib.sha256(json.dumps(OPENCODE_CONFIG, sort_keys=True).encode()).hexdigest()
+                                   if driver == "opencode" else None),
         "suite_sha256": hashlib.sha256(suite.read_bytes()).hexdigest(),
         "fixture_hashes": {t["id"]: hashes(suite.parent / t["fixture"]) for t in tasks},
         "skill_sha256": hashlib.sha256(skill.encode("utf-8")).hexdigest(),
@@ -272,9 +362,17 @@ def execute(suite: Path, output: Path, driver: str, model: str | None,
         (run_dir / "prompt.txt").write_text(prompt, encoding="utf-8")
         cmd = command(driver, model, prompt, task["id"], arm, claude_launcher,
                       tool_profile, max_turns)
+        turn_limited = False
         try:
-            agent_exit, timed_out, agent_time = run_cmd(
-                cmd, work, run_dir / "agent.stdout", run_dir / "agent.stderr", timeout)
+            if driver == "opencode":
+                cmd[2:2] = ["--dir", str(work)]
+                env = opencode_environment(run_dir / "opencode-config")
+                agent_exit, timed_out, agent_time, turn_limited = run_opencode_cmd(
+                    cmd, work, run_dir / "agent.stdout", run_dir / "agent.stderr",
+                    timeout, max_turns, env)
+            else:
+                agent_exit, timed_out, agent_time = run_cmd(
+                    cmd, work, run_dir / "agent.stdout", run_dir / "agent.stderr", timeout)
         except FileNotFoundError as exc:
             raise RuntimeError("Missing installed agent CLI: " + str(exc.filename)) from exc
         test_exit, test_timed_out, check_time = run_cmd(
@@ -294,6 +392,9 @@ def execute(suite: Path, output: Path, driver: str, model: str | None,
         agent_output = (run_dir / "agent.stdout").read_text(encoding="utf-8")
         use = usage_from_output(agent_output, driver)
         trace = summarize_trace(agent_output, driver)
+        if turn_limited:
+            trace["agent_subtype"] = "error_max_turns"
+            trace["trace_complete"] = False
         (run_dir / "trace_summary.json").write_text(
             json.dumps(trace, indent=2) + "\n", encoding="utf-8")
         evaluation = classify(
@@ -321,6 +422,7 @@ def execute(suite: Path, output: Path, driver: str, model: str | None,
             "tests_changed": changed_tests, "tests_tampered": not integrity["passed"],
             "test_integrity": integrity, "workspace_changed": changed,
             "agent_seconds": agent_time, "acceptance_seconds": check_time,
+            "opencode_turn_limited": turn_limited if driver == "opencode" else None,
             "code_accepted": evaluation["code_accepted"],
             "session_success": evaluation["session_success"],
             "failure_reasons": evaluation["failure_reasons"],
@@ -344,7 +446,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--suite", type=Path, default=HERE / "suite.json")
     parser.add_argument("--output", type=Path, required=True)
-    parser.add_argument("--driver", choices=("mock", "claude", "pi"), default="mock")
+    parser.add_argument("--driver", choices=("mock", "claude", "pi", "opencode"), default="mock")
     parser.add_argument("--model")
     parser.add_argument("--claude-launcher", choices=("direct", "omlx"), default="direct",
                         help="Use oMLX launch claude (requires OMLX_BIN) or direct Claude CLI")
@@ -356,6 +458,8 @@ def main() -> None:
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--timeout", type=int, default=180)
     parser.add_argument("--limit", type=int)
+    parser.add_argument("--arm", action="append", choices=ARMS,
+                        help="Strategy arm to include; repeat for paired studies")
     parser.add_argument("--task", action="append", dest="selected_tasks",
                         help="Select an exact task ID; repeat to select multiple tasks")
     parser.add_argument("--resume", action="store_true",
@@ -367,7 +471,8 @@ def main() -> None:
     execute(args.suite.resolve(), args.output.resolve(), args.driver, args.model,
             args.replicates, args.seed, args.timeout, args.execute, args.limit,
             args.claude_launcher, args.selected_tasks, args.claude_tool_profile,
-            args.acknowledge_isolation, args.max_turns, args.resume, args.stop_after)
+            args.acknowledge_isolation, args.max_turns, args.resume, args.stop_after,
+        args.arm)
 
 
 if __name__ == "__main__":
