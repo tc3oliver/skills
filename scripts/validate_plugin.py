@@ -30,6 +30,8 @@ def validate_plugin(root: Path = ROOT) -> None:
         folder = root / item
         for path in folder.rglob('*'):
             rel = path.relative_to(folder)
+            if '__pycache__' in rel.parts or path.suffix in {'.pyc', '.pyo'}:
+                continue
             assert not forbidden.intersection(rel.parts), f'non-runtime Skill payload: {item}/{rel}'
             if path.is_file():
                 assert path.suffix.lower() not in {'.mp4', '.gif', '.png', '.zip', '.mov'}, f'media in Skill: {item}/{rel}'
