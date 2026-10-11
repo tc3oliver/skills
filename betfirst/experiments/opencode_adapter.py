@@ -58,6 +58,8 @@ def metrics(data: str) -> tuple[dict, dict]:
     # the session. Do not equate missing telemetry with free tokens.
     full = bool(starts and len(finishes) == len(starts)
                 and all(isinstance(p, dict) for p in finishes))
+    if full and finishes[-1].get("reason") not in (None, "stop", "end-turn"):
+        full = False
     trace["trace_complete"] = full and not errors
     if not full:
         return unknown, trace
