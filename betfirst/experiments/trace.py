@@ -36,6 +36,10 @@ def summarize_trace(data: str, driver: str) -> dict:
         "bet_attempts": None, "bet_failures": None,
         "failed_bet_overhead_seconds": None,
     }
+    if driver == "opencode":
+        from opencode_adapter import metrics
+        _, summary = metrics(data)
+        return summary
     if driver != "claude":
         return unknown
     events = stream_events(data)
