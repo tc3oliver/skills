@@ -160,6 +160,37 @@ class RunnerTests(unittest.TestCase):
         self.assertEqual(len(problems), 2)
         self.assertTrue(all("source checkout" in p for p in problems))
 
+    def test_guard_rejects_dirty_fixture_checkout(self):
+        from workspace_guard import assert_clean_checkout
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            suite_root = root / "betfirst" / "experiments"
+            fixture_dir = suite_root / "fixtures" / "item"
+            oracle_dir = suite_root / "oracles"
+            fixture_dir.mkdir(parents=True)
+            oracle_dir.mkdir()
+            suite = suite_root / "suite-v3.json"
+            target = fixture_dir / "module.py"
+            suite.write_text("{}")
+            target.write_text("def f(): return 0")
+            (oracle_dir / "check.py").write_text("assert True")
+            def git(*args):
+                return subprocess.run(["git", "-C", str(root), *args],
+                                      capture_output=True, text=True, check=True)
+            git("init")
+            git("-c", "user.name=Test", "-c", "user.email=test@example.invalid",
+                "add", ".")
+            git("-c", "user.name=Test", "-c", "user.email=test@example.invalid",
+                "commit", "-m", "baseline")
+            assert_clean_checkout(suite, root)
+            target.write_text("def f(): return 1")
+            with self.assertRaisesRegex(RuntimeError, "already modified"):
+                assert_clean_checkout(suite, root)
+            target.write_text("def f(): return 0")
+            (oracle_dir / "unexpected.py").write_text("pass")
+            with self.assertRaisesRegex(RuntimeError, "already modified"):
+                assert_clean_checkout(suite, root)
+
     def test_snapshot_detects_fixture_mutation(self):
         from workspace_guard import snapshot_dataset
         with tempfile.TemporaryDirectory() as d:
