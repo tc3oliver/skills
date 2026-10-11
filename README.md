@@ -21,7 +21,7 @@ npx skills add tc3oliver/skills --skill betfirst
 | Skill | What it helps with |
 | --- | --- |
 | [**BetFirst**](./betfirst/) | **Make Cheap Bets. Win Big. Lose Small.** Tiny feasibility probes before expensive research and PoCs. |
-| [**Backlog**](./backlog/) | Persistent coding tasks, ready queue, and handoff evidence—without Backlog.md. [EN](./backlog/README.md) / [繁體中文](./backlog/README.zh-TW.md). |
+| [**Backlog**](./backlog/) | Persistent coding tasks, ready queue, and handoff evidence—without Backlog.md. [EN](./docs/backlog/README.md) / [繁體中文](./docs/backlog/README.zh-TW.md). |
 | [audit-agent-instructions](./audit-agent-instructions/) | Find duplication, instruction drift and excessive context. |
 | [diagnosing-bugs](./diagnosing-bugs/) | Reproducible debugging and focused regression tests. |
 | [writing-for-agents](./writing-for-agents/) | Clearer, more efficient instructions for coding agents. |
@@ -65,7 +65,7 @@ Earlier BetFirst revisions were **slower** on some simple tasks. v0.4 was change
 ## Verify
 
 ```bash
-python3 -m unittest discover -s backlog/tests -v
+python3 -m unittest discover -s research/backlog/tests -v
 python3 -m unittest discover -s research/betfirst/tests -v
 ```
 

@@ -50,4 +50,4 @@ python3 <skill-dir>/scripts/backlog.py --root . doctor
 
 `backlog-workflow` v1.6 使用外部 Backlog.md 引擎與多階段流程。v2 是不相容重寫，不自動遷移或刪除舊專案中的 `.agent-workflow`、Backlog.md 任務。舊版程式碼保留在 Git 歷史與 `archive/backlog-workflow-v1.6.0` Branch。
 
-詳見 [CLI 規格](references/cli.md)。
+詳見 [CLI 規格](../../backlog/references/cli.md)。

@@ -21,7 +21,7 @@ jobs:
         with:
           python-version: "3.12"
       - name: Validate Backlog CLI and lifecycle
-        run: python3 -m unittest discover -s backlog/tests -v
+        run: python3 -m unittest discover -s research/backlog/tests -v
       - name: Validate BetFirst analyzer
         run: python3 -m unittest discover -s research/betfirst/tests -v
       - name: Validate BetFirst controlled experiment runner
