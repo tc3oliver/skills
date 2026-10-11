@@ -23,13 +23,13 @@ jobs:
       - name: Validate Backlog CLI and lifecycle
         run: python3 -m unittest discover -s backlog/tests -v
       - name: Validate BetFirst analyzer
-        run: python3 -m unittest discover -s betfirst/tests -v
+        run: python3 -m unittest discover -s research/betfirst/tests -v
       - name: Validate BetFirst controlled experiment runner
         if: runner.os != 'Windows'
         run: |
-          python3 -m unittest discover -s betfirst/experiments/tests
-          python3 betfirst/experiments/run.py --driver mock --timeout 15 --output "$RUNNER_TEMP/betfirst-harness-smoke"
-          python3 betfirst/experiments/run.py --suite betfirst/experiments/suite-v2.json --driver mock --timeout 30 --output "$RUNNER_TEMP/betfirst-v2-harness-smoke"
-          python3 betfirst/experiments/run.py --suite betfirst/experiments/suite-v3.json --driver mock --timeout 30 --output "$RUNNER_TEMP/betfirst-v3-harness-smoke"
+          python3 -m unittest discover -s research/betfirst/experiments/tests
+          python3 research/betfirst/experiments/run.py --driver mock --timeout 15 --output "$RUNNER_TEMP/betfirst-harness-smoke"
+          python3 research/betfirst/experiments/run.py --suite research/betfirst/experiments/suite-v2.json --driver mock --timeout 30 --output "$RUNNER_TEMP/betfirst-v2-harness-smoke"
+          python3 research/betfirst/experiments/run.py --suite research/betfirst/experiments/suite-v3.json --driver mock --timeout 30 --output "$RUNNER_TEMP/betfirst-v3-harness-smoke"
       - name: Validate portable Skills and plugin registration
         run: python3 scripts/validate_plugin.py

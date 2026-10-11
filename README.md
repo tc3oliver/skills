@@ -5,16 +5,16 @@ Small, portable Skills for Claude Code, Pi, Codex and OpenCode. Work with eviden
 ## Featured: BetFirst
 
 <p align="center">
-  <a href="./betfirst/"><img src="./betfirst/assets/betfirst-v04-animated.svg" alt="BetFirst v0.4 animated overview: optional bets and 126 local executions" width="860"></a>
+  <a href="./betfirst/"><img src="./media/betfirst/assets/betfirst-v04-animated.svg" alt="BetFirst v0.4 animated overview: optional bets and 126 local executions" width="860"></a>
 </p>
 
-**Bet small before you spend big.** One safe, tiny, falsifiable bet can save a costly deep dive—but only if the possible upside warrants it. Otherwise go NORMAL; if already correct, ABSTAIN. **Evidence:** across two local Muse studies (126 runs), v0.4 had lower mean wall time than the tested controls. In the 72-run ablation, paired time fell **17.9% vs Efficiency** and **18.0% vs No-BET**, comparing both-PASS pairs. [Read results and limitations →](./betfirst/experiments/V04_RELEASE_RESULTS.md)
+**Bet small before you spend big.** One safe, tiny, falsifiable bet can save a costly deep dive—but only if the possible upside warrants it. Otherwise go NORMAL; if already correct, ABSTAIN. **Evidence:** across two local Muse studies (126 runs), v0.4 had lower mean wall time than the tested controls. In the 72-run ablation, paired time fell **17.9% vs Efficiency** and **18.0% vs No-BET**, comparing both-PASS pairs. [Read results and limitations →](./research/betfirst/experiments/V04_RELEASE_RESULTS.md)
 
 ```bash
 npx skills add tc3oliver/skills --skill betfirst -g -a claude-code -y
 ```
 
-[Explore BetFirst →](./betfirst/README.md) · [繁體中文 →](./betfirst/README.zh-TW.md) · [How it works →](./betfirst/docs/WHY_BETFIRST.md)
+[Explore BetFirst →](./docs/betfirst/README.md) · [繁體中文 →](./docs/betfirst/README.zh-TW.md) · [How it works →](./docs/betfirst/WHY_BETFIRST.md)
 
 ## Skills
 
@@ -60,13 +60,13 @@ Backlog is a lightweight persistence CLI, not a background orchestration service
 
 ## Evidence, including losing bets
 
-Earlier BetFirst revisions were **slower** on some simple tasks. v0.4 was changed to **NORMAL by default**. Published numbers are local synthetic-task observations, not a universal or causal guarantee. [Benchmark report →](./betfirst/experiments/V04_RELEASE_RESULTS.md) · [Experiment history →](./betfirst/experiments/EXPERIMENT_HISTORY.md)
+Earlier BetFirst revisions were **slower** on some simple tasks. v0.4 was changed to **NORMAL by default**. Published numbers are local synthetic-task observations, not a universal or causal guarantee. [Benchmark report →](./research/betfirst/experiments/V04_RELEASE_RESULTS.md) · [Experiment history →](./research/betfirst/experiments/EXPERIMENT_HISTORY.md)
 
 ## Verify
 
 ```bash
 python3 -m unittest discover -s backlog/tests -v
-python3 -m unittest discover -s betfirst/tests -v
+python3 -m unittest discover -s research/betfirst/tests -v
 ```
 
 MIT License. Existing upstream material and adapted sources retain their original notices.

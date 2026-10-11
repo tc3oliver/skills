@@ -39,7 +39,7 @@ def compute(run_dir:Path, suite_path:Path, *, bootstrap=2000)->dict:
             raise ValueError("fixture was changed after experiment: "+tid)
     if manifest.get("claude_tool_profile")!="diagnostic":
         raise ValueError("v3 publication requires one frozen diagnostic tool profile")
-    if manifest.get("skill_sha256")!=_sha(HERE.parent/"SKILL.md"):
+    if manifest.get("skill_sha256")!=_sha(HERE.parents[2]/"betfirst"/"SKILL.md"):
         raise ValueError("frozen BetFirst Skill SHA mismatch")
     from run import TOOL_PROFILES
     if manifest.get("claude_allowed_tools")!=list(TOOL_PROFILES["diagnostic"]):

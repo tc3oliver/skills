@@ -8,8 +8,8 @@
 
 From repository root:
 
-    python3 -m unittest discover -s betfirst/experiments/tests
-    python3 betfirst/experiments/run.py --driver mock --suite betfirst/experiments/suite.json --output /tmp/betfirst-harness-smoke
+    python3 -m unittest discover -s research/betfirst/experiments/tests
+    python3 research/betfirst/experiments/run.py --driver mock --suite research/betfirst/experiments/suite.json --output /tmp/betfirst-harness-smoke
 
 Expect three tasks × three arms = nine independent runs and nine acceptance passes. Output includes a file named **synthetic-smoke.csv**, never measured-runs.csv, and a manifest with **synthetic: true**. This validates copy/verify/isolation only.
 
@@ -28,11 +28,11 @@ Use installed authenticated CLI tools; verify supported flags locally with --hel
 
 Claude Code (primarily tested design target):
 
-    python3 betfirst/experiments/run.py --driver claude --model sonnet --execute --limit 3 --timeout 180 --output /tmp/betfirst-claude-pilot
+    python3 research/betfirst/experiments/run.py --driver claude --model sonnet --execute --limit 3 --timeout 180 --output /tmp/betfirst-claude-pilot
 
 Pi, with explicit provider/model selection on a consistent runtime:
 
-    python3 betfirst/experiments/run.py --driver pi --model anthropic/claude-sonnet-4-5 --execute --limit 3 --timeout 180 --output /tmp/betfirst-pi-pilot
+    python3 research/betfirst/experiments/run.py --driver pi --model anthropic/claude-sonnet-4-5 --execute --limit 3 --timeout 180 --output /tmp/betfirst-pi-pilot
 
 The model string is **illustrative**, not a claim of current model availability. Use the exact installed model ID and equivalent effort settings across all arms. For Pi's provider configuration, make sure it is authenticated before running.
 
@@ -46,8 +46,8 @@ Logs can contain task text, code, provider responses, or secrets. Keep --output 
 
 Each run has a separate workspace, prompt, raw CLI stdout/stderr and an outcome.json containing acceptance result, timeout, protected tests integrity, and wall time. The parent directory contains a manifest, metadata and a CSV.
 
-    python3 betfirst/scripts/analyze_runs.py /tmp/betfirst-claude-pilot/measured-runs.csv
-    python3 betfirst/experiments/report.py /tmp/betfirst-claude-pilot
+    python3 research/betfirst/scripts/analyze_runs.py /tmp/betfirst-claude-pilot/measured-runs.csv
+    python3 research/betfirst/experiments/report.py /tmp/betfirst-claude-pilot
 
 The new pilot reporter directly contrasts **BetFirst vs Efficiency-only**, includes pass counts and flags incomplete usage. It refuses to compute savings from synthetic mock output. For the existing analyzer on main, you get Baseline/Efficiency and Baseline/BetFirst comparisons. Once PR #3's analyzer is merged, you also get BetFirst vs Efficiency, the comparison that isolates the added decision policy. Only compare equal task/replicate pairs and disclose acceptance rate alongside costs.
 
@@ -63,6 +63,6 @@ Record input/output/cache token fields separately and actual provider USD cost w
 4. Scale to 30+ tasks and multiple replicates with randomized run order; review failed-bet tail and missed bets.
 5. Publish reproducible traces and summary only if results withstand correctness checks.
 
-The full v0.3 field study protocol lives in PR #3 at betfirst/evals/next-experiment.md. This PR intentionally stays independent of PR #3 and does not change SKILL.md or the Plugin version.
+The full v0.3 field study protocol lives in PR #3 at research/betfirst/evals/next-experiment.md. This PR intentionally stays independent of PR #3 and does not change SKILL.md or the Plugin version.
 
 References: [Claude Code CLI](https://code.claude.com/docs/en/cli-reference), [Pi print/JSON modes](https://github.com/badlogic/pi-mono/tree/main/packages/coding-agent/docs).
