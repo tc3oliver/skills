@@ -4,6 +4,9 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
+import tempfile
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -25,11 +28,20 @@ def preflight() -> None:
         raise RuntimeError("v05 cohort is unbalanced")
     for task in tasks:
         cwd = SUITE.parent / task["fixture"]
-        visible = subprocess.run(task["check"], cwd=cwd, capture_output=True, text=True, timeout=10)
-        oracle = subprocess.run([sys.executable, str(SUITE.parent / task["oracle"])],
-                                cwd=cwd, capture_output=True, text=True, timeout=10)
-        if visible.returncode != 0 or oracle.returncode == 0:
-            raise RuntimeError(f"Invalid fixture {task['id']}: visible={visible.returncode}; oracle={oracle.returncode}")
+        with tempfile.TemporaryDirectory() as tmp:
+            work = Path(tmp) / "work"
+            shutil.copytree(cwd, work)
+            visible = subprocess.run(task["check"], cwd=work, capture_output=True, text=True, timeout=10)
+            env = os.environ.copy()
+            env["PYTHONPATH"] = str(work) + os.pathsep + env.get("PYTHONPATH", "")
+            oracle = subprocess.run([sys.executable, str(SUITE.parent / task["oracle"])],
+                                    cwd=work, env=env, capture_output=True, text=True, timeout=10)
+            if visible.returncode != 0 or "Ran 0 tests" in visible.stderr:
+                raise RuntimeError(f"Invalid visible tests {task['id']}: {visible.stderr}")
+            if oracle.returncode == 0:
+                raise RuntimeError(f"Oracle fails to detect pristine defect: {task['id']}")
+            if "ModuleNotFoundError" in oracle.stderr or "ImportError" in oracle.stderr:
+                raise RuntimeError(f"Broken Oracle imports in {task['id']}: {oracle.stderr}")
     print("Frozen v05 preflight PASS (12 visible checks pass, 12 hidden oracles detect defects)", flush=True)
 
 
