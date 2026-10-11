@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="710" viewBox="0 0 1200 710" role="img" aria-labelledby="title desc">
-  <title id="title">BetFirst decision policy: SPOT, CAP, BET, WIN or CUT LOSS</title>
-  <desc id="desc">At a meaningful uncertainty, check for a cheap test, safe rollback and large upside. If the bet is justified, run a minimal experiment. A verified win continues to final validation; a failed bet cuts loss and returns to normal analysis. If no change is needed, abstain.</desc>
+  <title id="title">BetFirst v0.4 decision policy: NORMAL, optional BET, ABSTAIN</title>
+  <desc id="desc">Start with NORMAL; at a meaningful costly uncertainty, check for a cheap test, safe rollback and large upside. If the bet is justified, run a minimal experiment. A verified win continues to final validation; a failed bet cuts loss and returns to normal analysis. If no change is needed, abstain.</desc>
   <defs>
     <linearGradient id="paper" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#101B2C"/><stop offset="1" stop-color="#0D1323"/></linearGradient>
     <linearGradient id="warm" x1="0" y1="0" x2="1" y2="0"><stop stop-color="#FFB75B"/><stop offset="1" stop-color="#FFE19A"/></linearGradient>
@@ -10,7 +10,7 @@
   </defs>
   <rect width="1200" height="710" rx="20" fill="url(#paper)"/>
   <text x="58" y="58" fill="#FFCD80" font-family="Inter, system-ui, -apple-system, sans-serif" font-weight="750" font-size="15" letter-spacing="2.7">BETFIRST / THE DECISION POLICY</text>
-  <text x="58" y="98" fill="#EEF5FF" font-family="Inter, system-ui, -apple-system, sans-serif" font-weight="760" font-size="30">One small bet. An explicit exit.</text>
+  <text x="58" y="98" fill="#EEF5FF" font-family="Inter, system-ui, -apple-system, sans-serif" font-weight="760" font-size="30">BET if worthwhile. Otherwise NORMAL.</text>
   <path d="M300 227H365" stroke="#8FA7C7" stroke-width="2.5" marker-end="url(#arrow)" fill="none"/>
   <path d="M180 310V399" stroke="#8FA7C7" stroke-width="2.5" marker-end="url(#arrow)" fill="none"/>
   <path d="M822 225H910" stroke="#8FA7C7" stroke-width="2.5" marker-end="url(#arrow)" fill="none"/>
@@ -39,7 +39,7 @@
   </g>
   <rect x="910" y="170" width="239" height="109" rx="17" fill="#212A39" stroke="#6E7F99" stroke-width="1.4"/>
   <text x="933" y="205" fill="#B6C8E0" font-family="Inter, system-ui, -apple-system, sans-serif" font-size="15" font-weight="800" letter-spacing="1">NORMAL</text>
-  <text x="933" y="238" fill="#E9EFF9" font-family="Inter, system-ui, -apple-system, sans-serif" font-size="16">Investigate carefully</text>
+  <text x="933" y="238" fill="#E9EFF9" font-family="Inter, system-ui, -apple-system, sans-serif" font-size="16">Act directly, verify</text>
   <rect x="55" y="399" width="245" height="88" rx="17" fill="#1D2A3A" stroke="#6783A0" stroke-width="1.4"/>
   <text x="77" y="433" fill="#C4D6ED" font-family="Inter, system-ui, -apple-system, sans-serif" font-size="15" font-weight="800" letter-spacing="1">ABSTAIN</text>
   <text x="77" y="459" fill="#D1DEEF" font-family="Inter, system-ui, -apple-system, sans-serif" font-size="15">No change needed</text>
