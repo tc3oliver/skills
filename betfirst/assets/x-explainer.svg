@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900" role="img" aria-labelledby="title desc">
+<title id="title">BetFirst X explainer — test feasibility before deep research</title>
+<desc id="desc">Informational social graphic contrasting documentation, research and proof of concept before trying an idea, against an early bounded feasibility probe. A win skips only now-unnecessary work, a loss returns to ordinary analysis; both finish with correctness checks. This is a conceptual diagram, not measured benchmark data.</desc>
+<defs>
+<linearGradient id="bg" x2="1" y2="1"><stop stop-color="#0b1322"/><stop offset="1" stop-color="#15283c"/></linearGradient>
+<linearGradient id="gold" x2="1"><stop stop-color="#ffb74f"/><stop offset="1" stop-color="#ffe2a4"/></linearGradient>
+<linearGradient id="mint" x2="1"><stop stop-color="#2ecbaa"/><stop offset="1" stop-color="#8cf4d7"/></linearGradient>
+<pattern id="grid" width="38" height="38" patternUnits="userSpaceOnUse"><path d="M38 0H0V38" fill="none" stroke="#a5bed9" stroke-opacity=".055"/></pattern>
+</defs><rect width="1600" height="900" fill="url(#bg)"/><rect width="1600" height="900" fill="url(#grid)"/>
+<g font-family="Inter, -apple-system, BlinkMacSystemFont, Segoe UI, system-ui, sans-serif">
+<text x="86" y="110" font-size="66" fill="#f4f8ff" font-weight="820">What if you tested the idea first?</text>
+<text x="88" y="164" font-size="28" fill="#9cb0ca">The expensive question is not "Can I research this?" but "Can I cheaply find out?"</text>
+<rect x="85" y="214" width="1430" height="196" rx="23" fill="#223047" stroke="#4f627a" stroke-width="2"/>
+<text x="119" y="260" font-size="28" font-weight="780" fill="#b4c5d9">RESEARCH FIRST</text>
+<rect x="118" y="293" width="296" height="80" rx="18" fill="#2e4159" stroke="#637f98"/><text x="143" y="342" font-size="27" font-weight="700" fill="#eff7ff">READ DOCS</text><path d="M414 330h52" stroke="#a0b5cb" stroke-width="4"/><rect x="468" y="293" width="296" height="80" rx="18" fill="#2e4159" stroke="#637f98"/><text x="493" y="342" font-size="27" font-weight="700" fill="#eff7ff">TRACE CODE</text><path d="M764 330h52" stroke="#a0b5cb" stroke-width="4"/><rect x="818" y="293" width="296" height="80" rx="18" fill="#2e4159" stroke="#637f98"/><text x="843" y="342" font-size="27" font-weight="700" fill="#eff7ff">BUILD POC</text><path d="M1114 330h52" stroke="#a0b5cb" stroke-width="4"/><rect x="1168" y="293" width="296" height="80" rx="18" fill="#2e4159" stroke="#637f98"/><text x="1193" y="342" font-size="27" font-weight="700" fill="#eff7ff">TRY</text>
+<rect x="85" y="445" width="1430" height="315" rx="23" fill="#153037" stroke="#397f74" stroke-width="2"/>
+<text x="119" y="493" font-size="28" font-weight="810" fill="#6be5c4">BETFIRST — A SMALL TEST BEFORE THE DEEP DIVE</text>
+<rect x="117" y="529" width="328" height="131" rx="19" fill="#493426" stroke="#ffb761" stroke-width="3"/>
+<text x="146" y="580" font-size="30" font-weight="810" fill="#ffd493">BET SMALL</text>
+<text x="146" y="623" font-size="27" fill="#fff1de">Quick feasibility probe</text>
+<path d="M447 594h85" stroke="#ffc187" stroke-width="4"/>
+<rect x="548" y="517" width="428" height="105" rx="20" fill="#1c493d" stroke="#5de3bb" stroke-width="2"/>
+<text x="577" y="557" font-size="29" font-weight="830" fill="#93f4d9">WIN BIG</text>
+<text x="577" y="597" font-size="26" fill="#def9ef">Skip unneeded preparation</text>
+<rect x="548" y="634" width="428" height="100" rx="20" fill="#42372e" stroke="#e9af7a" stroke-width="2"/>
+<text x="577" y="673" font-size="29" font-weight="830" fill="#ffc99a">LOSE SMALL</text>
+<text x="577" y="713" font-size="25" fill="#f3e4d6">Stop, then investigate</text>
+<path d="M530 594v87h18" fill="none" stroke="#ffc187" stroke-width="3"/>
+<rect x="1060" y="554" width="407" height="146" rx="22" fill="#283b51" stroke="#779ab5" stroke-width="2"/>
+<text x="1093" y="604" font-size="29" font-weight="830" fill="#f5f8ff">ALWAYS VERIFY</text>
+<text x="1093" y="646" font-size="26" fill="#b8ccdf">Same correctness bar.</text>
+<path d="M980 570h80m-80 114h52v-48h28" fill="none" stroke="#74cbae" stroke-width="3" stroke-dasharray="8 10"/>
+<text x="92" y="838" font-size="25" fill="#9fb6ce">Illustration only, not measured speedup  •  github.com/tc3oliver/skills</text>
+</g></svg>

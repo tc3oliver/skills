@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900" role="img" aria-labelledby="title desc">
+<title id="title">BetFirst X cover — Make Cheap Bets. Win Big. Lose Small.</title>
+<desc id="desc">A shareable conceptual product poster: try a small reversible probe before investing in expensive research or a full proof of concept. Not benchmark performance data.</desc>
+<defs>
+<linearGradient id="bg" x2="1" y2="1"><stop stop-color="#0b1322"/><stop offset="1" stop-color="#15283c"/></linearGradient>
+<linearGradient id="gold" x2="1"><stop stop-color="#ffb74f"/><stop offset="1" stop-color="#ffe2a4"/></linearGradient>
+<linearGradient id="mint" x2="1"><stop stop-color="#2ecbaa"/><stop offset="1" stop-color="#8cf4d7"/></linearGradient>
+<pattern id="grid" width="38" height="38" patternUnits="userSpaceOnUse"><path d="M38 0H0V38" fill="none" stroke="#a5bed9" stroke-opacity=".055"/></pattern>
+</defs>
+<rect width="1600" height="900" fill="url(#bg)"/><rect width="1600" height="900" fill="url(#grid)"/><rect y="0" width="1600" height="9" fill="url(#gold)"/>
+<circle cx="1270" cy="445" r="370" fill="#134b45" fill-opacity=".23"/>
+<g font-family="Inter, -apple-system, BlinkMacSystemFont, Segoe UI, system-ui, sans-serif">
+<text x="102" y="120" fill="#a3bad5" font-size="24" font-weight="750" letter-spacing="4.8">BETFIRST  /  FOR CODING AGENTS</text>
+<text x="92" y="285" font-size="126" font-weight="850" fill="#f7faff" letter-spacing="-5">Make Cheap Bets.</text>
+<text x="97" y="412" font-size="116" font-weight="850" fill="url(#gold)" letter-spacing="-4">Win Big.</text>
+<text x="97" y="533" font-size="116" font-weight="850" fill="url(#mint)" letter-spacing="-4">Lose Small.</text>
+<text x="103" y="621" font-size="37" fill="#d8e4f2" font-weight="650">Try the smallest safe thing first.</text>
+<text x="104" y="677" font-size="31" fill="#a5b8ce">Skip unnecessary feasibility research when it works.</text>
+<text x="104" y="725" font-size="31" fill="#a5b8ce">Cut losses early when it doesn't.</text>
+<rect x="100" y="791" width="603" height="65" rx="22" fill="#203f3c" stroke="#53c7a8" stroke-width="2"/>
+<text x="131" y="834" font-size="28" font-weight="750" fill="#c6f9e8">BET ON HYPOTHESES. VERIFY THE CODE.</text>
+</g>
+<path d="M1073 246h143q44 0 44 44v102q0 36 33 36h121" stroke="#ffbc69" stroke-width="16" fill="none" stroke-linecap="round"/>
+<path d="M1073 246h143q44 0 44 44v301q0 36 33 36h121" stroke="#62e4c2" stroke-width="16" fill="none" stroke-linecap="round"/>
+<circle cx="1073" cy="246" r="47" fill="#533b2b" stroke="#ffcd7a" stroke-width="7"/><circle cx="1073" cy="246" r="18" fill="#ffe0a1"/>
+<g font-family="Inter, -apple-system, BlinkMacSystemFont, Segoe UI, system-ui, sans-serif" font-weight="780">
+<text x="1070" y="168" font-size="27" fill="#ffdcaa" text-anchor="middle">SMALL BET</text>
+<rect x="1315" y="340" width="207" height="98" rx="20" fill="#3d332c" stroke="#ffba76" stroke-width="2"/>
+<text x="1342" y="381" font-size="27" fill="#ffcf98">LOSE</text>
+<text x="1342" y="413" font-size="23" fill="#fbebdf">FOLD EARLY</text>
+<rect x="1315" y="550" width="207" height="96" rx="20" fill="#174239" stroke="#5de9bd" stroke-width="2"/>
+<text x="1342" y="589" font-size="27" fill="#8af8d6">WIN</text>
+<text x="1342" y="620" font-size="22" fill="#e8fff3">SKIP DETOURS</text>
+</g>
+</svg>
