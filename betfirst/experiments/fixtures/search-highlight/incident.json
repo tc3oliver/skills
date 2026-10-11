@@ -1,0 +1,6 @@
+{
+  "text": "科技新聞 AI 新模型",
+  "query": "AI",
+  "observed": "offset mismatch after Unicode prefix",
+  "expected": "科技新聞 [AI] 新模型"
+}
