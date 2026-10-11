@@ -99,7 +99,7 @@ def inspect_tests(original: Path, workspace: Path) -> dict:
     """
     before = _files(original / "tests")
     after = _files(workspace / "tests")
-    added, extended, tampered, deleted = [], [], [], []
+    added, extended, tampered, deleted, package_markers = [], [], [], [], []
     for rel, source in sorted(before.items()):
         target = after.get(rel)
         if target is None:
@@ -123,8 +123,26 @@ def inspect_tests(original: Path, workspace: Path) -> dict:
     for rel, path in sorted(after.items()):
         if rel in before:
             continue
-        # Only new test_*.py source modules are accepted. No conftest.py,
-        # .pth, test helper executables, or arbitrary data files.
+        # A package marker is harmless only when it has no executable
+        # statements; imported tests/__init__.py otherwise runs code before
+        # test discovery. Restrict this exception to the tests/ root.
+        if rel == "__init__.py":
+            try:
+                body = ast.parse(path.read_text(encoding="utf-8")).body
+            except (SyntaxError, UnicodeError, ValueError):
+                tampered.append(rel)
+                continue
+            if not body or (
+                len(body) == 1 and isinstance(body[0], ast.Expr)
+                and isinstance(body[0].value, ast.Constant)
+                and isinstance(body[0].value.value, str)
+            ):
+                package_markers.append(rel)
+            else:
+                tampered.append(rel)
+            continue
+        # Only new test_*.py modules are otherwise accepted. No conftest.py,
+        # arbitrary imports, .pth, or executable helper files.
         if path.suffix != ".py" or not Path(rel).name.startswith("test_"):
             tampered.append(rel)
             continue
@@ -137,6 +155,7 @@ def inspect_tests(original: Path, workspace: Path) -> dict:
     return {
         "passed": not (tampered or deleted),
         "added_test_files": added,
+        "added_package_markers": package_markers,
         "extended_test_files": extended,
         "tampered_test_files": tampered,
         "deleted_test_files": deleted,
