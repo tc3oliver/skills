@@ -58,3 +58,24 @@ python3 betfirst/experiments/run.py \
 Diagnostic profile allows arbitrary Python execution: `--acknowledge-isolation` is not a sandbox. Run in a dedicated OS-isolated account or VM and keep credentials out of trace data.
 
 The original v3 preregistration allowed a qualified positive headline only with a complete 108-session study meeting all correctness/time gates. An early-stopped v3 is an **incomplete negative/mixed observation**, not proof that the v0.3 candidate helps. The v0.3 experiments require their own prospective design and honest reporting.
+
+## Actual Gate 1 results — 2026-10-11 (9/9 completed; **NO-GO**)
+
+Owner supplied `betfirst-v03-triage.zip` (manifest + 9 measured rows, outcome/Oracle/trace summaries; **raw agent.stdout and final worktree were excluded**). Manifest skill SHA256: `a69b5cf2a7c08d5c6573c29d72ec9da38543bc787cbd860820d3552284773825` (matches tested candidate prompt). Recorded results:
+
+| Task | Baseline | Efficiency | BetFirst candidate | BetFirst vs Efficiency wall | Gross-token delta |
+| --- | --- | --- | --- | ---: | ---: |
+| search-highlight | PASS | PASS | PASS | +10.0% | +29.8% |
+| partition-watermarks | FAIL | PASS | **FAIL** (`oracle_failed`) | +6.4% (not equal correctness) | +47.3% |
+| ttl-boundary-ok | FAIL (`unexpected_change`) | PASS | PASS (**zero files changed**) | -21.3% | +40.6% |
+| **Total** | **1/3** | **3/3** | **2/3** | -4.7% (not comparable as speed win) | +36.6% |
+
+Gross tokens count the reported input + output + cache-read + cache-write fields. They are **not cash cost**. Task-level figures are one replicate per arm and should not be interpreted as stable estimates.
+
+**Decisive correctness failure:** The independent `partition-watermarks` Oracle rejected a legal first offset of zero (`consume([("c",0,"zero"),("c",0,"dup")])` returned `[]` rather than `["zero"]`). Original visible acceptance tests passed. Both the Baseline and candidate failed; Efficiency passed. This tests the candidate's existing "check high-risk boundary" instruction and shows the instruction alone is not sufficient in this run.
+
+**Successful behavioral regression:** Candidate BetFirst correctly abstained from editing `ttl-boundary-ok`, whereas the historical v3 BetFirst session edited tests.
+
+**Gate decision: STOP.** Do not merge the candidate or claim a speedup. The candidate is consistently more token-intensive than Efficiency in all three tasks and has worse correctness in this tiny sample. Avoid inflating `SKILL.md` with increasingly specific reminders until the missing logs reveal whether the problem is ignored policy, untested final patch, tool permissions or an incorrect validation assumption.
+
+**Cheapest next diagnostic:** inspect *only* `partition-watermarks-r1-betfirst/agent.stdout` and its final `work/` against the corresponding Efficiency run; optionally inspect `search-highlight-r1-betfirst/agent.stdout` for tool retry overhead. Preserve the measured run as-is. Then make a small, **shorter** candidate revision, run the identical three-task correctness gate once in a new output directory, and use new held-out work only if correctness is fixed. Static CI alone is not evidence of behavioral improvement.
