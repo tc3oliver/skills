@@ -159,5 +159,65 @@ class RunnerTests(unittest.TestCase):
                                          15, False, resume=True,
                                          selected_arms=["efficiency", "betfirst"])), 6)
 
+    def test_budgeted_pairs_round_robin_and_resume(self):
+        with tempfile.TemporaryDirectory() as d:
+            out = Path(d) / "budgeted"
+            kw = dict(
+                suite=EXP / "suite.json", output=out, driver="mock", model=None,
+                replicates=2, seed=42, timeout=15, execute_real=False,
+                selected_arms=["efficiency", "betfirst"], paired=True,
+                time_budget_seconds=200, verification_timeout=5,
+            )
+            results = execute(**kw)
+            self.assertEqual(len(results), 12)
+            manifest = json.loads((out / "manifest.json").read_text())
+            ids = manifest["run_order"]
+            self.assertEqual(len(ids), 12)
+            for i in range(0, len(ids), 2):
+                parts = [ids[i].rsplit("-", 1)[0], ids[i + 1].rsplit("-", 1)[0]]
+                self.assertEqual(parts[0], parts[1])
+            status = json.loads((out / "budget-status.json").read_text())
+            self.assertEqual(status["complete_pairs"], 6)
+            self.assertEqual(status["completed_sessions"], 12)
+            self.assertEqual(len(execute(**kw, resume=True)), 12)
+            status = json.loads((out / "budget-status.json").read_text())
+            self.assertEqual(status["completed_sessions"], 12)
+            self.assertEqual(status["reason"], "planned_sessions_complete")
+
+    def test_budget_stops_before_pair_and_never_restarts_on_resume(self):
+        with tempfile.TemporaryDirectory() as d:
+            out = Path(d) / "budgeted"
+            kw = dict(
+                suite=EXP / "suite.json", output=out, driver="mock", model=None,
+                replicates=2, seed=42, timeout=15, execute_real=False,
+                selected_arms=["efficiency", "betfirst"], paired=True,
+                time_budget_seconds=1, verification_timeout=5,
+            )
+            self.assertEqual(execute(**kw), [])
+            status = json.loads((out / "budget-status.json").read_text())
+            self.assertEqual(status["completed_sessions"], 0)
+            self.assertEqual(status["reason"], "insufficient_time_for_complete_pair")
+            self.assertEqual(execute(**kw, resume=True), [])
+            self.assertEqual(len(list(out.glob("*/outcome.json"))), 0)
+
+    def test_budget_requires_exactly_two_arms(self):
+        with tempfile.TemporaryDirectory() as d:
+            with self.assertRaisesRegex(ValueError, "exactly two"):
+                execute(
+                    EXP / "suite.json", Path(d) / "out",
+                    "mock", None, 1, 42, 15, False,
+                    selected_arms=["betfirst"], paired=True,
+                    time_budget_seconds=200,
+                )
+
+    def test_muse_study_gate_rejects_synthetic_smoke(self):
+        from muse_study import verify_smoke
+        with tempfile.TemporaryDirectory() as d:
+            out = Path(d) / "smoke"
+            execute(EXP / "suite.json", out, "mock", None, 1, 42, 15, False)
+            ok, issues = verify_smoke(out)
+            self.assertFalse(ok)
+            self.assertTrue(any("manifest driver" in issue for issue in issues))
+
 if __name__ == "__main__":
     unittest.main()
