@@ -12,7 +12,7 @@
 
 **What if you made one tiny bet *first*?**
 
-BetFirst teaches coding agents to look for a **cheap, falsifiable, reversible feasibility experiment** before committing to a big investigation. The bet isn't a blind guess; it's a quick way to buy evidence.
+BetFirst teaches coding agents to look for a **cheap, falsifiable, reversible bet** before expensive exploration—**only if the bet is worth the cost**. NORMAL is the default; ABSTAIN when no fix is needed. A bet is evidence, never a substitute for correct implementation.
 
 | **WIN BIG** | **LOSE SMALL** | **DON'T FORCE IT** |
 | --- | --- | --- |
@@ -20,7 +20,7 @@ BetFirst teaches coding agents to look for a **cheap, falsifiable, reversible fe
 
 **Bet on a hypothesis. Never gamble with correctness.** The full fix still needs implementation and final verification.
 
-**Claude Code · Pi · Portable Agent Skill · Experimental v0.2 · No additional runtime**
+**Claude Code · Pi · OpenCode · Portable Agent Skill · v0.4 · No additional runtime**
 
 ## Try your first bet
 
@@ -87,13 +87,11 @@ If the experiment could write production data, expose secrets, disturb someone e
 
 **Other compatible agents:** They can use the portable `SKILL.md`; automatic discovery depends on the tool. BetFirst works independently of Backlog and Claude Team Kit.
 
-## Early signals — the wins *and* the losses
+## Does the bet pay off? The data, including losses
 
-In a local Qwen/oMLX exploratory study, BetFirst was **slower on three simple tasks**. On **two diagnostic tasks repeated three times**, it used **33.8% less wall time** and **38.0% fewer gross tokens** than an Efficiency-only prompt; both completed **6/6**. These small, task-specific observations are **not causal or universal speedup claims**.
+**126 local Muse agent runs**, in two different controlled synthetic-task studies. In the first held-out cohort (54 runs), v0.4 passed **18/18** and averaged **13.53s**, versus **18.22s** for Efficiency and **15.37s** for v0.3. In the follow-up ablation (72 runs), v0.4 passed **23/24**; average wall time was **15.25s**, versus **17.93s** for Efficiency (23/24 PASS) and **19.88s** for No-BET (22/24 PASS). Among 22 pairs where both arms passed, v0.4 showed **17.9% lower wall time vs Efficiency** and **18.0% vs No-BET**. 
 
-A separately preregistered **12-task / 108-session Evaluation v3** study has **no published results yet**. Full results, including unfavorable cases, will be reported.
-
-[Experiment history →](./experiments/EXPERIMENT_HISTORY.md) · [Frozen v3 protocol →](./experiments/V3_PROTOCOL.md)
+**Not every bet wins.** Earlier policies were *slower* on simple tasks. Four follow-up Oracle failures shared an ambiguous uppercase-boolean requirement. These experiments do not establish universal speedups or prove that the BET mechanism independently caused the gains. Token data were incomplete. [Full methodology, unfavorable cases and caveats →](./experiments/V04_RELEASE_RESULTS.md) · [History →](./experiments/EXPERIMENT_HISTORY.md)
 
 ## Ready to try it?
 
