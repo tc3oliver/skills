@@ -23,6 +23,7 @@ from usage import usage_from_output
 from trace import summarize_trace
 from test_integrity import inspect_tests
 from scoring import classify
+from workspace_guard import snapshot_dataset, assert_clean_checkout, unexpected_tool_paths
 
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[1]
@@ -176,11 +177,17 @@ def opencode_configuration(tool_profile: str) -> dict:
     return {**OPENCODE_CONFIG, "permission": permissions}
 
 
-def opencode_environment(config_dir: Path, tool_profile: str = "restricted") -> dict[str, str]:
+def opencode_environment(config_dir: Path, tool_profile: str = "restricted",
+                         workspace: Path | None = None) -> dict[str, str]:
     """Benchmark policy override, not an OS sandbox; isolate at the host layer."""
     config = opencode_configuration(tool_profile)
     config_dir.mkdir(exist_ok=False)
     env = os.environ.copy()
+    # Popen(cwd=work) does NOT update inherited PWD/OLDPWD. Certain Node/CLI
+    # code paths may trust PWD, which formerly pointed at ~/betfirst-v03.
+    if workspace is not None:
+        env["PWD"] = str(workspace.resolve())
+        env.pop("OLDPWD", None)
     env.update({
         "OPENCODE_CONFIG_DIR": str(config_dir),
         "OPENCODE_CONFIG_CONTENT": json.dumps(config),
@@ -299,6 +306,12 @@ def execute(suite: Path, output: Path, driver: str, model: str | None,
     if limit:
         tasks = tasks[:limit]
     skill = (ROOT / "betfirst" / "SKILL.md").read_text(encoding="utf-8")
+    # If an Agent previously touched the pristine fixtures/hidden oracles,
+    # refusing to restart prevents a corrupted baseline being reused.
+    dataset_before = None
+    if driver == "opencode":
+        assert_clean_checkout(suite, ROOT)
+        dataset_before = snapshot_dataset(suite)
     output.mkdir(parents=True, exist_ok=True)
     if paired:
         rng = random.Random(seed)
@@ -335,6 +348,8 @@ def execute(suite: Path, output: Path, driver: str, model: str | None,
         "suite_sha256": hashlib.sha256(suite.read_bytes()).hexdigest(),
         "fixture_hashes": {t["id"]: hashes(suite.parent / t["fixture"]) for t in tasks},
         "skill_sha256": hashlib.sha256(skill.encode("utf-8")).hexdigest(),
+        "dataset_sha256": (hashlib.sha256(json.dumps(dataset_before, sort_keys=True).encode()).hexdigest()
+                           if dataset_before is not None else None),
         "note": "Mock exercises harness only, not agent performance or savings.",
         "run_order": [f"{task['id']}-r{rep}-{arm}" for task,rep,arm in plan],
     }
@@ -446,7 +461,7 @@ def execute(suite: Path, output: Path, driver: str, model: str | None,
         try:
             if driver == "opencode":
                 # run_opencode_cmd already sets subprocess.cwd=work.
-                env = opencode_environment(run_dir / "opencode-config", tool_profile)
+                env = opencode_environment(run_dir / "opencode-config", tool_profile, work)
                 agent_exit, timed_out, agent_time, turn_limited = run_opencode_cmd(
                     cmd, work, run_dir / "agent.stdout", run_dir / "agent.stderr",
                     timeout, max_turns, env)
@@ -455,6 +470,22 @@ def execute(suite: Path, output: Path, driver: str, model: str | None,
                     cmd, work, run_dir / "agent.stdout", run_dir / "agent.stderr", timeout)
         except FileNotFoundError as exc:
             raise RuntimeError("Missing installed agent CLI: " + str(exc.filename)) from exc
+        if driver == "opencode":
+            recorded = (run_dir / "agent.stdout").read_text(encoding="utf-8")
+            violations = unexpected_tool_paths(recorded, work, ROOT)
+            dataset_changed = snapshot_dataset(suite) != dataset_before
+            if violations or dataset_changed:
+                (run_dir / "benchmark-integrity-error.json").write_text(
+                    json.dumps({
+                        "external_tool_access": violations,
+                        "pristine_dataset_changed": dataset_changed,
+                        "explanation": "Do not interpret this run as skill efficacy.",
+                    }, indent=2) + "\n", encoding="utf-8")
+                raise RuntimeError(
+                    f"FATAL benchmark workspace leak in {rid}: "
+                    f"external access={len(violations)}, dataset changed={dataset_changed}. "
+                    "Keep current outputs; stop study; inspect and restore source fixture."
+                )
         test_exit, test_timed_out, check_time = run_cmd(
             task["check"], work, run_dir / "acceptance.stdout", run_dir / "acceptance.stderr", check_cap)
         # Independent oracle: never copied into the agent's work directory.
