@@ -74,9 +74,14 @@ class FinalReportTests(unittest.TestCase):
             writer.writeheader();writer.writerows(new)
         manifest_path=out/"manifest.json"
         manifest=json.loads(manifest_path.read_text())
+        from run import TOOL_PROFILES
         manifest.update(schema=3,synthetic=False,driver="claude",
-                        model="FAKE-SYNTHETIC-UNIT-TEST",replicates=3,runs=108,
-                        claude_tool_profile="diagnostic")
+                        model="Qwen3.8-27B-oQ4e-mtp",replicates=3,runs=108,
+                        seed=20261011,timeout=600,
+                        claude_launcher="omlx",claude_max_turns=30,
+                        claude_allowed_tools=list(TOOL_PROFILES["diagnostic"]),
+                        claude_tool_profile="diagnostic",
+                        run_order=[f"{r['task_id']}-r{r['replicate']}-{r['arm']}" for r in new])
         manifest_path.write_text(json.dumps(manifest))
         return out
 
@@ -100,6 +105,24 @@ class FinalReportTests(unittest.TestCase):
             with (publication/"trace-review-worksheet.csv").open(newline="") as handle:
                 review_rows=list(csv.DictReader(handle))
             self.assertEqual(len(review_rows),108)
+
+    def test_publication_rejects_skill_and_policy_drift(self):
+        with tempfile.TemporaryDirectory() as d:
+            out=self.make_synthetic_full_data(Path(d))
+            manifest_path=out/"manifest.json"
+            pristine=json.loads(manifest_path.read_text())
+            for mutation, expected in (
+                ({"skill_sha256":"tampered"},"Skill SHA"),
+                ({"claude_tool_profile":"restricted"},"diagnostic"),
+                ({"seed":42},"seed"),
+                ({"claude_max_turns":31},"turn/timeout"),
+            ):
+                with self.subTest(mutation=mutation):
+                    edited={**pristine,**mutation}
+                    manifest_path.write_text(json.dumps(edited))
+                    with self.assertRaisesRegex(ValueError,expected):
+                        compute(out,EXP/"suite-v3.json",bootstrap=100)
+            manifest_path.write_text(json.dumps(pristine))
 
     def test_reject_incomplete_and_synthetic(self):
         suite=EXP/"suite-v3.json"
