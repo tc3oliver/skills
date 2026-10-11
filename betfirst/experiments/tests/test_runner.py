@@ -267,9 +267,9 @@ class RunnerTests(unittest.TestCase):
             root = Path(d) / "run"
             with patch("sys.argv", ["muse_study.py", "launch",
                                     "--output", str(root), "--hours", "2",
-                                    "--acknowledge-isolation"]), \\
-                 patch("muse_study.run_smoke") as smoke, \\
-                 patch("muse_study.verify_smoke", return_value=(True, [])), \\
+                                    "--acknowledge-isolation"]), \
+                 patch("muse_study.run_smoke") as smoke, \
+                 patch("muse_study.verify_smoke", return_value=(True, [])), \
                  patch("muse_study.run_study", return_value=0) as study:
                 self.assertEqual(main(), 0)
                 smoke.assert_called_once_with(root / "smoke")
