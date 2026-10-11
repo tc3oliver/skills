@@ -164,14 +164,25 @@ def run_cmd(argv: list, cwd: Path, stdout: Path, stderr: Path, timeout: int) -> 
     return code, expired, time.perf_counter() - t0
 
 
-def opencode_environment(config_dir: Path) -> dict[str, str]:
+def opencode_configuration(tool_profile: str) -> dict:
+    if tool_profile not in TOOL_PROFILES:
+        raise ValueError("invalid OpenCode tool profile")
+    permissions = dict(OPENCODE_PERMISSIONS)
+    allowed = ("python3 *" if tool_profile == "diagnostic"
+               else "python3 -m unittest *")
+    permissions["bash"] = {"*": "deny", allowed: "allow"}
+    return {**OPENCODE_CONFIG, "permission": permissions}
+
+
+def opencode_environment(config_dir: Path, tool_profile: str = "restricted") -> dict[str, str]:
     """Benchmark policy override, not an OS sandbox; isolate at the host layer."""
+    config = opencode_configuration(tool_profile)
     config_dir.mkdir(exist_ok=False)
     env = os.environ.copy()
     env.update({
         "OPENCODE_CONFIG_DIR": str(config_dir),
-        "OPENCODE_CONFIG_CONTENT": json.dumps(OPENCODE_CONFIG),
-        "OPENCODE_PERMISSION": json.dumps(OPENCODE_PERMISSIONS),
+        "OPENCODE_CONFIG_CONTENT": json.dumps(config),
+        "OPENCODE_PERMISSION": json.dumps(config["permission"]),
         "OPENCODE_DISABLE_CLAUDE_CODE": "1",
         "OPENCODE_DISABLE_DEFAULT_PLUGINS": "1",
         "OPENCODE_DISABLE_LSP_DOWNLOAD": "1",
@@ -291,8 +302,9 @@ def execute(suite: Path, output: Path, driver: str, model: str | None,
         "claude_allowed_tools": list(TOOL_PROFILES[tool_profile]) if driver == "claude" else None,
         "claude_max_turns": max_turns if driver == "claude" else None,
         "opencode_max_steps": max_turns if driver == "opencode" else None,
-        "opencode_config_sha256": (hashlib.sha256(json.dumps(OPENCODE_CONFIG, sort_keys=True).encode()).hexdigest()
+        "opencode_config_sha256": (hashlib.sha256(json.dumps(opencode_configuration(tool_profile), sort_keys=True).encode()).hexdigest()
                                    if driver == "opencode" else None),
+        "opencode_tool_profile": tool_profile if driver == "opencode" else None,
         "suite_sha256": hashlib.sha256(suite.read_bytes()).hexdigest(),
         "fixture_hashes": {t["id"]: hashes(suite.parent / t["fixture"]) for t in tasks},
         "skill_sha256": hashlib.sha256(skill.encode("utf-8")).hexdigest(),
@@ -366,7 +378,7 @@ def execute(suite: Path, output: Path, driver: str, model: str | None,
         try:
             if driver == "opencode":
                 cmd[2:2] = ["--dir", str(work)]
-                env = opencode_environment(run_dir / "opencode-config")
+                env = opencode_environment(run_dir / "opencode-config", tool_profile)
                 agent_exit, timed_out, agent_time, turn_limited = run_opencode_cmd(
                     cmd, work, run_dir / "agent.stdout", run_dir / "agent.stderr",
                     timeout, max_turns, env)
@@ -450,7 +462,8 @@ def main() -> None:
     parser.add_argument("--model")
     parser.add_argument("--claude-launcher", choices=("direct", "omlx"), default="direct",
                         help="Use oMLX launch claude (requires OMLX_BIN) or direct Claude CLI")
-    parser.add_argument("--claude-tool-profile", choices=tuple(TOOL_PROFILES), default="restricted")
+    parser.add_argument("--tool-profile", "--claude-tool-profile", dest="claude_tool_profile",
+                        choices=tuple(TOOL_PROFILES), default="restricted")
     parser.add_argument("--acknowledge-isolation", action="store_true",
                         help="Explicitly acknowledge the diagnostic profile permits arbitrary Python execution and requires an OS-isolated account or VM")
     parser.add_argument("--max-turns", type=int, default=30)
