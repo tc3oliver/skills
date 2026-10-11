@@ -1,0 +1,5 @@
+{
+  "symptom": "A tiny payload is silently left in the remainder buffer, but an empty stream is accepted.",
+  "capture_hex": "02 00 6f 6b",
+  "hint": "Inspect the local wire encoder before attempting a broad parser rewrite."
+}
