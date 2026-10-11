@@ -44,6 +44,14 @@ normally. Preserve existing work and complete final verification.
 
 **Using the Claude Code plugin instead?** Run `/plugin marketplace add tc3oliver/skills`, then `/plugin install tc3oliver-skills`, and invoke `/tc3oliver-skills:betfirst`. Choose **one** installation method.
 
+## Watch the 30-second pitch
+
+<p align="center">
+  <a href="../../media/betfirst/assets/betfirst-promo.mp4"><img src="../../media/betfirst/assets/betfirst-promo.gif" alt="BetFirst promo: ALL IN? on an untested assumption, the expensive way versus one tiny test, WIN BIG and LOSE SMALL, NORMAL, BET and ABSTAIN, then local evidence from 126 runs." width="800"></a>
+</p>
+
+<sub>Silent loop; [full 30 s video with sound →](../../media/betfirst/assets/betfirst-promo.mp4). Counters in the "expensive way" scene are illustrative, not measured. The −17.9% / −18.0% figures cover 22 both-PASS pairs in one local Muse study, not a universal speedup. [Full benchmark report →](../../research/betfirst/experiments/V04_RELEASE_RESULTS.md)</sub>
+
 ## Why bet first?
 
 <p align="center">
