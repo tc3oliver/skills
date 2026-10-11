@@ -1,7 +1,7 @@
 # BetFirst × OpenCode Go — 1 smoke + 2-hour paired study
 
 The OpenCode CLI has already returned `OK` for
-`opencode-go/muse-spark-1.3-contributor`. This workflow skips another basic
+`opencode-go/muse-spark-1.3-contributor`. The installed CLI rejects `opencode run --dir`; the adapter instead sets the subprocess working directory to the fresh fixture and passes the supported `--standalone` option to avoid background-server workspace reuse. This workflow skips another basic
 connectivity probe and uses **one small real coding task** to verify the full
 runner and Oracle workflow. It then launches an exploratory study for **at
 most two hours** (study time excludes the preliminary smoke).
