@@ -27,7 +27,10 @@ from workspace_guard import snapshot_dataset, assert_clean_checkout, unexpected_
 
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[1]
+# Freeze the original default three-arm protocol and its import-facing API.
 ARMS = ("baseline", "efficiency", "betfirst")
+EXPERIMENT_ARMS = ARMS + ("betfirst-v04",)
+V04_SKILL = HERE / "candidates" / "v04" / "SKILL.md"
 EFFICIENCY = "Avoid redundant file reads, repeated tool calls and unnecessary tests; preserve final validation."
 OPENCODE_PERMISSIONS = {
     "*": "deny", "read": "allow", "glob": "allow", "grep": "allow",
@@ -99,12 +102,17 @@ def load_suite(path: Path) -> list:
 
 
 def prompt_for(task: dict, arm: str, skill_text: str, tool_profile: str = "restricted",
-               scratch: Path | None = None) -> str:
+               scratch: Path | None = None,
+               candidate_skill_text: str | None = None) -> str:
     prompt = task["prompt"].strip()
     if arm != "baseline":
         prompt += "\n\nExecution guidance:\n" + EFFICIENCY
     if arm == "betfirst":
         prompt += "\n\nApply the following BetFirst Skill:\n" + skill_text
+    elif arm == "betfirst-v04":
+        if not candidate_skill_text:
+            raise ValueError("betfirst-v04 requires an explicit candidate Skill")
+        prompt += "\n\nApply the following BetFirst Skill v0.4:\n" + candidate_skill_text
     prompt += "\n\nWork only on this task. Preserve original tests; additive regression tests are allowed. Finish with required verification."
     if tool_profile == "diagnostic":
         prompt += ("\n\nAll arms receive identical diagnostic tool permissions: use Python via "
@@ -113,7 +121,7 @@ def prompt_for(task: dict, arm: str, skill_text: str, tool_profile: str = "restr
                    "pipelines, mkdir or rm. Keep probes inside the task workspace.")
     if scratch is not None:
         prompt += (
-            "\\n\\nWorkspace boundary: use the current fixture working directory (PWD) "
+            "\n\nWorkspace boundary: use the current fixture working directory (PWD) "
             "for source and tests; NEVER inspect the parent benchmark checkout "
             "or its hidden oracles. Prefer inline python3 -c probes. "
             "If a temporary probe file is necessary, use only the dedicated "
@@ -303,10 +311,10 @@ def execute(suite: Path, output: Path, driver: str, model: str | None,
     elif output.exists() and any(output.iterdir()):
         raise ValueError("output exists and is not empty; never overwrite experiment evidence")
     arms = tuple(selected_arms) if selected_arms is not None else ARMS
-    if not arms or len(arms) != len(set(arms)) or any(a not in ARMS for a in arms):
+    if not arms or len(arms) != len(set(arms)) or any(a not in EXPERIMENT_ARMS for a in arms):
         raise ValueError("select distinct known --arm values")
-    if paired and len(arms) != 2:
-        raise ValueError("--paired requires exactly two --arm selections")
+    if paired and len(arms) not in (2, 3):
+        raise ValueError("--paired requires two or three --arm selections")
     if time_budget_seconds is not None and not paired:
         raise ValueError("--time-budget-seconds requires --paired, to protect comparison pairs")
     tasks = load_suite(suite)
@@ -321,6 +329,8 @@ def execute(suite: Path, output: Path, driver: str, model: str | None,
     if limit:
         tasks = tasks[:limit]
     skill = (ROOT / "betfirst" / "SKILL.md").read_text(encoding="utf-8")
+    v04_skill = (V04_SKILL.read_text(encoding="utf-8")
+                 if "betfirst-v04" in arms else None)
     # If an Agent previously touched the pristine fixtures/hidden oracles,
     # refusing to restart prevents a corrupted baseline being reused.
     dataset_before = None
@@ -366,6 +376,8 @@ def execute(suite: Path, output: Path, driver: str, model: str | None,
         "suite_sha256": hashlib.sha256(suite.read_bytes()).hexdigest(),
         "fixture_hashes": {t["id"]: hashes(suite.parent / t["fixture"]) for t in tasks},
         "skill_sha256": hashlib.sha256(skill.encode("utf-8")).hexdigest(),
+        **({"v04_skill_sha256": hashlib.sha256(v04_skill.encode("utf-8")).hexdigest()}
+           if v04_skill is not None else {}),
         "dataset_sha256": (hashlib.sha256(json.dumps(dataset_before, sort_keys=True).encode()).hexdigest()
                            if dataset_before is not None else None),
         "note": "Mock exercises harness only, not agent performance or savings.",
@@ -406,7 +418,7 @@ def execute(suite: Path, output: Path, driver: str, model: str | None,
             if not rowfile.is_file() or not (folder / "outcome.json").is_file():
                 raise ValueError("incomplete run requires manual archive/recovery before resume: " + rid)
             row = json.loads(rowfile.read_text(encoding="utf-8"))
-            if row.get("task_id") not in rid or row.get("arm") not in ARMS:
+            if row.get("task_id") not in rid or row.get("arm") not in EXPERIMENT_ARMS:
                 raise ValueError("invalid resume row: " + rid)
             existing[rid] = row
         csv_path = output / csv_name
@@ -438,19 +450,20 @@ def execute(suite: Path, output: Path, driver: str, model: str | None,
     done = 0
     deadline = (budget_start + time_budget_seconds
                 if budget_start is not None else None)
-    # Two arms, each with one Agent budget and two independent check budgets.
-    # Leave a small margin for fixture cloning and atomic checkpoints.
+    # A matched group has two or three arms, each with an Agent budget
+    # and two independent check budgets. Leave time for atomic checkpoints.
     check_cap = verification_timeout if verification_timeout is not None else timeout
-    pair_reserve = 2 * (timeout + 2 * check_cap) + 15
+    group_size = len(arms) if paired else 1
+    pair_reserve = group_size * (timeout + 2 * check_cap) + 15
     stop_reason = "planned_sessions_complete"
     for index, (task, rep, arm) in enumerate(plan):
         # Check only at pair boundaries so budget never deliberately schedules
         # an unpaired arm. A process failure is still possible, hence keep
         # all finished sessions as immutable evidence.
-        if deadline is not None and index % 2 == 0:
+        if deadline is not None and index % group_size == 0:
             pair_ids = [
                 f"{plan[j][0]['id']}-r{plan[j][1]}-{plan[j][2]}"
-                for j in range(index, min(index + 2, len(plan)))
+                for j in range(index, min(index + group_size, len(plan)))
             ]
             if not all(pair_id in existing for pair_id in pair_ids):
                 remaining = deadline - time.time()
@@ -472,7 +485,7 @@ def execute(suite: Path, output: Path, driver: str, model: str | None,
         original = hashes(work)
         tests = hashes(work / "tests") if (work / "tests").is_dir() else {}
         scratch = (run_dir / "opencode-tmp") if driver == "opencode" else None
-        prompt = prompt_for(task, arm, skill, tool_profile, scratch)
+        prompt = prompt_for(task, arm, skill, tool_profile, scratch, v04_skill)
         (run_dir / "prompt.txt").write_text(prompt, encoding="utf-8")
         cmd = command(driver, model, prompt, task["id"], arm, claude_launcher,
                       tool_profile, max_turns)
@@ -621,7 +634,7 @@ def main() -> None:
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--timeout", type=int, default=180)
     parser.add_argument("--limit", type=int)
-    parser.add_argument("--arm", action="append", choices=ARMS,
+    parser.add_argument("--arm", action="append", choices=EXPERIMENT_ARMS,
                         help="Strategy arm to include; repeat for paired studies")
     parser.add_argument("--task", action="append", dest="selected_tasks",
                         help="Select an exact task ID; repeat to select multiple tasks")

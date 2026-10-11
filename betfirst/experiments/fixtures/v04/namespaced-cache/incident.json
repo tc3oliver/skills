@@ -1,0 +1,5 @@
+{
+  "case": "Loading item 'first' under tenant 'west' returns a value loaded under tenant 'east'.",
+  "observed": "Cache hit incorrectly spans independent namespaces.",
+  "constraints": "Preserve cache hits for exact namespace/id repeats. A namespace is case-sensitive; do not globally disable caching."
+}
