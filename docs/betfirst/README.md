@@ -26,10 +26,20 @@ BetFirst teaches coding agents to look for a **cheap, falsifiable, reversible be
 
 ## Try your first bet
 
-Install with the Agent Skills CLI:
+Install with the Agent Skills CLI (choose your agent and installation scope):
+
+Or paste this into your coding agent:
+
+```text
+Install BetFirst for my coding agent. Follow https://github.com/tc3oliver/skills/blob/main/docs/betfirst/agent-install.md, detect my agent and existing installation, install only the BetFirst Skill, and verify it works.
+```
+
+[Agent-guided installation instructions →](./agent-install.md)
+
+CLI command:
 
 ```bash
-npx skills add tc3oliver/skills --skill betfirst -g -a claude-code -y
+npx skills add tc3oliver/skills --skill betfirst
 ```
 
 Then ask your agent:
