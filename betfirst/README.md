@@ -95,9 +95,11 @@ A separately preregistered **12-task / 108-session Evaluation v3** study has **n
 
 [Experiment history →](./experiments/EXPERIMENT_HISTORY.md) · [Frozen v3 protocol →](./experiments/V3_PROTOCOL.md)
 
-## Share the idea
+## Ready to try it?
 
-[**X launch visuals →**](./docs/X_MEDIA_KIT.md) · [Decision examples](./references/examples.md) · [Evaluation method](./evals/README.md) · [Skill source](./SKILL.md) · [Changelog](./CHANGELOG.md)
+Give BetFirst your next make-or-break feasibility question. See if one small, safe experiment can save a much bigger investigation.
+
+[Explore decision examples →](./references/examples.md) · [Read the Skill →](./SKILL.md)
 
 **Make Cheap Bets. Win Big. Lose Small.** Spend less finding out *if* something works, without lowering the bar for making it work.
 
