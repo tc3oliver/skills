@@ -20,7 +20,7 @@ class BetFirstPackagingTests(unittest.TestCase):
         for name in ("README.md", "README.zh-TW.md"):
             root = REPO / "docs/betfirst"
             content = (root / name).read_text(encoding="utf-8")
-            for image in ("betfirst-v04-animated.svg", "before-after.svg"):
+            for image in ("betfirst-promo.gif", "before-after.svg"):
                 link = "../../media/betfirst/assets/" + image
                 self.assertIn(link, content)
                 self.assertTrue((root / link).is_file())
