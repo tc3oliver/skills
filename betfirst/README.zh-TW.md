@@ -1,8 +1,10 @@
 <p align="center"><a href="./README.md">English</a> · <a href="./README.zh-TW.md">繁體中文</a></p>
 
 <p align="center">
-  <img src="./assets/hero.svg" alt="BetFirst — 小賭一把，贏大、輸小：先以低成本探測可行性，再決定是否投入大量研究。" width="1000">
+  <img src="./assets/betfirst-v04-animated.svg" alt="BetFirst — 小賭一把，贏大、輸小：先以低成本探測可行性，再決定是否投入大量研究。" width="1000">
 </p>
+
+<sub>Animated SVG · 126 local runs; paired time comparisons require both arms to PASS. [Full evidence →](./experiments/V04_RELEASE_RESULTS.md)</sub>
 
 # BetFirst
 
