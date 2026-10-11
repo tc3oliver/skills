@@ -11,6 +11,7 @@ EXP=Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(EXP))
 from run import execute
 from v3_report import compute,render_markdown
+from v3_publication import write_assets
 
 class ResumeTests(unittest.TestCase):
     def test_interrupted_then_resume_preserves_first_checkpoint(self):
@@ -91,6 +92,14 @@ class FinalReportTests(unittest.TestCase):
             self.assertEqual(c["paired_run_faster_count"],36)
             self.assertIn("No extra v4",render_markdown(result))
             self.assertFalse(result["performance_claim_is_causal"])
+            publication=Path(d)/"final-assets"
+            publication.mkdir()
+            write_assets(result,publication)
+            self.assertIn("108-session", (publication/"X_POST.md").read_text())
+            self.assertTrue((publication/"task-medians.svg").read_text().startswith("<svg"))
+            with (publication/"trace-review-worksheet.csv").open(newline="") as handle:
+                review_rows=list(csv.DictReader(handle))
+            self.assertEqual(len(review_rows),108)
 
     def test_reject_incomplete_and_synthetic(self):
         suite=EXP/"suite-v3.json"
