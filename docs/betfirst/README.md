@@ -44,7 +44,7 @@ normally. Preserve existing work and complete final verification.
 
 **Using the Claude Code plugin instead?** Run `/plugin marketplace add tc3oliver/skills`, then `/plugin install tc3oliver-skills`, and invoke `/tc3oliver-skills:betfirst`. Choose **one** installation method.
 
-## Watch the 30-second pitch
+## Watch the 32-second pitch
 
 <p align="center">
   <a href="../../media/betfirst/assets/betfirst-promo.mp4"><img src="../../media/betfirst/assets/betfirst-promo.gif" alt="BetFirst promo: ALL IN? on an untested assumption, the expensive way versus one tiny test, WIN BIG and LOSE SMALL, NORMAL, BET and ABSTAIN, then local evidence from 126 runs." width="800"></a>
