@@ -10,6 +10,34 @@ most two hours** (study time excludes the preliminary smoke).
 model and OpenCode harness, comparing Efficiency against candidate BetFirst.
 Do not compare Muse numbers directly with local Qwen to claim a Skill effect.
 
+## IMPORTANT: 2026-10-11 sample invalidated by workspace leakage
+
+The first owner-run Muse study recorded tool calls against the *checkout*
+(`~/betfirst-v03/betfirst/experiments/fixtures/...`) and referenced hidden
+`oracles/v3` and `oracles/v3-reference` paths instead of remaining in each
+`study/<task>-r<rep>-<arm>/work/`. The reference-vs-work diffs indicate the
+local pristine fixtures may also have changed while experiments were running.
+Therefore **do not use those early outcomes to claim BetFirst correctness or
+speedups**.
+
+The adapter now passes `PWD=work` (not merely `Popen(cwd=work)`) and
+performs fail-closed dataset/hash and structured tool-path checks. The
+`PWD` mismatch is a plausible cause, not proven from the supplied excerpts.
+
+Before any rerun, stop the prior runner, inspect
+`git -C ~/betfirst-v03 status --short`, archive the local fixture/oracle
+diffs, and restore the intended committed fixture baseline ONLY after review.
+Use a **new output directory**. The runner rejects dirty tracked/untracked
+fixtures or oracles and aborts if it sees an external checkout path or dataset
+mutation.
+
+**Important limitation:** A CLI path audit happens *after* an agent process.
+It cannot stop the attempted access. To ensure oracles and source repository
+are inaccessible to the agent, run the model's tool process in a genuine
+filesystem sandbox/container/VM that mounts **only** its temporary fixture,
+and evaluate via the independent host-side runner. CLI deny rules and
+`--acknowledge-isolation` alone do not meet this requirement.
+
 ## Preconditions
 
 - OpenCode Go authenticated; disable **Use balance** in OpenCode Console if
