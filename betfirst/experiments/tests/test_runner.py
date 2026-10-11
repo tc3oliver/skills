@@ -91,5 +91,73 @@ class RunnerTests(unittest.TestCase):
         self.assertIn("Execution guidance:", prompt2)
 
 
+    def test_opencode_permissions_and_cli(self):
+        from run import command, opencode_environment
+        with tempfile.TemporaryDirectory() as d:
+            cmd = command("opencode", "opencode-go/muse-spark-1.3-contributor",
+                          "repair", "task", "betfirst")
+            self.assertEqual(cmd[:4], ["opencode", "run", "--agent", "build"])
+            self.assertIn("--format", cmd)
+            self.assertNotIn("--auto", cmd)
+            env = opencode_environment(Path(d) / "config")
+            policy = json.loads(env["OPENCODE_CONFIG_CONTENT"])
+            self.assertEqual(policy["permission"]["external_directory"], "deny")
+            self.assertEqual(policy["permission"]["bash"]["*"], "deny")
+            self.assertEqual(policy["permission"]["bash"]["python3 *"], "allow")
+            self.assertEqual(policy["share"], "disabled")
+            self.assertEqual(env["OPENCODE_DISABLE_CLAUDE_CODE"], "1")
+
+    def test_opencode_usage_and_trace(self):
+        from trace import summarize_trace
+        events = [
+            {"type": "step_start"},
+            {"type": "tool_use", "part": {"callID": "x", "tool": "bash",
+             "state": {"status": "completed", "output": "ok"}}},
+            {"type": "step_finish", "part": {"reason": "tool-calls", "tokens":
+             {"input": 7, "output": 3, "cache": {"read": 2, "write": 1}}, "cost": 3.5}},
+            {"type": "step_start"},
+            {"type": "text", "part": {"text": "done"}},
+            {"type": "step_finish", "part": {"reason": "stop", "tokens":
+             {"input": 5, "output": 4, "cache": {"read": 1, "write": 0}}, "cost": 1.1}},
+        ]
+        data = "\n".join(json.dumps(e) for e in events)
+        actual = usage_from_output(data, "opencode")
+        self.assertEqual((actual["input_tokens"], actual["output_tokens"],
+                          actual["cache_read_tokens"], actual["cache_write_tokens"]),
+                         (12, 7, 3, 1))
+        self.assertIsNone(actual["api_cost_usd"])
+        summary = summarize_trace(data, "opencode")
+        self.assertEqual(summary["agent_turns"], 2)
+        self.assertEqual(summary["tool_calls"], 1)
+        self.assertTrue(summary["trace_complete"])
+
+    def test_opencode_missing_final_usage_is_unknown(self):
+        from trace import summarize_trace
+        events = [
+            {"type": "step_start"},
+            {"type": "step_finish", "part": {"tokens": {"input": 4, "output": 2,
+                  "cache": {"read": 0, "write": 0}}}},
+            {"type": "step_start"},
+            {"type": "text", "part": {"text": "OK"}},
+        ]
+        data = "\n".join(json.dumps(e) for e in events)
+        self.assertTrue(all(v is None for v in usage_from_output(data, "opencode").values()))
+        summary = summarize_trace(data, "opencode")
+        self.assertEqual(summary["agent_turns"], 2)
+        self.assertFalse(summary["trace_complete"])
+
+    def test_two_arm_mock_pilot_and_resume_plan(self):
+        with tempfile.TemporaryDirectory() as d:
+            dest = Path(d) / "result"
+            rows = execute(EXP / "suite.json", dest, "mock", None,
+                           1, 42, 15, False, selected_arms=["efficiency", "betfirst"])
+            self.assertEqual(len(rows), 6)
+            manifest = json.loads((dest / "manifest.json").read_text())
+            self.assertEqual(manifest["selected_arms"], ["efficiency", "betfirst"])
+            self.assertEqual(manifest["runs"], 6)
+            self.assertEqual(len(execute(EXP / "suite.json", dest, "mock", None, 1, 42,
+                                         15, False, resume=True,
+                                         selected_arms=["efficiency", "betfirst"])), 6)
+
 if __name__ == "__main__":
     unittest.main()
