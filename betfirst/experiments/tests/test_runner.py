@@ -219,5 +219,61 @@ class RunnerTests(unittest.TestCase):
             self.assertFalse(ok)
             self.assertTrue(any("manifest driver" in issue for issue in issues))
 
+    def test_muse_light_smoke_allows_a_real_oracle_fail(self):
+        from muse_study import MODEL, ROOT, SUITE, verify_smoke
+        import hashlib
+        with tempfile.TemporaryDirectory() as d:
+            folder = Path(d)
+            rid = "cursor-pagination-r1-betfirst"
+            (folder / rid).mkdir()
+            manifest = {
+                "driver": "opencode", "model": MODEL, "synthetic": False,
+                "selected_arms": ["betfirst"],
+                "selected_task_ids": ["cursor-pagination"],
+                "replicates": 1, "runs": 1,
+                "opencode_tool_profile": "diagnostic",
+                "skill_sha256": hashlib.sha256(
+                    (ROOT / "betfirst" / "SKILL.md").read_bytes()).hexdigest(),
+                "suite_sha256": hashlib.sha256(SUITE.read_bytes()).hexdigest(),
+            }
+            (folder / "manifest.json").write_text(json.dumps(manifest))
+            with (folder / "measured-runs.csv").open("w", newline="") as file:
+                writer = csv.DictWriter(file, fieldnames=[
+                    "task_id", "replicate", "arm", "passed", "failure_reasons"])
+                writer.writeheader()
+                writer.writerow({
+                    "task_id": "cursor-pagination", "replicate": 1,
+                    "arm": "betfirst", "passed": "false",
+                    "failure_reasons": "oracle_failed"})
+            outcome = {
+                "agent_exit": 0, "agent_timeout": False, "agent_subtype": None,
+                "acceptance_exit": 0, "oracle_exit": 1,
+                "passed": False, "code_accepted": False}
+            (folder / rid / "outcome.json").write_text(json.dumps(outcome))
+            (folder / rid / "trace_summary.json").write_text(
+                json.dumps({"agent_turns": 2, "tool_calls": 3}))
+            accepted, issues = verify_smoke(folder)
+            self.assertTrue(accepted, issues)
+            outcome["agent_exit"] = 1
+            (folder / rid / "outcome.json").write_text(json.dumps(outcome))
+            accepted, issues = verify_smoke(folder)
+            self.assertFalse(accepted)
+            self.assertTrue(any("process" in issue for issue in issues))
+
+    def test_muse_launch_runs_one_smoke_then_study_without_real_model(self):
+        from muse_study import main
+        from unittest.mock import patch
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d) / "run"
+            with patch("sys.argv", ["muse_study.py", "launch",
+                                    "--output", str(root), "--hours", "2",
+                                    "--acknowledge-isolation"]), \\
+                 patch("muse_study.run_smoke") as smoke, \\
+                 patch("muse_study.verify_smoke", return_value=(True, [])), \\
+                 patch("muse_study.run_study", return_value=0) as study:
+                self.assertEqual(main(), 0)
+                smoke.assert_called_once_with(root / "smoke")
+                study.assert_called_once_with(root / "study", 2.0)
+
 if __name__ == "__main__":
     unittest.main()
