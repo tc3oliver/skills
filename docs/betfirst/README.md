@@ -4,6 +4,8 @@
 
 **Make Cheap Bets. Win Big. Lose Small.**
 
+**ALL IN? On an assumption you haven't tested?**
+
 Your coding agent reads docs, digs into the source, compares approaches and builds a PoC… then discovers the original assumption was wrong.
 
 **What if one tiny test could have told you that first?**
