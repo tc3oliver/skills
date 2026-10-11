@@ -272,8 +272,8 @@ class RunnerTests(unittest.TestCase):
                  patch("muse_study.verify_smoke", return_value=(True, [])), \
                  patch("muse_study.run_study", return_value=0) as study:
                 self.assertEqual(main(), 0)
-                smoke.assert_called_once_with(root / "smoke")
-                study.assert_called_once_with(root / "study", 2.0)
+                smoke.assert_called_once_with(root.resolve() / "smoke")
+                study.assert_called_once_with(root.resolve() / "study", 2.0)
 
 if __name__ == "__main__":
     unittest.main()
