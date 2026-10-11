@@ -10,11 +10,11 @@ The bet may itself be a *tiny PoC*. Don't say BetFirst "eliminates PoCs", "repla
 
 ## Images — use as media in an X post
 
-- [X cover, 1600 × 900 SVG](../../media/media/betfirst/assets/x-cover.svg) — main launch visual; Make Cheap Bets / Win Big / Lose Small.
-- [X explainer, 1600 × 900 SVG](../../media/media/betfirst/assets/x-explainer.svg) — the normal long path versus a small reversible BET and its WIN/LOSE outcomes.
-- [GitHub hero, 1200 × 480 SVG](../../media/media/betfirst/assets/hero.svg) — banner for release notes / GitHub.
-- [README comparison, 1200 × 580 SVG](../../media/media/betfirst/assets/before-after.svg) — embedded product explanation.
-- [Existing lightweight concept GIF](../../media/media/betfirst/assets/probe-loop.gif) — optional animated supplement; conceptual rather than a recorded run.
+- [X cover, 1600 × 900 SVG](../../media/betfirst/assets/x-cover.svg) — main launch visual; Make Cheap Bets / Win Big / Lose Small.
+- [X explainer, 1600 × 900 SVG](../../media/betfirst/assets/x-explainer.svg) — the normal long path versus a small reversible BET and its WIN/LOSE outcomes.
+- [GitHub hero, 1200 × 480 SVG](../../media/betfirst/assets/hero.svg) — banner for release notes / GitHub.
+- [README comparison, 1200 × 580 SVG](../../media/betfirst/assets/before-after.svg) — embedded product explanation.
+- [Existing lightweight concept GIF](../../media/betfirst/assets/probe-loop.gif) — optional animated supplement; conceptual rather than a recorded run.
 
 **X usually works more reliably with PNG/JPEG than GitHub SVG.** Convert the provided SVGs to raster PNG before uploading. For example, with an optional *documentation-only* rasterizer (NOT a dependency of the BetFirst Skill):
 
