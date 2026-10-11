@@ -85,13 +85,19 @@ def unexpected_tool_paths(output: str, workspace: Path, repo: Path,
             if not isinstance(value, str) or not value.startswith("/"):
                 continue
             try:
-                in_workspace = Path(value).resolve().is_relative_to(workspace)
+                resolved = Path(value).resolve()
+                # macOS may present /var/... while Path.resolve() yields
+                # /private/var/...; compare canonical paths, not just strings.
+                if resolved.is_relative_to(repo):
+                    bad.append(f"{tool}: explicit source checkout reference")
+                    break
+                in_workspace = resolved.is_relative_to(workspace)
+                in_scratch = (scratch is not None and
+                              resolved.is_relative_to(scratch))
             except (OSError, RuntimeError):
-                in_workspace = False
+                in_workspace, in_scratch = False, False
             # Only a dedicated per-session scratch directory is permitted.
             # Never blanket-allow system /tmp: it can contain other sessions.
-            in_scratch = (scratch is not None and
-                          Path(value).resolve().is_relative_to(scratch))
             if not in_workspace and not in_scratch:
                 bad.append(f"{tool}: path outside fixture worktree ({key})")
                 break
