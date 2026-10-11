@@ -38,6 +38,30 @@ filesystem sandbox/container/VM that mounts **only** its temporary fixture,
 and evaluate via the independent host-side runner. CLI deny rules and
 `--acknowledge-isolation` alone do not meet this requirement.
 
+## 2026-10-11 scratch-path diagnostic
+
+In the next, cleaner Muse study, 25 fully matched pairs completed
+before the third `lease-fencing` BetFirst session attempted to
+`write` a Python probe to
+`/private/var/folders/.../T/opencode/probe_lease.py`. The source dataset
+checksum remained unchanged. This is an actual write outside the fixture,
+but **not evidence that the hidden Oracle or source checkout was accessed**.
+The strict path guard stopped the study and preserved the offending event.
+
+The new session-scratch-v1 protocol routes `TMPDIR`, `TMP` and `TEMP`
+to a dedicated `<session>/opencode-tmp/`, and both model arms receive the
+same explicit probe-path instruction. The guard accepts only this specific
+scratch subtree (besides its task workspace), **never arbitrary system
+`/tmp`, sibling sessions, checkout files or hidden Oracles**.
+The scratch protocol is pinned in the manifest: interrupted older studies
+cannot be silently resumed under changed experimental conditions.
+
+The observed 25 matched pairs are retained as an exploratory separate
+cohort. Among the 21 both-PASS pairs, median BetFirst wall-time ratio
+was +15.7% vs Efficiency, so the result does **not** support a broad
+BetFirst speedup. Do not combine that cohort with new scratch-protocol
+runs or presume the guard guarantees OS isolation.
+
 ## Preconditions
 
 - OpenCode Go authenticated; disable **Use balance** in OpenCode Console if
