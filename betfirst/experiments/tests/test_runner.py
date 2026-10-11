@@ -108,6 +108,29 @@ class RunnerTests(unittest.TestCase):
             self.assertEqual(policy["share"], "disabled")
             self.assertEqual(env["OPENCODE_DISABLE_CLAUDE_CODE"], "1")
 
+    def test_opencode_subprocess_uses_fixture_working_directory(self):
+        from run import run_opencode_cmd
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            work = root / "work"
+            work.mkdir()
+            stdout, stderr = root / "stdout.jsonl", root / "stderr.txt"
+            script = (
+                "import os,json;"
+                "print(json.dumps({'type':'step_start','cwd':os.getcwd()}), flush=True);"
+                "print(json.dumps({'type':'step_finish',"
+                "'part':{'reason':'stop'}}), flush=True)"
+            )
+            code, timed_out, elapsed, turn_limited = run_opencode_cmd(
+                [sys.executable, "-c", script], work, stdout, stderr,
+                timeout=5, max_steps=2, env=dict(__import__("os").environ))
+            self.assertEqual(code, 0)
+            self.assertFalse(timed_out)
+            self.assertFalse(turn_limited)
+            self.assertLess(elapsed, 5)
+            event = json.loads(stdout.read_text().splitlines()[0])
+            self.assertEqual(Path(event["cwd"]).resolve(), work.resolve())
+
     def test_opencode_usage_and_trace(self):
         from trace import summarize_trace
         events = [
