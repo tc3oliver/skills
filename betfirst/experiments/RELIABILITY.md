@@ -52,3 +52,36 @@ In an isolated environment only, with the **same** oMLX/Qwen model and the same 
     python3 betfirst/experiments/report.py "$OUT"
 
 This is 18 local model sessions. Do not run it on your primary host environment just because the CLI accepts --acknowledge-isolation; the permission profile includes arbitrary Python execution. Use matched pairs, correctness-first, separate low/diagnostic strata, report permission denials and turns, and repeat with held-out incidents before making speedup claims. Keep original PR #6 six-run data frozen as restricted-profile evidence.
+
+
+## Inert package marker grading correction (three-replicate pilot)
+
+A later 18-run diagnostic-profile pilot produced one Efficiency FAIL on
+config-scope-r3 even though agent exit, visible tests and independent oracle
+all returned 0. Its test-only additions were tests/test_tenant_isolation.py
+(which was allowed) and tests/__init__.py (rejected merely for its name).
+
+The integrity rule now permits a **new, root-level tests/__init__.py only when
+its AST is empty or contains one module docstring**. Comments/whitespace are
+inert. Import statements, executable expressions, nested package markers,
+changes to existing files and other non-test Python modules are still rejected.
+Independent oracle results remain mandatory. Inspect the actual initializer
+before attributing the pilot's FAIL to this rule; its bytes were not supplied
+to this repository.
+
+Regrade the original run **without invoking the model or rerunning tests**:
+
+    python3 betfirst/experiments/regrade.py "$RUN_DIR" \
+      --suite betfirst/experiments/suite-v2.json \
+      --output "$RUN_DIR/regraded-package-marker"
+    python3 betfirst/experiments/report.py "$RUN_DIR/regraded-package-marker"
+    cat "$RUN_DIR/regraded-package-marker/regrade-audit.json"
+
+Regraded CSV now updates passed, code_accepted, session_success and
+failure_reasons together. The source run directory remains unchanged, and the
+derived manifest records input hashes and grading version 3. The fixture hash
+is checked against the original experiment's manifest when present.
+
+This does NOT change the original six-run recorded outcomes or retroactively
+alter the preregistered tasks. If the newly added __init__.py has executable
+code, the regraded run must remain FAIL.
