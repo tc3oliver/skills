@@ -46,7 +46,9 @@ Use a dedicated OS-isolated user or VM with no host credentials. Diagnostic prof
     export CLAUDE_CODE_AUTO_MODE_SERVER=0
     export BET_MODEL="Qwen3.8-27B-oQ4e-mtp"
 
-    RUN_DIR="$(mktemp -d)"
+    # Durable evidence, not macOS temporary /var/folders storage.
+    RUN_DIR="$HOME/betfirst-v3-evidence/run-$(date +%Y%m%d-%H%M%S)"
+    echo "Evidence folder: $RUN_DIR"
     python3 betfirst/experiments/run.py \
       --suite betfirst/experiments/suite-v3.json \
       --driver claude --claude-launcher omlx \
@@ -55,7 +57,7 @@ Use a dedicated OS-isolated user or VM with no host credentials. Diagnostic prof
       --execute --seed 20261011 --replicates 3 \
       --max-turns 30 --timeout 600 --output "$RUN_DIR"
 
-After a graceful interruption at a completed checkpoint, repeat identical command with --resume and the SAME output directory. Resume checks full manifest consistency and refuses to silently overwrite an incomplete run directory. If an Agent was interrupted mid-tool, preserve evidence and repair explicitly rather than secretly rerunning its task. Each finished arm writes outcome.json, row.json and atomically refreshes measured-runs.csv.
+After an interruption at a completed checkpoint, repeat the identical command with --resume and the SAME persistent RUN_DIR path (save this path across terminal sessions). Resume checks full manifest consistency and refuses to silently overwrite an incomplete run directory. If an Agent was interrupted mid-tool, quarantine that incomplete run directory OUTSIDE RUN_DIR, retaining its stdout/stderr, and disclose the rerun in the public report; do not silently overwrite previous evidence. Each finished arm writes outcome.json, row.json and atomically refreshes measured-runs.csv.
 
 Offline synthetic smoke (NOT performance evidence):
 
@@ -69,7 +71,7 @@ Final output, only after 108 REAL model sessions:
     python3 betfirst/experiments/v3_report.py "$RUN_DIR"
     cat "$RUN_DIR/v3-publication-report/REPORT.md"
 
-The report refuses incomplete, synthetic, non-diagnostic or mismatched-hash samples.
+The report refuses incomplete, synthetic, non-diagnostic or mismatched-hash samples. It also produces X_POST.md (final real-data launch copy), task-medians.svg (1280×720 dark chart) and trace-review-worksheet.csv (108 rows) in the publication report folder. Do not post unredacted raw Agent logs.
 
 ## Release evidence
 
