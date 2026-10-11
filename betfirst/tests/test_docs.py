@@ -143,7 +143,7 @@ class ReadmeAndAssetTests(unittest.TestCase):
                 self.assertIn("README.zh-TW.md", content)
                 self.assertIn("Claude Code", content)
                 self.assertIn("Pi", content)
-                self.assertIn("evals/README.md", content)
+                self.assertNotIn("X 發文圖片與草稿", content)
                 self.assertIn("experiments/EXPERIMENT_HISTORY.md", content)
                 self.assertIn("experiments/V3_PROTOCOL.md", content)
                 self.assertIn("docs/WHY_BETFIRST.md", content)
