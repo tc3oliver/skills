@@ -404,6 +404,8 @@ def execute(suite: Path, output: Path, driver: str, model: str | None,
         agent_output = (run_dir / "agent.stdout").read_text(encoding="utf-8")
         use = usage_from_output(agent_output, driver)
         trace = summarize_trace(agent_output, driver)
+        if driver == "opencode" and not trace["agent_turns"]:
+            trace["agent_subtype"] = "error_missing_trace"
         if turn_limited:
             trace["agent_subtype"] = "error_max_turns"
             trace["trace_complete"] = False
