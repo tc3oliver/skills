@@ -132,6 +132,54 @@ class RunnerTests(unittest.TestCase):
             self.assertEqual(Path(event["cwd"]).resolve(), work.resolve())
 
 
+    def test_opencode_per_run_tmpdir_and_prompt_are_explicit(self):
+        from run import opencode_environment
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            work = root / "work"
+            work.mkdir()
+            scratch = root / "opencode-tmp"
+            env = opencode_environment(root / "config", "diagnostic",
+                                       work, scratch)
+            self.assertTrue(scratch.is_dir())
+            self.assertEqual(env["PWD"], str(work.resolve()))
+            for key in ("TMPDIR", "TEMP", "TMP"):
+                self.assertEqual(env[key], str(scratch.resolve()))
+            task = {"prompt": "Fix a bug"}
+            prompt = prompt_for(task, "betfirst", "BET RULES",
+                                "diagnostic", scratch)
+            self.assertIn(str(scratch), prompt)
+            self.assertIn("Do not use system /tmp", prompt)
+            self.assertIn("BET RULES", prompt)
+
+    def test_guard_allows_only_this_sessions_scratch(self):
+        from workspace_guard import unexpected_tool_paths
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            work = root / "study" / "task-r1-betfirst" / "work"
+            scratch = root / "study" / "task-r1-betfirst" / "opencode-tmp"
+            work.mkdir(parents=True)
+            scratch.mkdir()
+            checkout = root / "source"
+            checkout.mkdir()
+            make = lambda p: json.dumps({
+                "type": "tool_use",
+                "part": {"tool": "write", "state": {"input": {
+                    "path": str(p), "content": "probe"}}}})
+            events = [
+                make(work / "fix.py"),
+                make(scratch / "probe.py"),
+                make(root / "study" / "task-r1-efficiency" / "opencode-tmp" / "probe.py"),
+                make("/private/var/folders/abc/T/opencode/probe_lease.py"),
+                make(checkout / "betfirst/experiments/oracles/v3/check.py"),
+            ]
+            problems = unexpected_tool_paths(
+                "\n".join(events), work, checkout, scratch)
+            self.assertEqual(len(problems), 3)
+            self.assertTrue(any("source checkout" in p for p in problems))
+            self.assertEqual(len(unexpected_tool_paths(
+                "\n".join(events[:2]), work, checkout, scratch)), 0)
+
     def test_opencode_pwd_matches_agent_workspace_not_parent_repo(self):
         from run import opencode_environment
         with tempfile.TemporaryDirectory() as d:
