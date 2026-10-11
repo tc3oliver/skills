@@ -154,11 +154,14 @@ def execute(suite: Path, output: Path, driver: str, model: str | None,
             limit: int | None = None, claude_launcher: str = "direct",
             selected_tasks: list[str] | None = None,
             tool_profile: str = "restricted",
-            acknowledge_isolation: bool = False, max_turns: int = 30) -> list:
+            acknowledge_isolation: bool = False, max_turns: int = 30,
+            resume: bool = False, stop_after: int | None = None) -> list:
     if driver != "mock" and not execute_real:
         raise ValueError("real CLI execution requires --execute and may incur API cost")
     if driver != "mock" and not model:
         raise ValueError("--model must be explicit for live experiments")
+    if stop_after is not None and stop_after < 1:
+        raise ValueError("stop-after must be positive")
     if max_turns < 1:
         raise ValueError("max-turns must be positive")
     if tool_profile not in TOOL_PROFILES:
@@ -169,7 +172,10 @@ def execute(suite: Path, output: Path, driver: str, model: str | None,
         raise ValueError("diagnostic Python access requires --acknowledge-isolation: run in a dedicated OS-isolated environment, not an unrestricted host account")
     if replicates < 1 or timeout < 1 or (limit is not None and limit < 1):
         raise ValueError("replicates, timeout and limit must be positive")
-    if output.exists() and any(output.iterdir()):
+    if resume:
+        if not (output / "manifest.json").is_file():
+            raise ValueError("resume requires existing manifest.json")
+    elif output.exists() and any(output.iterdir()):
         raise ValueError("output exists and is not empty; never overwrite experiment evidence")
     tasks = load_suite(suite)
     if selected_tasks and limit is not None:
@@ -187,8 +193,8 @@ def execute(suite: Path, output: Path, driver: str, model: str | None,
     plan = [(task, rep, arm) for task in tasks
             for rep in range(1, replicates + 1) for arm in ARMS]
     random.Random(seed).shuffle(plan)
-    (output / "manifest.json").write_text(json.dumps({
-        "schema": 2, "driver": driver, "model": model, "seed": seed,
+    manifest = {
+        "schema": 3, "driver": driver, "model": model, "seed": seed,
         "selected_task_ids": [task["id"] for task in tasks],
         "task_selection": "explicit" if selected_tasks else ("first_N" if limit else "full_suite"),
         "replicates": replicates, "runs": len(plan),
@@ -200,12 +206,63 @@ def execute(suite: Path, output: Path, driver: str, model: str | None,
         "suite_sha256": hashlib.sha256(suite.read_bytes()).hexdigest(),
         "fixture_hashes": {t["id"]: hashes(suite.parent / t["fixture"]) for t in tasks},
         "skill_sha256": hashlib.sha256(skill.encode("utf-8")).hexdigest(),
-        "note": "Mock exercises harness only, not agent performance or savings."
-    }, indent=2) + "\n", encoding="utf-8")
+        "note": "Mock exercises harness only, not agent performance or savings.",
+        "run_order": [f"{task['id']}-r{rep}-{arm}" for task,rep,arm in plan],
+    }
+    csv_name = "synthetic-smoke.csv" if driver == "mock" else "measured-runs.csv"
+    existing = {}
+    if resume:
+        prior = json.loads((output / "manifest.json").read_text(encoding="utf-8"))
+        if prior != manifest:
+            raise ValueError("resume manifest mismatch; model, skill, fixtures, suite, order and runner flags must match original")
+        # A durable per-run record is authoritative when a crash interrupted
+        # the CSV atomic checkpoint between writing row.json and the CSV.
+        for rid in manifest["run_order"]:
+            folder = output / rid
+            if not folder.exists():
+                continue
+            rowfile = folder / "row.json"
+            if not rowfile.is_file() or not (folder / "outcome.json").is_file():
+                raise ValueError("incomplete run requires manual archive/recovery before resume: " + rid)
+            row = json.loads(rowfile.read_text(encoding="utf-8"))
+            if row.get("task_id") not in rid or row.get("arm") not in ARMS:
+                raise ValueError("invalid resume row: " + rid)
+            existing[rid] = row
+        csv_path = output / csv_name
+        if csv_path.is_file():
+            with csv_path.open(encoding="utf-8", newline="") as src:
+                persisted = list(csv.DictReader(src))
+            for row in persisted:
+                rid = f"{row['task_id']}-r{row['replicate']}-{row['arm']}"
+                if rid not in existing:
+                    raise ValueError("CSV references unfinished run: " + rid)
+                if {k: str(existing[rid].get(k) if existing[rid].get(k) is not None else '')
+                    for k in COLUMNS} != row:
+                    raise ValueError("CSV/checkpoint mismatch: " + rid)
+    else:
+        (output / "manifest.json").write_text(
+            json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+
+    def flush_checkpoint(rows: dict) -> None:
+        # Atomic replacement keeps a complete CSV after every finished arm.
+        target = output / csv_name
+        temporary = output / (csv_name + ".tmp")
+        with temporary.open("w", encoding="utf-8", newline="") as file:
+            writer = csv.DictWriter(file, fieldnames=COLUMNS)
+            writer.writeheader()
+            writer.writerows(rows[rid] for rid in manifest["run_order"] if rid in rows)
+        temporary.replace(target)
+
     results = []
+    done = 0
     for task, rep, arm in plan:
         rid = f"{task['id']}-r{rep}-{arm}"
         run_dir = output / rid
+        if rid in existing:
+            results.append(existing[rid])
+            continue
+        if run_dir.exists():
+            raise ValueError("refusing to overwrite incomplete run: " + rid)
         run_dir.mkdir()
         work = run_dir / "work"
         shutil.copytree(suite.parent / task["fixture"], work, symlinks=False)
@@ -257,7 +314,6 @@ def execute(suite: Path, output: Path, driver: str, model: str | None,
                "code_accepted": str(evaluation["code_accepted"]).lower(),
                "session_success": str(evaluation["session_success"]).lower(),
                "failure_reasons": ";".join(evaluation["failure_reasons"])}
-        results.append(row)
         (run_dir / "outcome.json").write_text(json.dumps({
             "passed": passed, "agent_exit": agent_exit, "agent_timeout": timed_out,
             "acceptance_exit": test_exit, "acceptance_timeout": test_timed_out,
@@ -272,12 +328,15 @@ def execute(suite: Path, output: Path, driver: str, model: str | None,
             "agent_turns": trace["agent_turns"],
             "oracle_seconds": oracle_time, "trace_complete": trace["trace_complete"]
         }, indent=2) + "\n", encoding="utf-8")
+        (run_dir / "row.json").write_text(
+            json.dumps(row, indent=2) + "\n", encoding="utf-8")
+        existing[rid] = row
+        results.append(row)
+        flush_checkpoint(existing)
+        done += 1
         print(f"{rid}: {'PASS' if passed else 'FAIL'}", flush=True)
-    csv_name = "synthetic-smoke.csv" if driver == "mock" else "measured-runs.csv"
-    with (output / csv_name).open("w", encoding="utf-8", newline="") as file:
-        writer = csv.DictWriter(file, fieldnames=COLUMNS)
-        writer.writeheader()
-        writer.writerows(results)
+        if stop_after is not None and done >= stop_after:
+            break
     return results
 
 
@@ -299,12 +358,16 @@ def main() -> None:
     parser.add_argument("--limit", type=int)
     parser.add_argument("--task", action="append", dest="selected_tasks",
                         help="Select an exact task ID; repeat to select multiple tasks")
+    parser.add_argument("--resume", action="store_true",
+                        help="Continue matching experiment from durable per-run checkpoints")
+    parser.add_argument("--stop-after", type=int,
+                        help="Stop after N newly completed arms (useful for offline resume verification)")
     parser.add_argument("--execute", action="store_true", help="Permit actual provider calls and costs")
     args = parser.parse_args()
     execute(args.suite.resolve(), args.output.resolve(), args.driver, args.model,
             args.replicates, args.seed, args.timeout, args.execute, args.limit,
             args.claude_launcher, args.selected_tasks, args.claude_tool_profile,
-            args.acknowledge_isolation, args.max_turns)
+            args.acknowledge_isolation, args.max_turns, args.resume, args.stop_after)
 
 
 if __name__ == "__main__":
