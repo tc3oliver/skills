@@ -1,113 +1,104 @@
 <p align="center"><a href="./README.md">English</a> · <a href="./README.zh-TW.md">繁體中文</a></p>
 
 <p align="center">
-  <img src="./assets/hero.svg" alt="BetFirst — Make Cheap Bets. Win Big. Lose Small. Bet on hypotheses, never on correctness." width="1000">
+  <img src="./assets/hero.svg" alt="BetFirst — Make Cheap Bets. Win Big. Lose Small. A tiny feasibility probe before a costly deep dive." width="1000">
 </p>
 
 # BetFirst
 
 ### Make Cheap Bets. Win Big. Lose Small.
 
-**Your coding agent is already making bets.** Every suspected root cause, every file it chooses to read, every fix it tries is a bet that the next step will be worth the cost.
+**Coding agents can spend a lot of time finding out whether an idea will work.** They read documentation, investigate dependencies, compare options, and build a proof of concept—sometimes before trying the smallest thing that could settle the question.
 
-**BetFirst teaches it to bet smarter.**
+**What if you made one tiny bet *first*?**
 
-Instead of spending a long session chasing a hunch, look for a **small, falsifiable, reversible experiment** that could settle the question first.
+BetFirst teaches coding agents to look for a **cheap, falsifiable, reversible feasibility experiment** before committing to a big investigation. The bet isn't a blind guess; it's a quick way to buy evidence.
 
-| **WIN BIG** | **LOSE SMALL** | **KNOW WHEN TO FOLD** |
-| :--- | :--- | :--- |
-| A tiny probe eliminates an expensive wrong path. | A failed probe has a clear stopping point and safe fallback. | No good bet? Work normally. Already correct? Don't touch it. |
+| **WIN BIG** | **LOSE SMALL** | **DON'T FORCE IT** |
+| --- | --- | --- |
+| One small test answers the question. Skip research or PoC work the result makes unnecessary. | The probe fails or is inconclusive. Stop at the preset limit, keep what you learned, return to normal investigation. | No safe, decisive low-cost test? Don't bet. If the task is already done, don't change anything. |
 
-**Bet on hypotheses. Never on correctness.**
+**Bet on a hypothesis. Never gamble with correctness.** The full fix still needs implementation and final verification.
 
-Claude Code · Pi · Portable Agent Skill · Experimental v0.2 · No additional runtime
+**Claude Code · Pi · Portable Agent Skill · Experimental v0.2 · No additional runtime**
 
-## Place your first bet in 30 seconds
+## Try your first bet
 
-**Install with the Agent Skills CLI:**
+Install with the Agent Skills CLI:
 
-~~~bash
+```bash
 npx skills add tc3oliver/skills --skill betfirst -g -a claude-code -y
-~~~
+```
 
-Then give your agent a task:
+Then ask your agent:
 
-~~~text
-Use BetFirst. Before investigating broadly, look for one cheap,
-falsifiable, reversible bet that could resolve the uncertainty.
-Define what would disprove it and when to stop. If no good bet
-exists, work normally. Preserve my changes and run final checks.
-~~~
+```text
+Use BetFirst. Before spending time on feasibility research or a full
+PoC, see if one small, safe, reversible experiment can settle the key
+uncertainty. Set a stop condition first. If it works, skip only the
+preparation now made unnecessary. If it fails, stop and investigate
+normally. Preserve existing work and complete final verification.
+```
 
-**Claude Code plugin instead?** Run `/plugin marketplace add tc3oliver/skills`, then `/plugin install tc3oliver-skills`, and invoke `/tc3oliver-skills:betfirst`. Choose **one** installation method to avoid duplicate Skills.
+**Using the Claude Code plugin instead?** Run `/plugin marketplace add tc3oliver/skills`, then `/plugin install tc3oliver-skills`, and invoke `/tc3oliver-skills:betfirst`. Choose **one** installation method.
 
-## A better way to lose
-
-Most coding-agent workflows talk about successful experiments. **BetFirst is designed for the losing ones, too.** The important question isn't whether a hypothesis was right. It's whether you learned something useful **before the investigation became expensive**.
+## Why bet first?
 
 <p align="center">
-  <img src="./assets/probe-loop.gif" width="760" alt="Illustrative workflow animation showing broad exploration compared with BetFirst's shorter bounded probe, learning and verification path. Not an actual model trace or benchmark.">
+  <img src="./assets/before-after.svg" alt="Conceptual comparison: researching documentation, tracing dependencies and building a PoC before trying an idea, versus testing one bounded feasibility hypothesis first, then either skipping unneeded investigation or stopping safely. Final verification remains required." width="1000">
 </p>
 
-<sub>Conceptual animation—not a recorded session or measured speedup. [Static comparison →](./assets/before-after.svg)</sub>
+<sub>Illustrative workflows, **not benchmark measurements**. [Animated concept →](./assets/probe-loop.gif)</sub>
 
-### The bet: one hypothesis, two outcomes
+A successful bet doesn't magically finish the task. It can make **parts of the preliminary investigation** unnecessary. A failed bet is useful when it cheaply rules out an assumption—and it only stays cheap if the agent actually stops.
 
-*Illustrative example, not a benchmark trace.*
+### Example: do we really need a full PoC?
 
-~~~text
-BUG         Subtitle rendering fails on Windows drive paths.
-HYPOTHESIS  The drive-colon escaping is wrong.
-BET         Try ONE representative path in an isolated filter call.
+*Illustrative scenario, not a recorded benchmark run.*
 
-WIN         The probe confirms the hypothesis → fix the escaping,
-            then run the required renderer/regression checks.
+```text
+QUESTION   Can this subtitle filter accept the path format we need?
+NORMAL     Read extensive docs, investigate escaping rules,
+           assemble a full rendering PoC, then try it.
+BET        Use one synthetic path and one tiny filter invocation.
+WIN        Confirm the behavior, avoid now-unnecessary feasibility
+           investigation, implement the real fix, verify normally.
+LOSE       Stop the probe, keep the error as evidence, investigate
+           the documentation and implementation as needed.
+```
 
-LOSE        The probe disproves it → stop pursuing that theory,
-            keep the evidence, investigate the next likely cause.
-~~~
+**The bet may itself be a tiny PoC.** The point is to avoid paying for a *large* PoC before checking the one make-or-break assumption.
 
-**A losing bet isn't a failed task.** A cheap refutation can save you from implementing the wrong fix. A winning bet doesn't let you skip verification.
-
-## Know when to bet. Know when to fold.
+## The decision rule
 
 **SPOT → CAP → BET → WIN / CUT LOSS**
 
-| Decision | What the agent does |
-| --- | --- |
-| **SPOT** | Identify a specific uncertainty worth testing, not just a vague guess. |
-| **CAP** | Set a small time/cost bound, observable outcome and safe exit *before* running the probe. |
-| **BET** | Run the smallest reversible test that can falsify the hypothesis. |
-| **WIN** | Use decisive evidence to avoid unnecessary exploration; finish with normal correctness checks. |
-| **CUT LOSS / FOLD** | Stop when the hypothesis fails or the bet becomes inconclusive; preserve evidence and return to normal debugging. |
-| **NORMAL / ABSTAIN** | Don't force a bet. Investigate normally, or leave already-correct code alone. |
+**SPOT** a costly uncertainty with a cheap decisive signal. **CAP** the cost, timeout and cleanup *before* the experiment. **BET** with one safe, reversible test. **WIN** means evidence lets you skip only work that is no longer necessary. **CUT LOSS** means stop at the limit and use the observation to guide NORMAL debugging.
 
-**The guardrail:** No production mutations, destructive Git cleanup, credentials, unbounded experiments or skipped acceptance tests. BetFirst is a decision policy—not a license to gamble with user data or ship unverified code.
+If the experiment could write production data, expose secrets, disturb someone else's changes, or cannot be safely stopped, **go NORMAL**. If nothing needs changing, **ABSTAIN**.
 
-[See the complete decision flow →](./assets/decision-flow.svg) · [Why this approach makes sense →](./docs/WHY_BETFIRST.md)
+[Decision flow →](./assets/decision-flow.svg) · [Why a small bet can pay off →](./docs/WHY_BETFIRST.md)
 
-## Small Skill. No new infrastructure.
+## Works with your existing agent
 
-**Claude Code:** Use the CLI or plugin setup above. Invoke explicitly or let a compatible Skill-discovery mechanism find it.
+**Claude Code:** Install via the CLI or plugin above. The Skill does not run a second agent or require telemetry.
 
-**Pi:** Install the complete `betfirst/` directory in a location your Pi version discovers (for example `~/.pi/agent/skills/betfirst/`), then use `/skill:betfirst`. The core [`SKILL.md`](./SKILL.md) is portable and has no Claude-only runtime dependencies.
+**Pi:** Install the complete `betfirst/` directory into a Pi-discovered Skill location (for example `~/.pi/agent/skills/betfirst/`) and invoke `/skill:betfirst`. The [portable Skill](./SKILL.md) has no Claude-specific runtime.
 
-**Other compatible coding agents:** Load the portable Skill as instructions; automatic discovery depends on your agent. BetFirst can run independently of Backlog, Claude Team Kit and task-management frameworks.
+**Other compatible agents:** They can use the portable `SKILL.md`; automatic discovery depends on the tool. BetFirst works independently of Backlog and Claude Team Kit.
 
-## Does betting first actually pay off?
+## Early signals — the wins *and* the losses
 
-**Sometimes yes. Sometimes no—and that's the point.** In early local Qwen/oMLX tests, BetFirst was **slower on three simple tasks**. But on **two diagnostic tasks, each repeated three times**, it used **33.8% less wall time** and **38.0% fewer gross tokens** than Efficiency-only; both completed **6/6** successfully.
+In a local Qwen/oMLX exploratory study, BetFirst was **slower on three simple tasks**. On **two diagnostic tasks repeated three times**, it used **33.8% less wall time** and **38.0% fewer gross tokens** than an Efficiency-only prompt; both completed **6/6**. These small, task-specific observations are **not causal or universal speedup claims**.
 
-These are **exploratory observations**, **not** a universal or causal speedup claim. A larger preregistered **12-task / 108-session v3** study is underway; **results are pending**, and wins *and* losses will be published.
+A separately preregistered **12-task / 108-session Evaluation v3** study has **no published results yet**. Full results, including unfavorable cases, will be reported.
 
-[Full experiment history →](./experiments/EXPERIMENT_HISTORY.md) · [v3 protocol →](./experiments/V3_PROTOCOL.md)
+[Experiment history →](./experiments/EXPERIMENT_HISTORY.md) · [Frozen v3 protocol →](./experiments/V3_PROTOCOL.md)
 
-## Make your agent a better bettor
+## Share the idea
 
-Install BetFirst, bring one real debugging task, and see whether a small bet can buy a decisive answer. **Win big when the evidence is there. Lose small when it isn't.**
+[**X launch visuals →**](./docs/X_MEDIA_KIT.md) · [Decision examples](./references/examples.md) · [Evaluation method](./evals/README.md) · [Skill source](./SKILL.md) · [Changelog](./CHANGELOG.md)
 
-[Decision examples](./references/examples.md) · [Evaluation protocol](./evals/README.md) · [Source Skill](./SKILL.md) · [Changelog](./CHANGELOG.md)
-
-**Make Cheap Bets. Win Big. Lose Small.**
+**Make Cheap Bets. Win Big. Lose Small.** Spend less finding out *if* something works, without lowering the bar for making it work.
 
 MIT License.

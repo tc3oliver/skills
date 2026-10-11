@@ -1,6 +1,10 @@
-# Why BetFirst works as a decision policy
+# Why bet before the feasibility deep dive?
 
-BetFirst is about the **value of information**, not betting on correctness. An agent should run a tiny, falsifiable probe when the probe costs little, can be safely stopped, and could avoid a much larger investigation. Otherwise it should investigate normally.
+BetFirst is about the **value of information**, not a bet on software quality. Sometimes a coding agent spends a long time reading documentation, exploring a codebase and building a full proof of concept before checking a single make-or-break assumption. **If a tiny, safe experiment can answer that question first, the rest of the preliminary feasibility work may no longer be necessary.**
+
+The micro-experiment can itself be a *small PoC*. BetFirst is not "never research" or "never make a PoC"; it's a decision policy for **whether a low-risk direct test is a better first investment**. If no such test exists, investigate normally. Finishing the actual implementation and acceptance tests is non-negotiable.
+
+A WIN means a probe produces decisive, usable evidence that avoids preparation no longer needed. A LOSE means its hypothesis failed or the result was inconclusive and the Agent stopped within the prior loss budget. Even a decisive refutation can be useful evidence; it never justifies unbounded retrying.
 
 ## The tradeoff
 
