@@ -42,6 +42,18 @@ npx skills add tc3oliver/skills --skill betfirst
 
 The bet is **never** a substitute for implementation or final verification.
 
+
+### Why make a bet at all?
+
+There's a simple rule behind it: **only bet when the expected time saved outweighs the time you might waste.**
+
+$$
+pS > (1-p)L + H
+$$
+
+Here, \(p\) is an *observed* success rate for comparable tasks, \(S\) is the work a successful probe avoids, \(L\) is the cost of a failed probe, and \(H\) is the overhead of making the bet. No reliable estimate? Don't force one. [The reasoning behind BetFirst →](./WHY_BETFIRST.md)
+
+
 ### The subtitle-path example
 
 Need to know whether a subtitle filter accepts an unusual file path? Before constructing a full rendering pipeline, try one synthetic path with one minimal filter call. If it works, proceed with the real change. If it fails, keep the error and investigate the right fix.
