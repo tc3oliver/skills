@@ -96,7 +96,8 @@ class RunnerTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             cmd = command("opencode", "opencode-go/muse-spark-1.3-contributor",
                           "repair", "task", "betfirst")
-            self.assertEqual(cmd[:4], ["opencode", "run", "--agent", "build"])
+            self.assertEqual(cmd[:5], ["opencode", "run", "--standalone", "--agent", "build"])
+            self.assertNotIn("--dir", cmd)
             self.assertIn("--format", cmd)
             self.assertNotIn("--auto", cmd)
             env = opencode_environment(Path(d) / "config", "diagnostic")
