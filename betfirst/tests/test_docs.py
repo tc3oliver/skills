@@ -173,7 +173,7 @@ class ReadmeAndAssetTests(unittest.TestCase):
         for asset in ("x-cover.svg", "x-explainer.svg"):
             self.assertTrue((ASSETS / asset).is_file())
         root = (ROOT.parent / "README.md").read_text(encoding="utf-8")
-        self.assertIn("full PoC", root)
+        self.assertIn("complete PoC", root)
         self.assertIn("Make Cheap Bets. Win Big. Lose Small.", root)
 
     def test_x_cards_are_full_size_and_accurately_labeled(self):
