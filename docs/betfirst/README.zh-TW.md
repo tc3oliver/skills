@@ -81,7 +81,7 @@ normally. Preserve existing work and complete final verification.
 
 若涉及正式環境寫入、憑證、破壞他人修改或無法停止的實驗，就**不要賭**。需求已經滿足則 **ABSTAIN**，不做無謂修改。
 
-[決策流程 →](../../media/betfirst/assets/decision-flow.svg) · [背後的方法論 →](./docs/WHY_BETFIRST.md)
+[決策流程 →](../../media/betfirst/assets/decision-flow.svg) · [背後的方法論 →](./WHY_BETFIRST.md)
 
 ## 放進現有的 Coding Agent 就能用
 

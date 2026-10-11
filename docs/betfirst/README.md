@@ -79,7 +79,7 @@ LOSE       Stop the probe, keep the error as evidence, investigate
 
 If the experiment could write production data, expose secrets, disturb someone else's changes, or cannot be safely stopped, **go NORMAL**. If nothing needs changing, **ABSTAIN**.
 
-[Decision flow →](../../media/betfirst/assets/decision-flow.svg) · [Why a small bet can pay off →](./docs/WHY_BETFIRST.md)
+[Decision flow →](../../media/betfirst/assets/decision-flow.svg) · [Why a small bet can pay off →](./WHY_BETFIRST.md)
 
 ## Works with your existing agent
 
