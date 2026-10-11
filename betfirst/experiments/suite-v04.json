@@ -1,0 +1,98 @@
+{
+  "schema": 3,
+  "description": "Frozen prospective Muse v0.4 held-out set: six newly authored public synthetic tasks (direct=2, diagnostic=2, negative=2). No prior model sessions on these tasks before freeze. Compare Efficiency / BetFirst v0.3 / v0.4 in randomized task-matched three-arm groups. Independent Oracle withheld from agent workspace. Do not modify after first live run.",
+  "tasks": [
+    {
+      "id": "csv-quoted-comma",
+      "difficulty": "direct",
+      "fixture": "fixtures/v04/csv-quoted-comma",
+      "prompt": "CSV records with a quoted comma are being split into extra fields. Repair parse_row to follow standard CSV quoting and escaped-quote rules while preserving simple records and empty final columns. Do not broaden scope beyond the parser.",
+      "oracle": "oracles/v04/csv-quoted-comma.py",
+      "check": [
+        "python3",
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "tests"
+      ]
+    },
+    {
+      "id": "path-segment-prefix",
+      "difficulty": "direct",
+      "fixture": "fixtures/v04/path-segment-prefix",
+      "prompt": "The URL route prefix guard considers /apix a child of /api. Correct its segment-boundary semantics: an exact prefix or slash-separated descendant is allowed, root matches descendants, and a prefix may have a trailing slash. Preserve the is_under API.",
+      "oracle": "oracles/v04/path-segment-prefix.py",
+      "check": [
+        "python3",
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "tests"
+      ]
+    },
+    {
+      "id": "packet-framing",
+      "difficulty": "diagnostic",
+      "fixture": "fixtures/v04/packet-framing",
+      "prompt": "A packet reader leaves a valid short frame in its remainder buffer. Investigate incident.json and the local wire writer, use the smallest decisive observation before any broad rewrite if worthwhile, and fix decode_chunks. Preserve fragmented arrivals, multiple frames, zero-length payloads and incomplete trailing frames.",
+      "oracle": "oracles/v04/packet-framing.py",
+      "check": [
+        "python3",
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "tests"
+      ]
+    },
+    {
+      "id": "namespaced-cache",
+      "difficulty": "diagnostic",
+      "fixture": "fixtures/v04/namespaced-cache",
+      "prompt": "Incident: a value loaded for tenant east is returned for tenant west when both use the same item ID. Inspect the incident and caching logic, then repair tenant isolation without disabling per-tenant memoization. Namespace casing and item IDs are significant.",
+      "oracle": "oracles/v04/namespaced-cache.py",
+      "check": [
+        "python3",
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "tests"
+      ]
+    },
+    {
+      "id": "interval-touch-ok",
+      "difficulty": "negative",
+      "fixture": "fixtures/v04/interval-touch-ok",
+      "prompt": "Bug report claims a half-open interval implementation treats two intervals touching at their shared endpoint as overlapping. Inspect code and verify whether this is actually true. If requirements already hold, leave the entire repository unchanged.",
+      "oracle": "oracles/v04/interval-touch-ok.py",
+      "no_change": true,
+      "check": [
+        "python3",
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "tests"
+      ]
+    },
+    {
+      "id": "retry-exhaustion-ok",
+      "difficulty": "negative",
+      "fixture": "fixtures/v04/retry-exhaustion-ok",
+      "prompt": "Bug report claims retry_once executes a failing operation three times and retries non-transient ValueError. Inspect and reproduce before editing. If the implementation already retries only TimeoutError at most once, leave the entire repository unchanged.",
+      "oracle": "oracles/v04/retry-exhaustion-ok.py",
+      "no_change": true,
+      "check": [
+        "python3",
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "tests"
+      ]
+    }
+  ]
+}
