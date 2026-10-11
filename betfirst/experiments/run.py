@@ -7,6 +7,7 @@ installed authenticated CLI and explicit --execute (possible API charges).
 from __future__ import annotations
 import argparse
 import csv
+import datetime
 import hashlib
 import json
 import os
@@ -248,7 +249,9 @@ def execute(suite: Path, output: Path, driver: str, model: str | None,
             tool_profile: str = "restricted",
             acknowledge_isolation: bool = False, max_turns: int = 30,
             resume: bool = False, stop_after: int | None = None,
-            selected_arms: list[str] | None = None) -> list:
+            selected_arms: list[str] | None = None,
+            paired: bool = False, time_budget_seconds: int | None = None,
+            verification_timeout: int | None = None) -> list:
     if driver != "mock" and not execute_real:
         raise ValueError("real CLI execution requires --execute and may incur API cost")
     if driver != "mock" and not model:
@@ -257,6 +260,10 @@ def execute(suite: Path, output: Path, driver: str, model: str | None,
         raise ValueError("stop-after must be positive")
     if max_turns < 1:
         raise ValueError("max-turns must be positive")
+    if time_budget_seconds is not None and time_budget_seconds < 1:
+        raise ValueError("time budget must be positive")
+    if verification_timeout is not None and verification_timeout < 1:
+        raise ValueError("verification timeout must be positive")
     if tool_profile not in TOOL_PROFILES:
         raise ValueError("unknown tool profile")
     if driver not in ("claude", "opencode") and tool_profile != "restricted":
@@ -275,6 +282,10 @@ def execute(suite: Path, output: Path, driver: str, model: str | None,
     arms = tuple(selected_arms) if selected_arms is not None else ARMS
     if not arms or len(arms) != len(set(arms)) or any(a not in ARMS for a in arms):
         raise ValueError("select distinct known --arm values")
+    if paired and len(arms) != 2:
+        raise ValueError("--paired requires exactly two --arm selections")
+    if time_budget_seconds is not None and not paired:
+        raise ValueError("--time-budget-seconds requires --paired, to protect comparison pairs")
     tasks = load_suite(suite)
     if selected_tasks and limit is not None:
         raise ValueError("--task and --limit cannot be used together")
@@ -288,14 +299,29 @@ def execute(suite: Path, output: Path, driver: str, model: str | None,
         tasks = tasks[:limit]
     skill = (ROOT / "betfirst" / "SKILL.md").read_text(encoding="utf-8")
     output.mkdir(parents=True, exist_ok=True)
-    plan = [(task, rep, arm) for task in tasks
-            for rep in range(1, replicates + 1) for arm in arms]
-    random.Random(seed).shuffle(plan)
+    if paired:
+        rng = random.Random(seed)
+        plan = []
+        # Complete paired comparisons before moving on; rotate every task in
+        # each replicate before starting another replicate.
+        for rep in range(1, replicates + 1):
+            round_tasks = list(tasks)
+            rng.shuffle(round_tasks)
+            for task in round_tasks:
+                pair_arms = list(arms)
+                rng.shuffle(pair_arms)
+                plan.extend((task, rep, arm) for arm in pair_arms)
+    else:
+        plan = [(task, rep, arm) for task in tasks
+                for rep in range(1, replicates + 1) for arm in arms]
+        random.Random(seed).shuffle(plan)
     manifest = {
         "schema": 3, "driver": driver, "model": model, "seed": seed,
         "selected_task_ids": [task["id"] for task in tasks],
         "task_selection": "explicit" if selected_tasks else ("first_N" if limit else "full_suite"),
         "replicates": replicates, "runs": len(plan), "selected_arms": list(arms),
+        "paired": paired, "time_budget_seconds": time_budget_seconds,
+        "verification_timeout": verification_timeout,
         "synthetic": driver == "mock", "timeout": timeout,
         "claude_launcher": claude_launcher if driver == "claude" else None,
         "claude_tool_profile": tool_profile if driver == "claude" else None,
@@ -313,6 +339,25 @@ def execute(suite: Path, output: Path, driver: str, model: str | None,
     }
     csv_name = "synthetic-smoke.csv" if driver == "mock" else "measured-runs.csv"
     existing = {}
+    # Durable start ensures --resume does not silently reset the two-hour clock.
+    budget_path = output / "budget-start.json"
+    budget_start = None
+    if time_budget_seconds is not None:
+        if resume:
+            if not budget_path.is_file():
+                raise ValueError("budgeted --resume requires budget-start.json")
+            budget_state = json.loads(budget_path.read_text(encoding="utf-8"))
+            if budget_state.get("seconds") != time_budget_seconds:
+                raise ValueError("time budget mismatch on resume")
+            budget_start = float(budget_state["start_epoch"])
+        else:
+            budget_start = time.time()
+            budget_path.write_text(json.dumps({
+                "start_epoch": budget_start,
+                "started_utc": datetime.datetime.fromtimestamp(
+                    budget_start, datetime.timezone.utc).isoformat(),
+                "seconds": time_budget_seconds,
+            }, indent=2) + "\n", encoding="utf-8")
     if resume:
         prior = json.loads((output / "manifest.json").read_text(encoding="utf-8"))
         if prior != manifest:
@@ -357,7 +402,24 @@ def execute(suite: Path, output: Path, driver: str, model: str | None,
 
     results = []
     done = 0
-    for task, rep, arm in plan:
+    deadline = (budget_start + time_budget_seconds
+                if budget_start is not None else None)
+    # Two arms, each with one Agent budget and two independent check budgets.
+    # Leave a small margin for fixture cloning and atomic checkpoints.
+    check_cap = verification_timeout if verification_timeout is not None else timeout
+    pair_reserve = 2 * (timeout + 2 * check_cap) + 15
+    stop_reason = "planned_sessions_complete"
+    for index, (task, rep, arm) in enumerate(plan):
+        # Check only at pair boundaries so budget never deliberately schedules
+        # an unpaired arm. A process failure is still possible, hence keep
+        # all finished sessions as immutable evidence.
+        if deadline is not None and index % 2 == 0:
+            remaining = deadline - time.time()
+            if remaining < pair_reserve:
+                stop_reason = "insufficient_time_for_complete_pair"
+                print(f"Budget stop: {remaining:.0f}s left, "
+                      f"need {pair_reserve}s for a bounded pair", flush=True)
+                break
         rid = f"{task['id']}-r{rep}-{arm}"
         run_dir = output / rid
         if rid in existing:
@@ -388,7 +450,7 @@ def execute(suite: Path, output: Path, driver: str, model: str | None,
         except FileNotFoundError as exc:
             raise RuntimeError("Missing installed agent CLI: " + str(exc.filename)) from exc
         test_exit, test_timed_out, check_time = run_cmd(
-            task["check"], work, run_dir / "acceptance.stdout", run_dir / "acceptance.stderr", timeout)
+            task["check"], work, run_dir / "acceptance.stdout", run_dir / "acceptance.stderr", check_cap)
         # Independent oracle: never copied into the agent's work directory.
         # Running it after the visible suite prevents an agent from claiming
         # correctness solely by satisfying the tests it could inspect.
@@ -397,7 +459,7 @@ def execute(suite: Path, output: Path, driver: str, model: str | None,
             oracle_path = (suite.parent / task["oracle"]).resolve()
             oracle_exit, oracle_timed_out, oracle_time = run_cmd(
                 [sys.executable, str(oracle_path)], work,
-                run_dir / "oracle.stdout", run_dir / "oracle.stderr", timeout)
+                run_dir / "oracle.stdout", run_dir / "oracle.stderr", check_cap)
         changed_tests = tests != (hashes(work / "tests") if (work / "tests").is_dir() else {})
         integrity = inspect_tests(suite.parent / task["fixture"], work)
         changed = original != hashes(work)
@@ -452,7 +514,31 @@ def execute(suite: Path, output: Path, driver: str, model: str | None,
         done += 1
         print(f"{rid}: {'PASS' if passed else 'FAIL'}", flush=True)
         if stop_after is not None and done >= stop_after:
+            stop_reason = "stop_after"
             break
+    if deadline is not None:
+        complete = {
+            (r["task_id"], r["replicate"])
+            for r in results
+            if sum(1 for row in results
+                   if row["task_id"] == r["task_id"]
+                   and row["replicate"] == r["replicate"]) == len(arms)
+        }
+        status = {
+            "reason": stop_reason,
+            "budget_seconds": time_budget_seconds,
+            "elapsed_seconds": round(time.time() - budget_start, 3),
+            "completed_sessions": len(results),
+            "complete_pairs": len(complete),
+            "planned_sessions": len(plan),
+            "last_updated_utc": datetime.datetime.now(
+                datetime.timezone.utc).isoformat(),
+        }
+        tmp = output / "budget-status.json.tmp"
+        tmp.write_text(json.dumps(status, indent=2) + "\n", encoding="utf-8")
+        tmp.replace(output / "budget-status.json")
+        print(f"Budget status: {status['complete_pairs']} complete pairs, "
+              f"{status['completed_sessions']} sessions; {stop_reason}", flush=True)
     return results
 
 
@@ -470,6 +556,12 @@ def main() -> None:
                         help="Explicitly acknowledge the diagnostic profile permits arbitrary Python execution and requires an OS-isolated account or VM")
     parser.add_argument("--max-turns", type=int, default=30)
     parser.add_argument("--replicates", type=int, default=1)
+    parser.add_argument("--paired", action="store_true",
+                        help="Run matching pairs adjacent with randomized order")
+    parser.add_argument("--time-budget-seconds", type=int,
+                        help="Durable wall-time cap; stop before a pair if time cannot cover both arms")
+    parser.add_argument("--verification-timeout", type=int,
+                        help="Separate per-command timeout for acceptance and Oracle")
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--timeout", type=int, default=180)
     parser.add_argument("--limit", type=int)
@@ -487,7 +579,7 @@ def main() -> None:
             args.replicates, args.seed, args.timeout, args.execute, args.limit,
             args.claude_launcher, args.selected_tasks, args.claude_tool_profile,
             args.acknowledge_isolation, args.max_turns, args.resume, args.stop_after,
-        args.arm)
+        args.arm, args.paired, args.time_budget_seconds, args.verification_timeout)
 
 
 if __name__ == "__main__":
