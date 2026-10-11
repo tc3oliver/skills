@@ -157,6 +157,12 @@ class ReadmeAndAssetTests(unittest.TestCase):
         self.assertIn("exploratory observations", english)
         self.assertIn("探索性觀察", chinese)
         self.assertIn("results are pending", english)
+        self.assertIn("Make Cheap Bets. Win Big. Lose Small.", english)
+        self.assertIn("Know when to fold.", english)
+        self.assertIn("Never on correctness.", english)
+        self.assertIn("Make Cheap Bets. Win Big. Lose Small.", chinese)
+        self.assertIn("賭輸", chinese)
+        self.assertIn("賭的是假設，絕不賭程式正確性", chinese)
         self.assertIn("結果待公布", chinese)
 
     def test_local_readme_asset_references_resolve(self):
