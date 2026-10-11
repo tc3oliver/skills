@@ -98,7 +98,8 @@ def load_suite(path: Path) -> list:
     return tasks
 
 
-def prompt_for(task: dict, arm: str, skill_text: str, tool_profile: str = "restricted") -> str:
+def prompt_for(task: dict, arm: str, skill_text: str, tool_profile: str = "restricted",
+               scratch: Path | None = None) -> str:
     prompt = task["prompt"].strip()
     if arm != "baseline":
         prompt += "\n\nExecution guidance:\n" + EFFICIENCY
@@ -110,6 +111,15 @@ def prompt_for(task: dict, arm: str, skill_text: str, tool_profile: str = "restr
                    "python3 -c or python3 script.py for focused probes. "
                    "Create source files with Write/Edit, not shell heredocs, "
                    "pipelines, mkdir or rm. Keep probes inside the task workspace.")
+    if scratch is not None:
+        prompt += (
+            "\\n\\nWorkspace boundary: use the current fixture working directory (PWD) "
+            "for source and tests; NEVER inspect the parent benchmark checkout "
+            "or its hidden oracles. Prefer inline python3 -c probes. "
+            "If a temporary probe file is necessary, use only the dedicated "
+            "per-session scratch directory " + str(scratch) +
+            ". Do not use system /tmp, /private/var or other external paths."
+        )
     return prompt
 
 
@@ -178,7 +188,8 @@ def opencode_configuration(tool_profile: str) -> dict:
 
 
 def opencode_environment(config_dir: Path, tool_profile: str = "restricted",
-                         workspace: Path | None = None) -> dict[str, str]:
+                         workspace: Path | None = None,
+                         scratch: Path | None = None) -> dict[str, str]:
     """Benchmark policy override, not an OS sandbox; isolate at the host layer."""
     config = opencode_configuration(tool_profile)
     config_dir.mkdir(exist_ok=False)
@@ -188,6 +199,10 @@ def opencode_environment(config_dir: Path, tool_profile: str = "restricted",
     if workspace is not None:
         env["PWD"] = str(workspace.resolve())
         env.pop("OLDPWD", None)
+    if scratch is not None:
+        scratch.mkdir(mode=0o700, parents=False, exist_ok=False)
+        for key in ("TMPDIR", "TMP", "TEMP"):
+            env[key] = str(scratch.resolve())
     env.update({
         "OPENCODE_CONFIG_DIR": str(config_dir),
         "OPENCODE_CONFIG_CONTENT": json.dumps(config),
@@ -345,6 +360,9 @@ def execute(suite: Path, output: Path, driver: str, model: str | None,
         "opencode_config_sha256": (hashlib.sha256(json.dumps(opencode_configuration(tool_profile), sort_keys=True).encode()).hexdigest()
                                    if driver == "opencode" else None),
         "opencode_tool_profile": tool_profile if driver == "opencode" else None,
+        # Protocol revision: isolated scratch is deliberately incompatible with
+        # resuming studies created before this mitigation.
+        "opencode_scratch_protocol": "session-scratch-v1" if driver == "opencode" else None,
         "suite_sha256": hashlib.sha256(suite.read_bytes()).hexdigest(),
         "fixture_hashes": {t["id"]: hashes(suite.parent / t["fixture"]) for t in tasks},
         "skill_sha256": hashlib.sha256(skill.encode("utf-8")).hexdigest(),
@@ -453,7 +471,8 @@ def execute(suite: Path, output: Path, driver: str, model: str | None,
         shutil.copytree(suite.parent / task["fixture"], work, symlinks=False)
         original = hashes(work)
         tests = hashes(work / "tests") if (work / "tests").is_dir() else {}
-        prompt = prompt_for(task, arm, skill, tool_profile)
+        scratch = (run_dir / "opencode-tmp") if driver == "opencode" else None
+        prompt = prompt_for(task, arm, skill, tool_profile, scratch)
         (run_dir / "prompt.txt").write_text(prompt, encoding="utf-8")
         cmd = command(driver, model, prompt, task["id"], arm, claude_launcher,
                       tool_profile, max_turns)
@@ -461,7 +480,7 @@ def execute(suite: Path, output: Path, driver: str, model: str | None,
         try:
             if driver == "opencode":
                 # run_opencode_cmd already sets subprocess.cwd=work.
-                env = opencode_environment(run_dir / "opencode-config", tool_profile, work)
+                env = opencode_environment(run_dir / "opencode-config", tool_profile, work, scratch)
                 agent_exit, timed_out, agent_time, turn_limited = run_opencode_cmd(
                     cmd, work, run_dir / "agent.stdout", run_dir / "agent.stderr",
                     timeout, max_turns, env)
@@ -472,7 +491,7 @@ def execute(suite: Path, output: Path, driver: str, model: str | None,
             raise RuntimeError("Missing installed agent CLI: " + str(exc.filename)) from exc
         if driver == "opencode":
             recorded = (run_dir / "agent.stdout").read_text(encoding="utf-8")
-            violations = unexpected_tool_paths(recorded, work, ROOT)
+            violations = unexpected_tool_paths(recorded, work, ROOT, scratch)
             dataset_changed = snapshot_dataset(suite) != dataset_before
             if violations or dataset_changed:
                 (run_dir / "benchmark-integrity-error.json").write_text(
