@@ -39,7 +39,7 @@ python3 betfirst/experiments/run.py \
   --task search-highlight --task partition-watermarks --task ttl-boundary-ok \
   --arm efficiency --arm betfirst \
   --driver opencode --model opencode-go/muse-spark-1.3-contributor \
-  --claude-tool-profile diagnostic --acknowledge-isolation \
+  --tool-profile diagnostic --acknowledge-isolation \
   --execute --seed 20261011 --replicates 1 \
   --max-turns 30 --timeout 600 --output "$RUN_DIR"
 
