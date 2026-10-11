@@ -15,13 +15,20 @@ Draft templates are **not an authorization to fabricate future results**. Fill v
 
 ## Safe pre-v3 general-purpose X post
 
-I built BetFirst: a small, open-source decision-policy Skill for coding agents.
+A coding agent may spend ages reading docs, studying feasibility, and building a full PoC before trying the one thing that could prove whether an idea works.
 
-Before an expensive debugging rabbit hole: can a tiny, reversible, falsifiable probe settle the uncertainty?
+What if it made one tiny, reversible bet first?
 
-If yes, bet small and observe. If not, work normally. If the probe fails, stop.
+**WIN:** evidence makes part of that up-front research unnecessary.
+**LOSE:** stop early, keep the observation, investigate normally.
+**NO SAFE BET:** skip the bet, not the necessary engineering.
+
+**BetFirst — Make Cheap Bets. Win Big. Lose Small.**
+Never gamble with final correctness.
 
 Skill + reproducible evaluation: https://github.com/tc3oliver/skills/tree/main/betfirst
+
+For ready-to-export illustrations, alternative X copy and usage/alt-text guidelines see [the X media kit](../docs/X_MEDIA_KIT.md). The illustration is not a model trace or measured timing comparison.
 
 ## Positive gate met (AFTER final v3 report only)
 
@@ -47,7 +54,7 @@ Skill + study: [LINK]
 
 ## Technical thread and media
 
-1. Motivation and strategy: SPOT > CAP > BET > WIN or CUT LOSS, with legitimate NORMAL/ABSTAIN.
+1. Problem and strategy: expensive upfront documentation/research/full PoC before trying the key feasibility assumption; SPOT > CAP > BET > WIN or CUT LOSS, with legitimate NORMAL/ABSTAIN.
 2. Task matrix, same baseline/Efficiency/BetFirst agent and permissions.
 3. Full quality table and by-category differences, not an unqualified speedup maximum.
 4. 12-task per-task median comparison; confidence interval and failure cases.

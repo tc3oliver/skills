@@ -8,8 +8,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 ASSETS = ROOT / "assets"
-EXPECTED_SVGS = ("hero.svg", "decision-flow.svg", "before-after.svg")
-EMBEDDED = ("hero.svg", "probe-loop.gif")
+EXPECTED_SVGS = ("hero.svg", "decision-flow.svg", "before-after.svg", "x-cover.svg", "x-explainer.svg")
+EMBEDDED = ("hero.svg", "before-after.svg")
 SVG_NS = "{http://www.w3.org/2000/svg}"
 
 
@@ -154,16 +154,40 @@ class ReadmeAndAssetTests(unittest.TestCase):
                 self.assertIn("12", content)
                 self.assertNotIn("v3 has not run yet", content)
                 self.assertNotIn("EXPERIMENTAL v0.1", content)
-        self.assertIn("exploratory observations", english)
-        self.assertIn("探索性觀察", chinese)
-        self.assertIn("results are pending", english)
+        self.assertIn("exploratory study", english)
+        self.assertIn("探索性測試", chinese)
+        self.assertIn("no published results yet", english)
+        self.assertIn("尚未公布結果", chinese)
         self.assertIn("Make Cheap Bets. Win Big. Lose Small.", english)
-        self.assertIn("Know when to fold.", english)
-        self.assertIn("Never on correctness.", english)
         self.assertIn("Make Cheap Bets. Win Big. Lose Small.", chinese)
-        self.assertIn("賭輸", chinese)
-        self.assertIn("賭的是假設，絕不賭程式正確性", chinese)
-        self.assertIn("結果待公布", chinese)
+        self.assertIn("full PoC", english)
+        self.assertIn("完整 PoC", chinese)
+        self.assertIn("skip only", english)
+        self.assertIn("不再必要", chinese)
+        self.assertIn("Never gamble with correctness", english)
+        self.assertIn("不是程式正確性", chinese)
+        self.assertIn("docs/X_MEDIA_KIT.md", english)
+        self.assertIn("docs/X_MEDIA_KIT.md", chinese)
+        self.assertNotIn("Your coding agent is already making bets", english)
+        self.assertNotIn("你的 Coding Agent 其實一直都在下注", chinese)
+        for asset in ("x-cover.svg", "x-explainer.svg"):
+            self.assertTrue((ASSETS / asset).is_file())
+        root = (ROOT.parent / "README.md").read_text(encoding="utf-8")
+        self.assertIn("complete PoC", root)
+        self.assertIn("Make Cheap Bets. Win Big. Lose Small.", root)
+
+    def test_x_cards_are_full_size_and_accurately_labeled(self):
+        for name in ("x-cover.svg", "x-explainer.svg"):
+            with self.subTest(name=name):
+                root = ET.parse(ASSETS / name).getroot()
+                self.assertEqual(root.attrib["viewBox"], "0 0 1600 900")
+                self.assertEqual(root.attrib["width"], "1600")
+                self.assertEqual(root.attrib["height"], "900")
+        media_kit = (ROOT / "docs" / "X_MEDIA_KIT.md").read_text(encoding="utf-8")
+        self.assertIn("not measured", media_kit.lower())
+        self.assertIn("cairosvg", media_kit)
+        for asset in ("x-cover.svg", "x-explainer.svg"):
+            self.assertIn(asset, media_kit)
 
     def test_local_readme_asset_references_resolve(self):
         for name in ("README.md", "README.zh-TW.md"):

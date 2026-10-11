@@ -8,7 +8,7 @@ Small, portable Skills for Claude Code, Pi, Codex and OpenCode. Work with eviden
   <a href="./betfirst/"><img src="./betfirst/assets/hero.svg" alt="BetFirst — Make Cheap Bets. Win Big. Lose Small." width="860"></a>
 </p>
 
-**Make Cheap Bets. Win Big. Lose Small.** Your coding agent is already making bets—on root causes, files, and fixes. **BetFirst teaches it when to bet, when to fold, and when not to bet at all.** Tiny falsifiable probes. Bounded downside. Verified code—without another runtime, team, or mandatory logging.
+**Make Cheap Bets. Win Big. Lose Small.** Before an agent spends hours reading docs, researching feasibility or building a complete PoC, **what if one tiny, safe experiment could answer the make-or-break question?** Win and skip now-unnecessary preparation; lose and stop early. Same final correctness checks.
 
 ```bash
 npx skills add tc3oliver/skills --skill betfirst -g -a claude-code -y
@@ -20,7 +20,7 @@ npx skills add tc3oliver/skills --skill betfirst -g -a claude-code -y
 
 | Skill | What it helps with |
 | --- | --- |
-| [**BetFirst**](./betfirst/) | **Make Cheap Bets. Win Big. Lose Small.** Bet on hypotheses, never on correctness. |
+| [**BetFirst**](./betfirst/) | **Make Cheap Bets. Win Big. Lose Small.** Tiny feasibility probes before expensive research and PoCs. |
 | [**Backlog**](./backlog/) | Persistent coding tasks, ready queue, and handoff evidence—without Backlog.md. [EN](./backlog/README.md) / [繁體中文](./backlog/README.zh-TW.md). |
 | [audit-agent-instructions](./audit-agent-instructions/) | Find duplication, instruction drift and excessive context. |
 | [diagnosing-bugs](./diagnosing-bugs/) | Reproducible debugging and focused regression tests. |
