@@ -1,0 +1,150 @@
+{
+  "schema": 3,
+  "description": "New frozen causal cohort of 12 synthetic tasks in 3 predeclared categories; oracles remain out of the agent workspace. No previous model runs on these tasks. Compare Efficiency / v0.4 / v0.4 No-BET.",
+  "tasks": [
+    {
+      "id": "win-byte-frame",
+      "difficulty": "bet-win",
+      "fixture": "fixtures/v05/win-byte-frame",
+      "prompt": "Frame reader mishandles non-ASCII payload lengths. Incident reports Unicode payloads only. Identify whether the length prefix counts bytes or characters, then repair encode_frame without rewriting the decoder.",
+      "oracle": "oracles/v05/win-byte-frame.py",
+      "check": [
+        "python3",
+        "-c",
+        "import runpy; runpy.run_path('tests/test_smoke.py', run_name='__main__')"
+      ]
+    },
+    {
+      "id": "win-tenant-key",
+      "difficulty": "bet-win",
+      "fixture": "fixtures/v05/win-tenant-key",
+      "prompt": "An incident shows shared item IDs from different customers colliding. Determine whether keying or serialization is responsible using one decisive local probe, then repair get_value while retaining caching.",
+      "oracle": "oracles/v05/win-tenant-key.py",
+      "check": [
+        "python3",
+        "-c",
+        "import runpy; runpy.run_path('tests/test_smoke.py', run_name='__main__')"
+      ]
+    },
+    {
+      "id": "win-escape-pipe",
+      "difficulty": "bet-win",
+      "fixture": "fixtures/v05/win-escape-pipe",
+      "prompt": "A pipe-separated line protocol corrupts literal escaped pipe symbols. Determine whether input escaping or split logic is incorrect with a minimal observation, then repair split_fields.",
+      "oracle": "oracles/v05/win-escape-pipe.py",
+      "check": [
+        "python3",
+        "-c",
+        "import runpy; runpy.run_path('tests/test_smoke.py', run_name='__main__')"
+      ]
+    },
+    {
+      "id": "win-null-flag",
+      "difficulty": "bet-win",
+      "fixture": "fixtures/v05/win-null-flag",
+      "prompt": "A log indicates explicit false gets replaced with default true. Inspect one boundary example to distinguish missing value from false before repairing effective_flag.",
+      "oracle": "oracles/v05/win-null-flag.py",
+      "check": [
+        "python3",
+        "-c",
+        "import runpy; runpy.run_path('tests/test_smoke.py', run_name='__main__')"
+      ]
+    },
+    {
+      "id": "loss-casefold",
+      "difficulty": "bet-loss",
+      "fixture": "fixtures/v05/loss-casefold",
+      "prompt": "Reporter suspects Unicode normalization is corrupting usernames, but an uppercase-only alias is rejected. Confirm actual contract locally; fix same_user to use case-insensitive comparison without changing punctuation or stripping whitespace.",
+      "oracle": "oracles/v05/loss-casefold.py",
+      "check": [
+        "python3",
+        "-c",
+        "import runpy; runpy.run_path('tests/test_smoke.py', run_name='__main__')"
+      ]
+    },
+    {
+      "id": "loss-trailing-slash",
+      "difficulty": "bet-loss",
+      "fixture": "fixtures/v05/loss-trailing-slash",
+      "prompt": "Report blames URL decoding, but requests with exactly one trailing slash fail to match the route. Investigate and fix only trailing-slash normalization in route_equal.",
+      "oracle": "oracles/v05/loss-trailing-slash.py",
+      "check": [
+        "python3",
+        "-c",
+        "import runpy; runpy.run_path('tests/test_smoke.py', run_name='__main__')"
+      ]
+    },
+    {
+      "id": "loss-boolean-string",
+      "difficulty": "bet-loss",
+      "fixture": "fixtures/v05/loss-boolean-string",
+      "prompt": "A report suspects JSON parsing, but config already arrives as a Python string. Interpret explicit 'false' and 'true' correctly in to_bool; reject unrelated strings.",
+      "oracle": "oracles/v05/loss-boolean-string.py",
+      "check": [
+        "python3",
+        "-c",
+        "import runpy; runpy.run_path('tests/test_smoke.py', run_name='__main__')"
+      ]
+    },
+    {
+      "id": "loss-empty-batch",
+      "difficulty": "bet-loss",
+      "fixture": "fixtures/v05/loss-empty-batch",
+      "prompt": "A report blames concurrency for a negative item count. Investigate local count_pending behavior; empty entries should not count, including strings containing only whitespace.",
+      "oracle": "oracles/v05/loss-empty-batch.py",
+      "check": [
+        "python3",
+        "-c",
+        "import runpy; runpy.run_path('tests/test_smoke.py', run_name='__main__')"
+      ]
+    },
+    {
+      "id": "normal-inclusive-max",
+      "difficulty": "normal",
+      "fixture": "fixtures/v05/normal-inclusive-max",
+      "prompt": "Fix clamp's upper boundary: values equal to high must remain accepted, while values above high are clamped. Keep the API.",
+      "oracle": "oracles/v05/normal-inclusive-max.py",
+      "check": [
+        "python3",
+        "-c",
+        "import runpy; runpy.run_path('tests/test_smoke.py', run_name='__main__')"
+      ]
+    },
+    {
+      "id": "normal-dedupe-order",
+      "difficulty": "normal",
+      "fixture": "fixtures/v05/normal-dedupe-order",
+      "prompt": "Fix unique to remove duplicates while retaining first-occurrence order instead of sorting the values.",
+      "oracle": "oracles/v05/normal-dedupe-order.py",
+      "check": [
+        "python3",
+        "-c",
+        "import runpy; runpy.run_path('tests/test_smoke.py', run_name='__main__')"
+      ]
+    },
+    {
+      "id": "normal-empty-prefix",
+      "difficulty": "normal",
+      "fixture": "fixtures/v05/normal-empty-prefix",
+      "prompt": "Fix starts_with to accept an empty prefix (it matches any string). Preserve nonempty prefix semantics.",
+      "oracle": "oracles/v05/normal-empty-prefix.py",
+      "check": [
+        "python3",
+        "-c",
+        "import runpy; runpy.run_path('tests/test_smoke.py', run_name='__main__')"
+      ]
+    },
+    {
+      "id": "normal-zero-ttl",
+      "difficulty": "normal",
+      "fixture": "fixtures/v05/normal-zero-ttl",
+      "prompt": "Fix is_expired: expiration is inclusive, so now equal to expires_at counts as expired. Keep the function signature.",
+      "oracle": "oracles/v05/normal-zero-ttl.py",
+      "check": [
+        "python3",
+        "-c",
+        "import runpy; runpy.run_path('tests/test_smoke.py', run_name='__main__')"
+      ]
+    }
+  ]
+}
