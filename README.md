@@ -1,43 +1,53 @@
 # AI Coding Skills
 
-Portable skills for Claude Code, Pi, Codex and OpenCode. Small, composable tools: track work only when needed, explore cheaply when safe, and verify what actually happened.
+Small, portable Skills for Claude Code, Pi, Codex and OpenCode. Work with evidence, keep state only when needed, and avoid unnecessary agent overhead.
+
+## Featured: BetFirst
+
+<p align="center">
+  <a href="./betfirst/"><img src="./betfirst/assets/hero.svg" alt="BetFirst — make cheap bets, skip expensive guesses." width="860"></a>
+</p>
+
+**Before your agent explores another ten files, can one tiny, safe probe answer the question?** BetFirst brings cost-aware, reversible experiments to coding agents—without another runtime, team or mandatory logging.
+
+```bash
+npx skills add tc3oliver/skills --skill betfirst -g -a claude-code -y
+```
+
+[Explore BetFirst →](./betfirst/README.md) · [繁體中文 →](./betfirst/README.zh-TW.md) · [How it works →](./betfirst/docs/WHY_BETFIRST.md)
 
 ## Skills
 
-| Skill | Purpose |
+| Skill | What it helps with |
 | --- | --- |
-| [`backlog`](backlog/) | **Persistent coding tasks without Backlog.md.** Ready queue, dependencies, cross-session handoffs, completion evidence; no workflow framework. [EN](backlog/README.md) / [繁體中文](backlog/README.zh-TW.md). |
-| [`betfirst`](betfirst/) | **Make cheap bets. Win big. Lose small.** Bounded reversible probes. [EN](betfirst/README.md) / [繁體中文](betfirst/README.zh-TW.md). |
-| [`audit-agent-instructions`](audit-agent-instructions/) | Audit agent instruction files for duplication, drift and excessive context. |
-| [`diagnosing-bugs`](diagnosing-bugs/) | Evidence-based debugging and regression tests. |
-| [`writing-for-agents`](writing-for-agents/) | Write clear, concise, context-efficient agent instructions. |
-| [`skill-optimizer`](skill-optimizer/) | Improve Skill routing, context use and reliability. |
-| [`resolving-merge-conflicts`](resolving-merge-conflicts/) | Resolve Git conflicts without losing either side's intent. |
+| [**BetFirst**](./betfirst/) | **Stop guessing, start probing.** Bounded, reversible bets before expensive investigation. |
+| [**Backlog**](./backlog/) | Persistent coding tasks, ready queue, and handoff evidence—without Backlog.md. [EN](./backlog/README.md) / [繁體中文](./backlog/README.zh-TW.md). |
+| [audit-agent-instructions](./audit-agent-instructions/) | Find duplication, instruction drift and excessive context. |
+| [diagnosing-bugs](./diagnosing-bugs/) | Reproducible debugging and focused regression tests. |
+| [writing-for-agents](./writing-for-agents/) | Clearer, more efficient instructions for coding agents. |
+| [skill-optimizer](./skill-optimizer/) | Skill routing, prompt size and reliability. |
+| [resolving-merge-conflicts](./resolving-merge-conflicts/) | Resolve conflicting code without losing either side's intent. |
 
-## Installation
+## Install
 
-Agent Skills CLI:
-
+**Agent Skills CLI:**
 ```bash
 npx skills add tc3oliver/skills
 ```
 
-Claude Code plugin:
-
+**Claude Code plugin:**
 ```text
 /plugin marketplace add tc3oliver/skills
 /plugin install tc3oliver-skills
 ```
 
-Installed plugin Skills appear as `/tc3oliver-skills:backlog`, `/tc3oliver-skills:betfirst`, etc. Pi and other compatible agents load the portable `SKILL.md` directly.
+Plugin entries use `/tc3oliver-skills:betfirst`, `/tc3oliver-skills:backlog`, etc. Portable Skill installations expose each `SKILL.md` through the compatible agent's discovery system; avoid installing the same Skill twice.
 
-## Composing Skills
+## Build your own workflow
 
-Backlog (durable work), BetFirst (optional cheap probes), and [Claude Team Kit](https://github.com/tc3oliver/claude-team-kit) (explicit native teams) can run independently or together. No new router, installer or shared runtime is required. See the concise [composition contract](docs/COMPOSITION.md) for ownership, optional handoff, and stopping rules.
+**BetFirst** decides whether a small probe is worth the risk. **Backlog** owns persistent tasks and evidence. [Claude Team Kit](https://github.com/tc3oliver/claude-team-kit) manages explicit native Agent Teams. They work independently or together without a new orchestrator. [Composition guide →](./docs/COMPOSITION.md)
 
-## Backlog v2
-
-Backlog is a **small persistence layer**, not an execution orchestrator. The skill does not activate on ordinary coding work; it records and resumes tasks only when the user wants persistent work tracking. A standard-library Python CLI manages `.backlog/tasks/` and `.backlog/archive/{done,cancelled}/YYYY-MM/`. The ready queue reads only task metadata, and `show ID` retrieves one full task.
+Backlog is a lightweight persistence CLI, not a background orchestration service:
 
 ```text
 /backlog add "Build OAuth login"
@@ -46,25 +56,17 @@ Backlog is a **small persistence layer**, not an execution orchestrator. The ski
 /backlog status
 ```
 
-Invoke syntax is agent-specific. For direct CLI use and command flags see [Backlog README](backlog/README.md) and [CLI reference](backlog/references/cli.md).
+[Backlog CLI reference →](./backlog/references/cli.md) · [Legacy v1.6 archive →](https://github.com/tc3oliver/skills/tree/archive/backlog-workflow-v1.6.0/backlog-workflow)
 
-**Boundaries:** [BetFirst](betfirst/) is responsible for safe, low-cost probes. [Claude Team Kit](https://github.com/tc3oliver/claude-team-kit) owns Agent Teams, bounded workers, reviews and team-local tasks. Backlog does not spawn teams, replicate worker tasks, or override either Skill's verification requirements.
+## Evidence, not hype
 
-### Legacy backlog-workflow v1.6
+BetFirst's preliminary local study includes a **negative result on simple tasks** and an encouraging but **small two-task diagnostic result**. Neither establishes universal or causal speedups. The preregistered [Evaluation v3 study](./betfirst/experiments/V3_PROTOCOL.md) will publish full results, good or bad. [Experiment history →](./betfirst/experiments/EXPERIMENT_HISTORY.md)
 
-The old Backlog.md-dependent `backlog-workflow` was deliberately removed as a breaking change. No automatic migration is performed; existing project data remain untouched. Its source is preserved under Git branch [`archive/backlog-workflow-v1.6.0`](https://github.com/tc3oliver/skills/tree/archive/backlog-workflow-v1.6.0/backlog-workflow).
-
-## BetFirst experimental evidence
-
-The BetFirst v0.2 Skill has preliminary real local Qwen3.8-27B/oMLX observations, including **negative simple-task overhead** and **positive two-diagnosis-task replicated results**. These are not general or causal speedups; see [historical evidence](betfirst/experiments/EXPERIMENT_HISTORY.md).
-
-The [Evaluation v3 final-study protocol](betfirst/experiments/V3_PROTOCOL.md) preregisters **12 new tasks × 3 arms × 3 repetitions = 108 real model runs**. v3 has not been run at commit time; its release kit commits to publishing favorable or unfavorable outcomes without a further required v4.
-
-## Validation
+## Verify
 
 ```bash
 python3 -m unittest discover -s backlog/tests -v
 python3 -m unittest discover -s betfirst/tests -v
 ```
 
-MIT license; adaptations and upstream sources retain their original notices.
+MIT License. Existing upstream material and adapted sources retain their original notices.
