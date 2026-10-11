@@ -11,10 +11,10 @@ Small, portable Skills for Claude Code, Pi, Codex and OpenCode. Work with eviden
 **Bet small before you spend big.** One safe, tiny, falsifiable bet can save a costly deep dive—but only if the possible upside warrants it. Otherwise go NORMAL; if already correct, ABSTAIN. **Evidence:** across two local Muse studies (126 runs), v0.4 had lower mean wall time than the tested controls. In the 72-run ablation, paired time fell **17.9% vs Efficiency** and **18.0% vs No-BET**, comparing both-PASS pairs. [Read results and limitations →](./research/betfirst/experiments/V04_RELEASE_RESULTS.md)
 
 ```bash
-npx skills add tc3oliver/skills --skill betfirst -g -a claude-code -y
+npx skills add tc3oliver/skills --skill betfirst
 ```
 
-[Explore BetFirst →](./docs/betfirst/README.md) · [繁體中文 →](./docs/betfirst/README.zh-TW.md) · [How it works →](./docs/betfirst/WHY_BETFIRST.md)
+[Agent-guided install →](./docs/betfirst/agent-install.md) · [Explore BetFirst →](./docs/betfirst/README.md) · [繁體中文 →](./docs/betfirst/README.zh-TW.md) · [How it works →](./docs/betfirst/WHY_BETFIRST.md)
 
 ## Skills
 
@@ -30,7 +30,7 @@ npx skills add tc3oliver/skills --skill betfirst -g -a claude-code -y
 
 ## Install
 
-**Agent Skills CLI:**
+**Agent Skills CLI (choose the agent and installation scope interactively):**
 ```bash
 npx skills add tc3oliver/skills
 ```
