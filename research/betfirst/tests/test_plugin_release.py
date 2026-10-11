@@ -6,7 +6,7 @@ import sys
 import unittest
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[2]
+ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / 'scripts'))
 from validate_plugin import validate_plugin, validate_plugin_version  # noqa: E402
 
