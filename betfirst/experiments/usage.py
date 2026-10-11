@@ -40,6 +40,9 @@ def usage_from_output(data: str, driver: str) -> dict:
             cost = obj.get("total_cost_usd")
             if isinstance(cost, (int, float)) and not isinstance(cost, bool):
                 result["api_cost_usd"] = cost
+        elif driver == "opencode":
+            from opencode_adapter import metrics
+            result, _ = metrics(data)
         elif driver == "pi":
             events = [json.loads(line) for line in data.splitlines() if line.strip()]
             messages = [e["message"] for e in events if e.get("type") == "message_end"
