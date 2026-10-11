@@ -8,7 +8,7 @@ Small, portable Skills for Claude Code, Pi, Codex and OpenCode. Work with eviden
   <a href="./betfirst/"><img src="./betfirst/assets/hero.svg" alt="BetFirst — Make Cheap Bets. Win Big. Lose Small." width="860"></a>
 </p>
 
-**Make Cheap Bets. Win Big. Lose Small.** Before an agent spends hours reading docs, researching feasibility or building a complete PoC, **what if one tiny, safe experiment could answer the make-or-break question?** Win and skip now-unnecessary preparation; lose and stop early. Same final correctness checks.
+**Bet small before you spend big.** One safe, tiny, falsifiable bet can save a costly deep dive—but only if the possible upside warrants it. Otherwise go NORMAL; if already correct, ABSTAIN. **Evidence:** across two local Muse studies (126 runs), v0.4 had lower mean wall time than the tested controls. In the 72-run ablation, paired time fell **17.9% vs Efficiency** and **18.0% vs No-BET**, comparing both-PASS pairs. [Read results and limitations →](./betfirst/experiments/V04_RELEASE_RESULTS.md)
 
 ```bash
 npx skills add tc3oliver/skills --skill betfirst -g -a claude-code -y
@@ -58,9 +58,9 @@ Backlog is a lightweight persistence CLI, not a background orchestration service
 
 [Backlog CLI reference →](./backlog/references/cli.md) · [Legacy v1.6 archive →](https://github.com/tc3oliver/skills/tree/archive/backlog-workflow-v1.6.0/backlog-workflow)
 
-## Evidence, not hype
+## Evidence, including losing bets
 
-BetFirst's preliminary local study includes a **negative result on simple tasks** and an encouraging but **small two-task diagnostic result**. Neither establishes universal or causal speedups. The preregistered [Evaluation v3 study](./betfirst/experiments/V3_PROTOCOL.md) will publish full results, good or bad. [Experiment history →](./betfirst/experiments/EXPERIMENT_HISTORY.md)
+Earlier BetFirst revisions were **slower** on some simple tasks. v0.4 was changed to **NORMAL by default**. Published numbers are local synthetic-task observations, not a universal or causal guarantee. [Benchmark report →](./betfirst/experiments/V04_RELEASE_RESULTS.md) · [Experiment history →](./betfirst/experiments/EXPERIMENT_HISTORY.md)
 
 ## Verify
 
