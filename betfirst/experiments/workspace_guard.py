@@ -36,7 +36,7 @@ def assert_clean_checkout(suite: Path, root: Path) -> None:
         raise RuntimeError("OpenCode suite must live inside its checked-out repository") from exc
     paths = ["betfirst/experiments/fixtures", "betfirst/experiments/oracles", str(rel)]
     check = subprocess.run(
-        ["git", "-C", str(root), "status", "--porcelain", "--untracked-files=no",
+        ["git", "-C", str(root), "status", "--porcelain", "--untracked-files=all",
          "--", *paths],
         capture_output=True, text=True, check=False,
     )
