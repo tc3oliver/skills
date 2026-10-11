@@ -414,12 +414,17 @@ def execute(suite: Path, output: Path, driver: str, model: str | None,
         # an unpaired arm. A process failure is still possible, hence keep
         # all finished sessions as immutable evidence.
         if deadline is not None and index % 2 == 0:
-            remaining = deadline - time.time()
-            if remaining < pair_reserve:
-                stop_reason = "insufficient_time_for_complete_pair"
-                print(f"Budget stop: {remaining:.0f}s left, "
-                      f"need {pair_reserve}s for a bounded pair", flush=True)
-                break
+            pair_ids = [
+                f"{plan[j][0]['id']}-r{plan[j][1]}-{plan[j][2]}"
+                for j in range(index, min(index + 2, len(plan)))
+            ]
+            if not all(pair_id in existing for pair_id in pair_ids):
+                remaining = deadline - time.time()
+                if remaining < pair_reserve:
+                    stop_reason = "insufficient_time_for_complete_pair"
+                    print(f"Budget stop: {remaining:.0f}s left, "
+                          f"need {pair_reserve}s for a bounded pair", flush=True)
+                    break
         rid = f"{task['id']}-r{rep}-{arm}"
         run_dir = output / rid
         if rid in existing:
@@ -517,18 +522,18 @@ def execute(suite: Path, output: Path, driver: str, model: str | None,
             stop_reason = "stop_after"
             break
     if deadline is not None:
-        complete = {
-            (r["task_id"], r["replicate"])
-            for r in results
-            if sum(1 for row in results
-                   if row["task_id"] == r["task_id"]
-                   and row["replicate"] == r["replicate"]) == len(arms)
-        }
+        all_saved = list(existing.values())
+        pair_counts = {}
+        for row in all_saved:
+            key = (row["task_id"], row["replicate"])
+            pair_counts.setdefault(key, set()).add(row["arm"])
+        complete = {key for key, done_arms in pair_counts.items()
+                    if set(arms) <= done_arms}
         status = {
             "reason": stop_reason,
             "budget_seconds": time_budget_seconds,
             "elapsed_seconds": round(time.time() - budget_start, 3),
-            "completed_sessions": len(results),
+            "completed_sessions": len(all_saved),
             "complete_pairs": len(complete),
             "planned_sessions": len(plan),
             "last_updated_utc": datetime.datetime.now(
