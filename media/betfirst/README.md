@@ -4,8 +4,8 @@ Final published assets for [BetFirst](../../docs/betfirst/README.md). The instal
 
 | Asset | Format | Use |
 | --- | --- | --- |
-| [Promo video](assets/betfirst-promo.mp4) | 1920×1080 H.264/AAC, 30 s | X/Twitter full video |
-| [README loop](assets/betfirst-promo.gif) | 960×540 animated GIF, ~19 s | Embedded GitHub preview |
+| [Promo video](assets/betfirst-promo.mp4) | 1920×1080 H.264/AAC, 32 s | X/Twitter full video |
+| [README loop](assets/betfirst-promo.gif) | 960×540 animated GIF, ~21 s | Embedded GitHub preview |
 | [Poster](assets/betfirst-promo-poster.png) | 1920×1080 PNG | Static thumbnail |
 
 Illustrative counters in the video are not measurements. The paired wall-time evidence compares 22 both-PASS pairs; [full study and limitations](../../research/betfirst/experiments/V04_RELEASE_RESULTS.md).
