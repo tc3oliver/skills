@@ -1,6 +1,7 @@
 """Frozen v05 protocol preflight: no live model calls."""
 from __future__ import annotations
 import subprocess
+import os
 import sys
 import unittest
 from pathlib import Path
@@ -21,9 +22,13 @@ class CausalV05Tests(unittest.TestCase):
                 cwd=suite.parent/task["fixture"]
                 visible=subprocess.run(task["check"],cwd=cwd,capture_output=True,text=True,timeout=10)
                 self.assertEqual(visible.returncode,0,visible.stderr)
+                env=os.environ.copy()
+                env["PYTHONPATH"]=str(cwd.resolve())+os.pathsep+env.get("PYTHONPATH","")
                 oracle=subprocess.run([sys.executable,str(suite.parent/task["oracle"])],
-                                      cwd=cwd,capture_output=True,text=True,timeout=10)
+                                      cwd=cwd,env=env,capture_output=True,text=True,timeout=10)
                 self.assertNotEqual(oracle.returncode,0,"hidden oracle must discriminate unfixed fixture")
+                self.assertNotIn("ModuleNotFoundError",oracle.stderr)
+                self.assertNotIn("ImportError",oracle.stderr)
 
     def test_ablation_is_distinct_and_isolated(self):
         self.assertIn("betfirst-v04-nobet",EXPERIMENT_ARMS)
