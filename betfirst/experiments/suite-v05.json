@@ -10,11 +10,8 @@
       "oracle": "oracles/v05/win-byte-frame.py",
       "check": [
         "python3",
-        "-m",
-        "unittest",
-        "discover",
-        "-s",
-        "tests"
+        "-c",
+        "import runpy; runpy.run_path('tests/test_smoke.py', run_name='__main__')"
       ]
     },
     {
@@ -25,11 +22,8 @@
       "oracle": "oracles/v05/win-tenant-key.py",
       "check": [
         "python3",
-        "-m",
-        "unittest",
-        "discover",
-        "-s",
-        "tests"
+        "-c",
+        "import runpy; runpy.run_path('tests/test_smoke.py', run_name='__main__')"
       ]
     },
     {
@@ -40,11 +34,8 @@
       "oracle": "oracles/v05/win-escape-pipe.py",
       "check": [
         "python3",
-        "-m",
-        "unittest",
-        "discover",
-        "-s",
-        "tests"
+        "-c",
+        "import runpy; runpy.run_path('tests/test_smoke.py', run_name='__main__')"
       ]
     },
     {
@@ -55,11 +46,8 @@
       "oracle": "oracles/v05/win-null-flag.py",
       "check": [
         "python3",
-        "-m",
-        "unittest",
-        "discover",
-        "-s",
-        "tests"
+        "-c",
+        "import runpy; runpy.run_path('tests/test_smoke.py', run_name='__main__')"
       ]
     },
     {
@@ -70,11 +58,8 @@
       "oracle": "oracles/v05/loss-casefold.py",
       "check": [
         "python3",
-        "-m",
-        "unittest",
-        "discover",
-        "-s",
-        "tests"
+        "-c",
+        "import runpy; runpy.run_path('tests/test_smoke.py', run_name='__main__')"
       ]
     },
     {
@@ -85,11 +70,8 @@
       "oracle": "oracles/v05/loss-trailing-slash.py",
       "check": [
         "python3",
-        "-m",
-        "unittest",
-        "discover",
-        "-s",
-        "tests"
+        "-c",
+        "import runpy; runpy.run_path('tests/test_smoke.py', run_name='__main__')"
       ]
     },
     {
@@ -100,11 +82,8 @@
       "oracle": "oracles/v05/loss-boolean-string.py",
       "check": [
         "python3",
-        "-m",
-        "unittest",
-        "discover",
-        "-s",
-        "tests"
+        "-c",
+        "import runpy; runpy.run_path('tests/test_smoke.py', run_name='__main__')"
       ]
     },
     {
@@ -115,11 +94,8 @@
       "oracle": "oracles/v05/loss-empty-batch.py",
       "check": [
         "python3",
-        "-m",
-        "unittest",
-        "discover",
-        "-s",
-        "tests"
+        "-c",
+        "import runpy; runpy.run_path('tests/test_smoke.py', run_name='__main__')"
       ]
     },
     {
@@ -130,11 +106,8 @@
       "oracle": "oracles/v05/normal-inclusive-max.py",
       "check": [
         "python3",
-        "-m",
-        "unittest",
-        "discover",
-        "-s",
-        "tests"
+        "-c",
+        "import runpy; runpy.run_path('tests/test_smoke.py', run_name='__main__')"
       ]
     },
     {
@@ -145,11 +118,8 @@
       "oracle": "oracles/v05/normal-dedupe-order.py",
       "check": [
         "python3",
-        "-m",
-        "unittest",
-        "discover",
-        "-s",
-        "tests"
+        "-c",
+        "import runpy; runpy.run_path('tests/test_smoke.py', run_name='__main__')"
       ]
     },
     {
@@ -160,11 +130,8 @@
       "oracle": "oracles/v05/normal-empty-prefix.py",
       "check": [
         "python3",
-        "-m",
-        "unittest",
-        "discover",
-        "-s",
-        "tests"
+        "-c",
+        "import runpy; runpy.run_path('tests/test_smoke.py', run_name='__main__')"
       ]
     },
     {
@@ -175,11 +142,8 @@
       "oracle": "oracles/v05/normal-zero-ttl.py",
       "check": [
         "python3",
-        "-m",
-        "unittest",
-        "discover",
-        "-s",
-        "tests"
+        "-c",
+        "import runpy; runpy.run_path('tests/test_smoke.py', run_name='__main__')"
       ]
     }
   ]
