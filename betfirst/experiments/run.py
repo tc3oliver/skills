@@ -106,7 +106,7 @@ def prompt_for(task: dict, arm: str, skill_text: str, tool_profile: str = "restr
     if arm != "baseline":
         prompt += "\n\nExecution guidance:\n" + EFFICIENCY
     if arm == "betfirst":
-        prompt += "\n\nApply the following BetFirst Skill v0.3:\n" + skill_text
+        prompt += "\n\nApply the following BetFirst Skill:\n" + skill_text
     elif arm == "betfirst-v04":
         if not candidate_skill_text:
             raise ValueError("betfirst-v04 requires an explicit candidate Skill")
