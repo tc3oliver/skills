@@ -28,10 +28,20 @@
 
 ## 30 秒，先下一個小賭注
 
-用 Agent Skills CLI 安裝：
+用 Agent Skills CLI 安裝（依提示選擇 Agent 和安裝範圍）：
+
+也可以直接把這句話貼給你正在使用的 Coding Agent：
+
+```text
+Install BetFirst for my coding agent. Follow https://github.com/tc3oliver/skills/blob/main/docs/betfirst/agent-install.md, detect my agent and existing installation, install only the BetFirst Skill, and verify it works.
+```
+
+[Agent 自動安裝說明 →](./agent-install.md)
+
+CLI 指令：
 
 ```bash
-npx skills add tc3oliver/skills --skill betfirst -g -a claude-code -y
+npx skills add tc3oliver/skills --skill betfirst
 ```
 
 交給 Agent 一個真實任務：
