@@ -1,6 +1,6 @@
 # BetFirst evaluation protocol
 
-These fixtures define decisions to test, not proof of faster execution. **No benchmark result has been measured or published in this repository.**
+These fixtures define decisions to test, not proof of universal speedup. Real owner-reported local results now exist: v1 found simple-task overhead, while a v2 two-diagnostic-task replicated study observed lower BetFirst time and gross tokens. See [full chronological evidence](../experiments/EXPERIMENT_HISTORY.md). A new 12-task/108-session [final preregistered v3 study](../experiments/V3_PROTOCOL.md) is pending local execution and is the last planned release prerequisite.
 
 ## 1. Qualitative routing checks
 
@@ -18,7 +18,7 @@ Keep the task prompt, tooling, permissions, available files, sandbox, and networ
 
 For a controlled `efficiency` arm, use the same small instruction across all tasks: "Avoid redundant file reads, repeated tool calls, and unnecessary tests; preserve required validation." Use that exact instruction **plus** BetFirst in the `betfirst` arm. In Claude Code, exclude the BetFirst plugin/skill from baseline and efficiency harnesses (not merely "don't invoke it"): an auto-discoverable skill description can otherwise contaminate the control group. Keep all other Skills equal.
 
-Start with 10–12 diverse tasks for smoke testing; expand to at least 30 tasks and multiple repetitions before making public performance claims. Include tasks with no reasonable bet, ambiguous probes, dirty worktrees, hard bugs, and cheap decisive tests. The independent acceptance evaluator must not be the coding agent's self-report.
+Historical design proposals anticipated 30+ distinct tasks. The actual **final public-release study** is explicitly limited to 12 new task clusters, three repeats and 108 real sessions, with task-level inference and full caveats. Do not claim it establishes general coding-agent population performance; publication follows the preregistered positive/mixed/negative decision. Include tasks with no reasonable bet, ambiguous probes, dirty worktrees, hard bugs, and cheap decisive tests. The independent acceptance evaluator must not be the coding agent's self-report.
 
 ## 3. Record actual measurements
 
