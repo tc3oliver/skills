@@ -1,0 +1,8 @@
+{
+  "issue": "Worker crashes during second write, checkpoint shows 2 even though sink persisted only one",
+  "items": [
+    "A",
+    "B",
+    "C"
+  ]
+}

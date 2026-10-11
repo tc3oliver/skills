@@ -1,0 +1,189 @@
+{
+  "schema": 3,
+  "description": "Preregistered 12 new tasks; 3 each low, diagnostic, stateful, negative. Do not edit after first live run; mock reference only validates fixture behavior, not model efficacy.",
+  "tasks": [
+    {
+      "id": "webhook-signature",
+      "difficulty": "low",
+      "fixture": "fixtures/webhook-signature",
+      "prompt": "An HTTP webhook verifier rejects documented sha256= signatures even when the body and signing secret are correct. Repair verification without accepting wrong keys, altered bodies or malformed signatures. Preserve the public verify function.",
+      "check": [
+        "python3",
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "tests"
+      ],
+      "oracle": "oracles/v3/webhook-signature.py"
+    },
+    {
+      "id": "cursor-pagination",
+      "difficulty": "low",
+      "fixture": "fixtures/cursor-pagination",
+      "prompt": "A page endpoint returns a duplicate item at the start of the next page, even when its cursor is valid. Fix the page boundary without changing cursor semantics or source ordering.",
+      "check": [
+        "python3",
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "tests"
+      ],
+      "oracle": "oracles/v3/cursor-pagination.py"
+    },
+    {
+      "id": "unicode-casefold",
+      "difficulty": "low",
+      "fixture": "fixtures/unicode-casefold",
+      "prompt": "User lookup should compare Unicode identifiers using full Unicode case folding. Currently some visually equivalent alphabetic names do not match, while trimming and whitespace semantics must stay unchanged.",
+      "check": [
+        "python3",
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "tests"
+      ],
+      "oracle": "oracles/v3/unicode-casefold.py"
+    },
+    {
+      "id": "queue-priority",
+      "difficulty": "diagnostic",
+      "fixture": "fixtures/queue-priority",
+      "prompt": "Incident report: an urgent job is not dispatched first when a background retry is present. Inspect incident.json and the dispatcher, queue policy and job metadata. Fix priority scheduling without starving older equal-priority jobs or changing retry eligibility.",
+      "check": [
+        "python3",
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "tests"
+      ],
+      "oracle": "oracles/v3/queue-priority.py"
+    },
+    {
+      "id": "ledger-idempotency",
+      "difficulty": "diagnostic",
+      "fixture": "fixtures/ledger-idempotency",
+      "prompt": "Payment retry incident: posting the same event twice applies a second debit, but a different account may legitimately send the same request ID. Investigate account identity, event receipts, and balance updates. Keep overdraft checks and return the original receipt on a retry.",
+      "check": [
+        "python3",
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "tests"
+      ],
+      "oracle": "oracles/v3/ledger-idempotency.py"
+    },
+    {
+      "id": "search-highlight",
+      "difficulty": "diagnostic",
+      "fixture": "fixtures/search-highlight",
+      "prompt": "Search results for non-ASCII text point to the wrong highlight span, although the match word is correct. Inspect tokenizer offsets, snippet rendering, and the incident case. Preserve correct behavior for ordinary ASCII and repeated terms.",
+      "check": [
+        "python3",
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "tests"
+      ],
+      "oracle": "oracles/v3/search-highlight.py"
+    },
+    {
+      "id": "lease-fencing",
+      "difficulty": "stateful",
+      "fixture": "fixtures/lease-fencing",
+      "prompt": "A task lease can expire and be acquired by another worker; after takeover the original worker sometimes commits stale results. Update fencing semantics so only the current lease holder may commit and duplicate/expired owners cannot overwrite progress. See incident.json.",
+      "check": [
+        "python3",
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "tests"
+      ],
+      "oracle": "oracles/v3/lease-fencing.py"
+    },
+    {
+      "id": "checkpoint-atomicity",
+      "difficulty": "stateful",
+      "fixture": "fixtures/checkpoint-atomicity",
+      "prompt": "After a worker interruption, checkpoint recovery sometimes reports progress that was not actually committed. Inspect processor, checkpoint, and incident report. Ensure checkpoints advance only after a successful durable sink write, with no duplicate writes on resume.",
+      "check": [
+        "python3",
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "tests"
+      ],
+      "oracle": "oracles/v3/checkpoint-atomicity.py"
+    },
+    {
+      "id": "partition-watermarks",
+      "difficulty": "stateful",
+      "fixture": "fixtures/partition-watermarks",
+      "prompt": "An ingestion pipeline drops valid events from one shard when a different shard has already advanced farther. Fix progress tracking so out-of-order interleaved partitions each advance independently; duplicate offsets should still be suppressed.",
+      "check": [
+        "python3",
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "tests"
+      ],
+      "oracle": "oracles/v3/partition-watermarks.py"
+    },
+    {
+      "id": "stable-merge-ok",
+      "difficulty": "negative",
+      "fixture": "fixtures/stable-merge-ok",
+      "prompt": "An incident claims merge_sorted drops equal-key entries during merge. Inspect implementation and tests. Confirm whether this is reproducible; if already correct, do not modify any file.",
+      "check": [
+        "python3",
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "tests"
+      ],
+      "oracle": "oracles/v3/stable-merge-ok.py",
+      "no_change": true
+    },
+    {
+      "id": "ttl-boundary-ok",
+      "difficulty": "negative",
+      "fixture": "fixtures/ttl-boundary-ok",
+      "prompt": "A report alleges TTL validity is off-by-one at the expiry instant. Inspect the memoized lookup and prove whether the expiry boundary is implemented correctly. If correct, leave the repository unchanged.",
+      "check": [
+        "python3",
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "tests"
+      ],
+      "oracle": "oracles/v3/ttl-boundary-ok.py",
+      "no_change": true
+    },
+    {
+      "id": "retry-once-ok",
+      "difficulty": "negative",
+      "fixture": "fixtures/retry-once-ok",
+      "prompt": "A bug ticket claims retry_once swallows permanent errors and sometimes invokes the function three times. Inspect logic and reproduce before changing anything. If the claim is unsupported, keep all files unchanged.",
+      "check": [
+        "python3",
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "tests"
+      ],
+      "oracle": "oracles/v3/retry-once-ok.py",
+      "no_change": true
+    }
+  ]
+}

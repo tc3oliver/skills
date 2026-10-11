@@ -1,4 +1,6 @@
-# BetFirst v0.3 — controlled evidence plan
+# Archived historical proposal: BetFirst v0.3 controlled evidence plan
+
+> **SUPERSEDED.** This is an earlier unexecuted proposal, not the current release gate. The frozen [final Evaluation v3 protocol](../experiments/V3_PROTOCOL.md) replaces its open-ended smoke-then-30+ sequence. v3 is one planned 108-session release study, after which the project publishes good, mixed or negative results. Keep this file for methodology history rather than treating it as a new v4 requirement.
 
 **Status: proposed, not executed.** A single concurrent-agent field log is insufficient to claim cost savings. This plan aims to test whether the *bet-selection policy*, rather than generic concise-agent guidance, makes completed coding tasks cheaper **without lowering correctness**.
 

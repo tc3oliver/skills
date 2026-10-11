@@ -15,7 +15,7 @@ BetFirst 是一個給 Coding Agent 使用的**成本感知執行策略（Cost-Aw
 **以 Claude Code 為主 · 相容 Pi · 不增加執行階段依賴**
 
 > [!IMPORTANT]
-> **目前為實驗性 v0.2。** BetFirst 提供的是決策策略，**尚未證明可以節省多少時間、Token 或費用**。本文中的例子與數字均非 BetFirst 實測結果。請參考[評估方法](evals/README.md)。
+> **實驗性 v0.2。** 本地 Qwen/oMLX 的初步實驗包含**簡單任務的負面結果**，以及在**兩道診斷題、各三次重複**中，BetFirst 相較 Efficiency 減少 **33.8% 耗時、38.0% Gross Tokens**（雙方皆 6/6 PASS）。這**不代表普遍或因果加速，也不是實際金錢節省**。完整紀錄請見[實驗歷史](experiments/EXPERIMENT_HISTORY.md)。[v3 最終實驗規格](experiments/V3_PROTOCOL.md)已規劃 108 次執行，**目前尚未進行真實 v3 推論**。
 
 ## 30 秒開始使用
 
@@ -183,8 +183,8 @@ python3 betfirst/scripts/analyze_runs.py path/to/measured-runs.csv
 
 - **v0.1**：跨 Agent 的下注決策規則、止損邊界、案例與可重現的分析規範。
 - **v0.2（目前）**：優先唯讀探測、成本與可執行停止條件、重視「有用的反證」；[實地紀錄](evals/field-notes/signalforge-video.md)（20 次下注、單一專案、沒有對照組）。原始耗時總和 **1,355 秒**，時間戳跨度總和 **1,594 秒**，有 **5 筆不一致**，無法宣稱有效節省時間；[摘要工具](scripts/summarize_bet_log.py)會同時揭露兩種數據。詳見 [CHANGELOG](CHANGELOG.md)。
-- **v0.3（下一步）**：依照[可執行的實驗計畫](evals/next-experiment.md)，先用 10–12 題單 Agent 任務預試，再擴大至 30 題以上與多次重複；Baseline / Efficiency / BetFirst 三組需獨立驗收與真實 Token 資料。**尚未完成。**
-- **v1.0**：公開可重現的跨任務評估；只有數據證明值得，才加入額外 Runtime Instrumentation 或強制控制機制。
+- **v0.2 發布前最後實驗**：[Evaluation v3](experiments/V3_PROTOCOL.md) 預先固定 12 道新題、三組策略、各三次，總共 108 次模型執行。**此輪完成就發布，不要求再跑 v4**。
+- **未來研究（非發布門檻）**：根據完整結果研究是否需要 Selective Routing 或跨模型重現，不為了讓數字更漂亮而調整實驗題目。
 
 ## 分享與貢獻
 

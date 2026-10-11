@@ -36,6 +36,17 @@ elif task_id == "render-resume":
     )
 elif task_id == "already-correct":
     pass
+elif task_id in {
+    "webhook-signature", "cursor-pagination", "unicode-casefold",
+    "queue-priority", "ledger-idempotency", "search-highlight",
+    "lease-fencing", "checkpoint-atomicity", "partition-watermarks",
+    "stable-merge-ok", "ttl-boundary-ok", "retry-once-ok",
+}:
+    import runpy
+    reference = Path(__file__).resolve().parent / "oracles" / "v3-reference" / (task_id + ".py")
+    if not reference.is_file():
+        raise SystemExit("reference mock missing: " + task_id)
+    runpy.run_path(str(reference), run_name="__main__")
 else:
     raise SystemExit("unknown smoke task " + task_id)
 print("SYNTHETIC HARNESS SMOKE ONLY; NOT AN AGENT RESULT")

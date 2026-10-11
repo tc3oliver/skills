@@ -13,7 +13,7 @@
 **Claude Code first · Pi compatible · No additional runtime dependencies**
 
 > [!IMPORTANT]
-> **Experimental v0.2.** This is a decision policy, not a measured speedup. **No token, time, or cost savings are claimed yet.** Read the [evaluation protocol](evals/README.md) before drawing performance conclusions.
+> **Experimental v0.2.** Owner-reported local Qwen/oMLX data include **negative overhead on three simple tasks** and **33.8% lower wall time / 38.0% fewer gross tokens** versus Efficiency-only on **two diagnostic tasks × three replicates** (both 6/6 passed). These observations are **not generalizable, causal, or actual USD savings**. See [the full experiment history](experiments/EXPERIMENT_HISTORY.md) and the [preregistered final v3 release study](experiments/V3_PROTOCOL.md). The **108-session v3 has not run yet**.
 
 ## Try it in 30 seconds
 
@@ -161,8 +161,8 @@ The analyzer reports paired time, gross-token and USD-cost savings, with `null` 
 
 - **v0.1:** portable policy, bounded failure, qualitative cases, repeatable analysis protocol.
 - **v0.2 (this Skill):** read-only-first probes, bounded stoppable bets and recognizing useful refutations. The [uncontrolled field log](evals/field-notes/signalforge-video.md) (20 bets, one project, no control) has **five unresolved timing discrepancies**: reported durations total 1,355 s versus timestamp spans totaling 1,594 s. The [auditor](scripts/summarize_bet_log.py) exposes both without calling either verified cost. See the [changelog](CHANGELOG.md).
-- **v0.3 (next):** run the [controlled experiment plan](evals/next-experiment.md) (10–12 single-agent smoke tasks, then 30+ paired and repeated tasks) with Baseline / Efficiency / BetFirst, independent acceptance and real token telemetry. **Not done yet.**
-- **v1.0:** publish reproducible cross-task results; only add runtime instrumentation or enforcement where measured failures justify it.
+- **v0.2 launch study (now):** [Evaluation v3](experiments/V3_PROTOCOL.md), 12 fresh task clusters × 3 arms × 3 repeats = 108 planned real model sessions; **single preregistered release gate, no mandatory v4**. New results are not available yet.
+- **Later development (optional, NOT a release blocker):** improve selective Bet routing or cross-model validity only after reviewing published successes *and* regressions; do not change v0.2 during v3.
 
 ## Share and contribute
 

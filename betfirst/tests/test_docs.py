@@ -43,8 +43,15 @@ class ReadmeAndAssetTests(unittest.TestCase):
                 self.assertIn("Pi", content)
                 self.assertIn("evals/README.md", content)
                 self.assertIn("scripts/analyze_runs.py", content)
-        self.assertIn("No token, time, or cost savings are claimed", english)
-        self.assertIn("尚未證明可以節省多少時間", chinese)
+        self.assertIn("33.8% lower wall time", english)
+        self.assertIn("negative overhead on three simple tasks", english)
+        self.assertIn("v3 has not run yet", english)
+        self.assertIn("33.8% 耗時", chinese)
+        self.assertIn("簡單任務的負面結果", chinese)
+        self.assertIn("尚未進行真實 v3 推論", chinese)
+        for content in (english, chinese):
+            self.assertIn("experiments/EXPERIMENT_HISTORY.md", content)
+            self.assertIn("experiments/V3_PROTOCOL.md", content)
 
     def test_local_readme_asset_references_resolve(self):
         for name in ("README.md", "README.zh-TW.md"):

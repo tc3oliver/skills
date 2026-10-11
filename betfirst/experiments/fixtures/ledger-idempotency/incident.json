@@ -1,0 +1,16 @@
+{
+  "issue": "Repeated delivery debits one account twice",
+  "deliveries": [
+    [
+      "team-a",
+      "evt-42",
+      15
+    ],
+    [
+      "team-a",
+      "evt-42",
+      15
+    ]
+  ],
+  "expected_net_debit": 15
+}

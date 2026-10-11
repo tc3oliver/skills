@@ -1,0 +1,4 @@
+{
+  "story": "worker w1 lease expires; w2 acquires and finishes; delayed w1 result arrives",
+  "expected": "reject stale token even on owner reuse"
+}

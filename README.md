@@ -54,6 +54,12 @@ Invoke syntax is agent-specific. For direct CLI use and command flags see [Backl
 
 The old Backlog.md-dependent `backlog-workflow` was deliberately removed as a breaking change. No automatic migration is performed; existing project data remain untouched. Its source is preserved under Git branch [`archive/backlog-workflow-v1.6.0`](https://github.com/tc3oliver/skills/tree/archive/backlog-workflow-v1.6.0/backlog-workflow).
 
+## BetFirst experimental evidence
+
+The BetFirst v0.2 Skill has preliminary real local Qwen3.8-27B/oMLX observations, including **negative simple-task overhead** and **positive two-diagnosis-task replicated results**. These are not general or causal speedups; see [historical evidence](betfirst/experiments/EXPERIMENT_HISTORY.md).
+
+The [Evaluation v3 final-study protocol](betfirst/experiments/V3_PROTOCOL.md) preregisters **12 new tasks × 3 arms × 3 repetitions = 108 real model runs**. v3 has not been run at commit time; its release kit commits to publishing favorable or unfavorable outcomes without a further required v4.
+
 ## Validation
 
 ```bash
