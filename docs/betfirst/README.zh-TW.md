@@ -46,7 +46,7 @@ normally. Preserve existing work and complete final verification.
 
 **偏好 Claude Code Plugin？** 執行 `/plugin marketplace add tc3oliver/skills`、`/plugin install tc3oliver-skills`，再呼叫 `/tc3oliver-skills:betfirst`。Plugin 與 CLI **擇一安裝**即可。
 
-## 30 秒看懂 BetFirst
+## 32 秒看懂 BetFirst
 
 <p align="center">
   <a href="../../media/betfirst/assets/betfirst-promo.mp4"><img src="../../media/betfirst/assets/betfirst-promo.gif" alt="BetFirst 宣傳影片：ALL IN？昂貴研究與極小測試的對比、WIN BIG 與 LOSE SMALL、NORMAL / BET / ABSTAIN，以及本地實驗數據。" width="800"></a>
