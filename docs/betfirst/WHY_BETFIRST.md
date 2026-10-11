@@ -12,10 +12,15 @@ Exploration costs time and tokens: reading many files, running full test suites,
 
 For any **single resource**, a simple expected-saving model is:
 
-```text
-E[saved] = p × S − (1 − p) × L − H
-break-even p > (L + H) / (S + L)
-```
+$
+E[\\mathrm{saved}] = pS - (1-p)L - H
+$
+
+The bet breaks even when:
+
+$
+p > \\frac{L+H}{S+L}
+$
 
 - `p` is an observed success rate in a comparable task class, never a fabricated model confidence.
 - `S` is what a decisive probe avoids compared with ordinary execution.
@@ -36,4 +41,4 @@ The design draws on rational metareasoning and cost-aware exploration, especiall
 - *Calibrate-Then-Act: Cost-Aware Exploration in LLM Agents* (2026): https://arxiv.org/abs/2602.16699
 - *Analyzing and Mitigating Cost-Inefficient Behaviors in Coding Agents* (2026): https://arxiv.org/abs/2609.30725
 
-See [the experimental record](../experiments/EXPERIMENT_HISTORY.md), including negative cases, for actual BetFirst observations. Those studies cannot establish a general causal speedup.
+See [the experimental record](../../research/betfirst/experiments/EXPERIMENT_HISTORY.md), including negative cases, for actual BetFirst observations. Those studies cannot establish a general causal speedup.
