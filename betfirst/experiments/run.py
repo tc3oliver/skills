@@ -141,9 +141,10 @@ def command(driver: str, model: str | None, prompt: str, tid: str, arm: str,
                 "--no-prompt-templates", "--no-session", "-p",
                 "--mode", "json", "--model", model, prompt]
     if driver == "opencode":
-        # The runner passes --dir with the fresh fixture path at invocation.
-        return ["opencode", "run", "--agent", "build", "--format", "json",
-                "--model", model, prompt]
+        # The user-installed CLI has no --dir option. The subprocess runs with
+        # cwd=work; --standalone avoids reusing a background server workspace.
+        return ["opencode", "run", "--standalone", "--agent", "build",
+                "--format", "json", "--model", model, prompt]
     raise ValueError("unknown driver")
 
 
@@ -444,7 +445,7 @@ def execute(suite: Path, output: Path, driver: str, model: str | None,
         turn_limited = False
         try:
             if driver == "opencode":
-                cmd[2:2] = ["--dir", str(work)]
+                # run_opencode_cmd already sets subprocess.cwd=work.
                 env = opencode_environment(run_dir / "opencode-config", tool_profile)
                 agent_exit, timed_out, agent_time, turn_limited = run_opencode_cmd(
                     cmd, work, run_dir / "agent.stdout", run_dir / "agent.stderr",
