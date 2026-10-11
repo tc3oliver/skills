@@ -201,6 +201,8 @@ def main():
     target.mkdir(parents=True)
     (target/"result.json").write_text(json.dumps(result,indent=2,ensure_ascii=False)+"\n",encoding="utf-8")
     (target/"REPORT.md").write_text(render_markdown(result),encoding="utf-8")
+    from v3_publication import write_assets
+    write_assets(result,target)
     with (target/"per-task.csv").open("w",encoding="utf-8",newline="") as f:
         writer=csv.DictWriter(f,fieldnames=list(result["per_task"][0]))
         writer.writeheader();writer.writerows(result["per_task"])
