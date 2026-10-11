@@ -12,15 +12,15 @@ Exploration costs time and tokens: reading many files, running full test suites,
 
 For any **single resource**, a simple expected-saving model is:
 
-$
-E[\\mathrm{saved}] = pS - (1-p)L - H
-$
+$$
+E[\mathrm{saved}] = pS - (1-p)L - H
+$$
 
 The bet breaks even when:
 
-$
-p > \\frac{L+H}{S+L}
-$
+$$
+p > \frac{L+H}{S+L}
+$$
 
 - `p` is an observed success rate in a comparable task class, never a fabricated model confidence.
 - `S` is what a decisive probe avoids compared with ordinary execution.
