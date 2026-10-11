@@ -131,6 +131,50 @@ class RunnerTests(unittest.TestCase):
             event = json.loads(stdout.read_text().splitlines()[0])
             self.assertEqual(Path(event["cwd"]).resolve(), work.resolve())
 
+
+    def test_opencode_pwd_matches_agent_workspace_not_parent_repo(self):
+        from run import opencode_environment
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            work = root / "work"
+            work.mkdir()
+            env = opencode_environment(root / "cfg", "diagnostic", work)
+            self.assertEqual(Path(env["PWD"]).resolve(), work.resolve())
+            self.assertNotIn("OLDPWD", env)
+
+    def test_source_checkout_path_audit_detects_hidden_oracle_access(self):
+        from workspace_guard import unexpected_tool_paths
+        root = Path("/Users/sample/betfirst-v03")
+        work = Path("/Users/sample/isolated/work")
+        events = [
+            {"type": "tool_use", "part": {"tool": "read", "state": {
+                "input": {"path": str(work / "ledger.py")}}}},
+            {"type": "tool_use", "part": {"tool": "read", "state": {
+                "input": {"path": str(root / "betfirst/experiments/oracles/v3/ledger.py")}}}},
+            {"type": "tool_use", "part": {"tool": "shell", "state": {
+                "input": {"command": "python3 -c 'print(1)'",
+                          "workdir": str(root)}}}},
+        ]
+        out = "\n".join(json.dumps(e) for e in events)
+        problems = unexpected_tool_paths(out, work, root)
+        self.assertEqual(len(problems), 2)
+        self.assertTrue(all("source checkout" in p for p in problems))
+
+    def test_snapshot_detects_fixture_mutation(self):
+        from workspace_guard import snapshot_dataset
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            (root / "fixtures" / "task").mkdir(parents=True)
+            (root / "oracles").mkdir()
+            suite = root / "suite.json"
+            fixture = root / "fixtures" / "task" / "module.py"
+            suite.write_text("{}")
+            fixture.write_text("x = 1")
+            (root / "oracles" / "secret.py").write_text("pass")
+            before = snapshot_dataset(suite)
+            fixture.write_text("x = 2")
+            self.assertNotEqual(before, snapshot_dataset(suite))
+
     def test_opencode_usage_and_trace(self):
         from trace import summarize_trace
         events = [
