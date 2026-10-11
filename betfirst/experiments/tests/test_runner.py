@@ -99,7 +99,7 @@ class RunnerTests(unittest.TestCase):
             self.assertEqual(cmd[:4], ["opencode", "run", "--agent", "build"])
             self.assertIn("--format", cmd)
             self.assertNotIn("--auto", cmd)
-            env = opencode_environment(Path(d) / "config")
+            env = opencode_environment(Path(d) / "config", "diagnostic")
             policy = json.loads(env["OPENCODE_CONFIG_CONTENT"])
             self.assertEqual(policy["permission"]["external_directory"], "deny")
             self.assertEqual(policy["permission"]["bash"]["*"], "deny")
