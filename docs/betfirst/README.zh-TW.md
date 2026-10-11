@@ -52,7 +52,7 @@ normally. Preserve existing work and complete final verification.
   <a href="../../media/betfirst/assets/betfirst-promo.mp4"><img src="../../media/betfirst/assets/betfirst-promo.gif" alt="BetFirst 宣傳影片：ALL IN？昂貴研究與極小測試的對比、WIN BIG 與 LOSE SMALL、NORMAL / BET / ABSTAIN，以及本地實驗數據。" width="800"></a>
 </p>
 
-<sub>靜音循環；[完整 30 秒影片（含音效）→](../../media/betfirst/assets/betfirst-promo.mp4)。畫面中的探索成本計數器僅為示意，非實測。−17.9% / −18.0% 來自本地 Muse 研究中 22 組雙方皆 PASS 的配對，不代表普遍加速。[完整報告 →](../../research/betfirst/experiments/V04_RELEASE_RESULTS.md)</sub>
+<sub>靜音循環；[完整 32 秒影片（含音效）→](../../media/betfirst/assets/betfirst-promo.mp4)。畫面中的探索成本計數器僅為示意，非實測。−17.9% / −18.0% 來自本地 Muse 研究中 22 組雙方皆 PASS 的配對，不代表普遍加速。[完整報告 →](../../research/betfirst/experiments/V04_RELEASE_RESULTS.md)</sub>
 
 ## 為什麼要先賭？
 
