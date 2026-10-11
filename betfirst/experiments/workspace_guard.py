@@ -49,7 +49,8 @@ def assert_clean_checkout(suite: Path, root: Path) -> None:
         )
 
 
-def unexpected_tool_paths(output: str, workspace: Path, repo: Path) -> list[str]:
+def unexpected_tool_paths(output: str, workspace: Path, repo: Path,
+                          scratch: Path | None = None) -> list[str]:
     """Detect read/edit/shell targeting checkout or absolute paths outside work.
 
     Only structured tool calls count. Prompt or model prose is never evidence
@@ -58,6 +59,7 @@ def unexpected_tool_paths(output: str, workspace: Path, repo: Path) -> list[str]
     bad = []
     workspace = workspace.resolve()
     repo = repo.resolve()
+    scratch = scratch.resolve() if scratch is not None else None
     for line in output.splitlines():
         try:
             event = json.loads(line)
@@ -86,7 +88,11 @@ def unexpected_tool_paths(output: str, workspace: Path, repo: Path) -> list[str]
                 in_workspace = Path(value).resolve().is_relative_to(workspace)
             except (OSError, RuntimeError):
                 in_workspace = False
-            if not in_workspace:
+            # Only a dedicated per-session scratch directory is permitted.
+            # Never blanket-allow system /tmp: it can contain other sessions.
+            in_scratch = (scratch is not None and
+                          Path(value).resolve().is_relative_to(scratch))
+            if not in_workspace and not in_scratch:
                 bad.append(f"{tool}: path outside fixture worktree ({key})")
                 break
     return bad
