@@ -1,5 +1,9 @@
 # BetFirst changelog
 
+## v0.3 candidate — trace-driven guardrails (unreleased)
+
+Experimental policy draft on a separate branch: skip ceremonial probes on cheap tasks, keep a task-critical boundary check after a winning probe, treat no-change as no **file** edits, and do not modify original tests as a workaround for unavailable file tools. Motivated by eight inspected v3 traces and **not yet validated by a new comparative experiment**. See `experiments/V03_TRIAGE.md`. Frozen v3 evidence and preregistered Skill remain unchanged on main.
+
 ## v0.2 — Field evidence and bounded bets (experimental)
 
 Policy:

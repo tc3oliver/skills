@@ -85,6 +85,48 @@
       "scenario": "A six-second read-only measurement refutes the proposed implementation but changes the next action",
       "expected": "BET_THEN_NORMAL",
       "must": "Preserve the refutation as useful evidence, do not count it as a probe-quality failure or repeat the hypothesis"
+    },
+    {
+      "id": "micro-poc-before-full-poc",
+      "scenario": "Before a long documentation search and integration PoC, a 1-second isolated call can decisively establish whether the required operation is supported",
+      "expected": "BET",
+      "must": "Run bounded synthetic test before full investigation; success skips only unneeded research, never final acceptance"
+    },
+    {
+      "id": "no-change-includes-tests",
+      "scenario": "An alleged TTL expiry bug is false; a boundary probe proves current code correct but extra regression tests could be written",
+      "expected": "ABSTAIN",
+      "must": "Do not change any repository file, including existing or new tests, when instructions require no change"
+    },
+    {
+      "id": "win-still-checks-invariants",
+      "scenario": "A cheap probe confirms per-partition progress fix but initial dictionary value may reject a legitimate zero offset",
+      "expected": "BET_THEN_VERIFY",
+      "must": "After the bet, validate the task-critical zero/boundary case and run required final tests"
+    },
+    {
+      "id": "replay-payload-mismatch",
+      "scenario": "A deduplication probe confirms duplicate events should be ignored, while reused id with altered request fields might violate invariants",
+      "expected": "BET_THEN_VERIFY",
+      "must": "Probe is not task completion; check the essential retry invariant and independent acceptance"
+    },
+    {
+      "id": "additive-tests-file-tool-unavailable",
+      "scenario": "Agent wants to add coverage, shell here-doc is denied, file creation tool unavailable, and modifying original tests is disallowed",
+      "expected": "NORMAL_OR_TEMP_PROBE",
+      "must": "Do not modify original tests as a workaround; use allowed existing tests or temporary nonrepo checks"
+    },
+    {
+      "id": "obvious-cheap-fix-no-ceremonial-bet",
+      "scenario": "The exact root cause is directly visible and the fix is cheaper than preparing a separate probe",
+      "expected": "NORMAL",
+      "must": "Do not add a redundant probe just to satisfy the BetFirst label"
+    },
+    {
+      "id": "unsupported-timeout-command",
+      "scenario": "The system lacks an external timeout executable for an otherwise naturally bounded read-only in-memory probe",
+      "expected": "BET_IF_NATURALLY_BOUNDED",
+      "must": "Do not repeatedly retry unavailable timeout commands; keep loss bounded or use NORMAL"
     }
   ]
 }
