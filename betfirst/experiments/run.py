@@ -29,8 +29,9 @@ HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[1]
 # Freeze the original default three-arm protocol and its import-facing API.
 ARMS = ("baseline", "efficiency", "betfirst")
-EXPERIMENT_ARMS = ARMS + ("betfirst-v04",)
+EXPERIMENT_ARMS = ARMS + ("betfirst-v04", "betfirst-v04-nobet")
 V04_SKILL = HERE / "candidates" / "v04" / "SKILL.md"
+NOBET_SKILL = HERE / "candidates" / "v05" / "NO_BET.md"
 EFFICIENCY = "Avoid redundant file reads, repeated tool calls and unnecessary tests; preserve final validation."
 OPENCODE_PERMISSIONS = {
     "*": "deny", "read": "allow", "glob": "allow", "grep": "allow",
@@ -109,6 +110,10 @@ def prompt_for(task: dict, arm: str, skill_text: str, tool_profile: str = "restr
         prompt += "\n\nExecution guidance:\n" + EFFICIENCY
     if arm == "betfirst":
         prompt += "\n\nApply the following BetFirst Skill:\n" + skill_text
+    elif arm == "betfirst-v04-nobet":
+        if not candidate_skill_text:
+            raise ValueError("betfirst-v04-nobet requires an explicit ablation Skill")
+        prompt += "\n\nApply the following selective execution Skill without BET:\n" + candidate_skill_text
     elif arm == "betfirst-v04":
         if not candidate_skill_text:
             raise ValueError("betfirst-v04 requires an explicit candidate Skill")
@@ -331,6 +336,8 @@ def execute(suite: Path, output: Path, driver: str, model: str | None,
     skill = (ROOT / "betfirst" / "SKILL.md").read_text(encoding="utf-8")
     v04_skill = (V04_SKILL.read_text(encoding="utf-8")
                  if "betfirst-v04" in arms else None)
+    nobet_skill = (NOBET_SKILL.read_text(encoding="utf-8")
+                   if "betfirst-v04-nobet" in arms else None)
     # If an Agent previously touched the pristine fixtures/hidden oracles,
     # refusing to restart prevents a corrupted baseline being reused.
     dataset_before = None
@@ -378,6 +385,8 @@ def execute(suite: Path, output: Path, driver: str, model: str | None,
         "skill_sha256": hashlib.sha256(skill.encode("utf-8")).hexdigest(),
         **({"v04_skill_sha256": hashlib.sha256(v04_skill.encode("utf-8")).hexdigest()}
            if v04_skill is not None else {}),
+        **({"nobet_skill_sha256": hashlib.sha256(nobet_skill.encode("utf-8")).hexdigest()}
+           if nobet_skill is not None else {}),
         "dataset_sha256": (hashlib.sha256(json.dumps(dataset_before, sort_keys=True).encode()).hexdigest()
                            if dataset_before is not None else None),
         "note": "Mock exercises harness only, not agent performance or savings.",
@@ -485,7 +494,8 @@ def execute(suite: Path, output: Path, driver: str, model: str | None,
         original = hashes(work)
         tests = hashes(work / "tests") if (work / "tests").is_dir() else {}
         scratch = (run_dir / "opencode-tmp") if driver == "opencode" else None
-        prompt = prompt_for(task, arm, skill, tool_profile, scratch, v04_skill)
+        prompt = prompt_for(task, arm, skill, tool_profile, scratch,
+                            nobet_skill if arm == "betfirst-v04-nobet" else v04_skill)
         (run_dir / "prompt.txt").write_text(prompt, encoding="utf-8")
         cmd = command(driver, model, prompt, task["id"], arm, claude_launcher,
                       tool_profile, max_turns)
