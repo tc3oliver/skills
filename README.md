@@ -5,7 +5,7 @@ Small, portable Skills for Claude Code, Pi, Codex and OpenCode. Work with eviden
 ## Featured: BetFirst
 
 <p align="center">
-  <a href="./betfirst/"><img src="./media/betfirst/assets/betfirst-v04-animated.svg" alt="BetFirst v0.4 animated overview: optional bets and 126 local executions" width="860"></a>
+  <a href="./docs/betfirst/README.md"><img src="./media/betfirst/assets/betfirst-v04-animated.svg" alt="BetFirst v0.4 animated overview: optional bets and 126 local executions" width="860"></a>
 </p>
 
 **Bet small before you spend big.** One safe, tiny, falsifiable bet can save a costly deep dive—but only if the possible upside warrants it. Otherwise go NORMAL; if already correct, ABSTAIN. **Evidence:** across two local Muse studies (126 runs), v0.4 had lower mean wall time than the tested controls. In the 72-run ablation, paired time fell **17.9% vs Efficiency** and **18.0% vs No-BET**, comparing both-PASS pairs. [Read results and limitations →](./research/betfirst/experiments/V04_RELEASE_RESULTS.md)
@@ -20,7 +20,7 @@ npx skills add tc3oliver/skills --skill betfirst
 
 | Skill | What it helps with |
 | --- | --- |
-| [**BetFirst**](./betfirst/) | **Make Cheap Bets. Win Big. Lose Small.** Tiny feasibility probes before expensive research and PoCs. |
+| [**BetFirst**](./docs/betfirst/README.md) | **Make Cheap Bets. Win Big. Lose Small.** Tiny feasibility probes before expensive research and PoCs. |
 | [**Backlog**](./backlog/) | Persistent coding tasks, ready queue, and handoff evidence—without Backlog.md. [EN](./docs/backlog/README.md) / [繁體中文](./docs/backlog/README.zh-TW.md). |
 | [audit-agent-instructions](./audit-agent-instructions/) | Find duplication, instruction drift and excessive context. |
 | [diagnosing-bugs](./diagnosing-bugs/) | Reproducible debugging and focused regression tests. |
