@@ -14,6 +14,7 @@ from pathlib import Path
 
 from run import HERE, hashes, load_suite
 from test_integrity import inspect_tests
+from scoring import classify
 
 
 def _sha(path: Path) -> str:
@@ -36,6 +37,10 @@ def regrade(source: Path, suite: Path, destination: Path) -> dict:
         if not columns or "passed" not in columns:
             raise ValueError("malformed measured-runs.csv")
         rows = list(reader)
+    columns = list(columns)
+    for field in ("code_accepted", "session_success", "failure_reasons"):
+        if field not in columns:
+            columns.append(field)
     if not rows or len(rows) != manifest.get("runs"):
         raise ValueError("run count differs from immutable manifest")
 
@@ -64,25 +69,39 @@ def regrade(source: Path, suite: Path, destination: Path) -> dict:
         existing = source / run_id / "outcome.json"
         recorded = json.loads(existing.read_text(encoding="utf-8"))
         integrity = inspect_tests(suite.parent / tasks[tid]["fixture"], source / run_id / "work")
-        good = (
-            recorded.get("agent_exit") == 0
-            and recorded.get("agent_timeout") is False
-            and recorded.get("acceptance_exit") == 0
-            and recorded.get("acceptance_timeout") is False
-            and recorded.get("oracle_exit") == 0
-            and recorded.get("oracle_timeout") is False
-            and integrity["passed"]
-            and (not tasks[tid].get("no_change") or recorded.get("workspace_changed") is False)
+        # An oracle required by the task must have a recorded successful
+        # exit. A missing result is an acceptance failure, not a free pass.
+        oracle_exit = recorded.get("oracle_exit")
+        if "oracle" in tasks[tid] and oracle_exit is None:
+            oracle_exit = -1
+        evaluation = classify(
+            task=tasks[tid],
+            agent_exit=recorded.get("agent_exit"),
+            agent_timeout=recorded.get("agent_timeout") is True,
+            agent_subtype=recorded.get("agent_subtype") or row.get("agent_subtype"),
+            test_exit=recorded.get("acceptance_exit"),
+            test_timeout=recorded.get("acceptance_timeout") is True,
+            oracle_exit=oracle_exit,
+            oracle_timeout=recorded.get("oracle_timeout") is True,
+            test_integrity_passed=integrity["passed"],
+            workspace_changed=recorded.get("workspace_changed") is True,
         )
+        good = evaluation["passed"]
         original_pass = row["passed"].strip().lower()
         if original_pass not in ("true", "false") or (original_pass == "true") != bool(recorded.get("passed")):
             raise ValueError(f"CSV and outcome mismatch: {run_id}")
         updated = dict(row)
         updated["passed"] = str(good).lower()
+        updated["code_accepted"] = str(evaluation["code_accepted"]).lower()
+        updated["session_success"] = str(evaluation["session_success"]).lower()
+        updated["failure_reasons"] = ";".join(evaluation["failure_reasons"])
         revised.append(updated)
         changes.append({
             "run_id": run_id, "original_passed": bool(recorded["passed"]),
             "regraded_passed": good, "tests_changed": recorded.get("tests_changed"),
+            "code_accepted": evaluation["code_accepted"],
+            "session_success": evaluation["session_success"],
+            "failure_reasons": evaluation["failure_reasons"],
             "test_integrity": integrity,
             "agent_exit": recorded.get("agent_exit"),
             "oracle_exit": recorded.get("oracle_exit"),
@@ -96,7 +115,7 @@ def regrade(source: Path, suite: Path, destination: Path) -> dict:
     destination.mkdir(parents=True)
     derived_manifest = dict(manifest)
     derived_manifest.update({
-        "grading_version": 2,
+        "grading_version": 3,
         "derived_from_manifest_sha256": _sha(manifest_file),
         "derived_from_rows_sha256": _sha(rows_file),
         "original_fixture_hashes_verified": verified_fixture_hashes,
