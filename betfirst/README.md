@@ -1,175 +1,98 @@
 <p align="center"><a href="./README.md">English</a> · <a href="./README.zh-TW.md">繁體中文</a></p>
 
 <p align="center">
-  <img src="./assets/hero.svg" alt="BetFirst — Make Cheap Bets. Win Big. Lose Small." width="1000">
+  <img src="./assets/hero.svg" alt="BetFirst: Make cheap bets, skip expensive guesses. A small probe finds a verified path through complex exploration." width="1000">
 </p>
 
 # BetFirst
 
-> **What if your coding agent tested the obvious hypothesis before reading another 20 files?**
+### Stop exploring blindly. Test the one thing that matters.
 
-**Make cheap bets. Win big. Lose small.** BetFirst is a cost-aware execution Skill for coding agents: take a **tiny, falsifiable, reversible bet** when it can eliminate a costly investigation. If it loses, **cut the loss**, preserve evidence, and fall back to normal development.
+**BetFirst** is a lightweight, cost-aware decision Skill for coding agents. Before diving into a large investigation, it looks for a **small, falsifiable, reversible probe** that could settle the uncertainty. If the probe loses, **stop early** and return to normal debugging.
 
-**Claude Code first · Pi compatible · No additional runtime dependencies**
+No daemon. No extra agent. No required telemetry. **And no skipped verification.**
 
-> [!IMPORTANT]
-> **Experimental v0.2.** Owner-reported local Qwen/oMLX data include **negative overhead on three simple tasks** and **33.8% lower wall time / 38.0% fewer gross tokens** versus Efficiency-only on **two diagnostic tasks × three replicates** (both 6/6 passed). These observations are **not generalizable, causal, or actual USD savings**. See [the full experiment history](experiments/EXPERIMENT_HISTORY.md) and the [preregistered final v3 release study](experiments/V3_PROTOCOL.md). The **108-session v3 has not run yet**.
+**Works with Claude Code and Pi** · Portable `SKILL.md` · Experimental v0.2
 
-## Try it in 30 seconds
+## Get started in 30 seconds
 
-With the repository's Claude Code plugin installed (instructions below), invoke `/tc3oliver-skills:betfirst`, then give the agent a real coding task.
-
-```text
-Use BetFirst for this task. If a cheap, reversible probe can settle
-a key uncertainty, take that bet. Stop immediately if it fails or
-becomes inconclusive, preserve my existing work, and finish with
-the normal correctness checks.
-```
-
-**The bet is optional.** If no cheap, decisive, bounded experiment exists, keep working normally.
-
-## Why this exists
-
-Coding agents often pay for broad file reads, dependency tracing and long tool outputs before trying a tiny diagnostic test. Sometimes that investigation is essential. Sometimes a ten-second probe could invalidate the guess first.
-
-**BetFirst targets the second case.** It trades a small, bounded downside for the chance to avoid a much larger investigation.
-
-| BetFirst **is** | BetFirst **is not** |
-| --- | --- |
-| A decision policy for small, falsifiable probes | A command to guess and ship |
-| A way to buy evidence cheaply | Permission to skip required tests |
-| A bounded failure with a normal fallback | A replacement for systematic debugging |
-| Agent-neutral instructions | A new runtime, daemon, or framework |
-
-<p align="center">
-  <img src="./assets/before-after.svg" alt="Illustrative comparison of broad exploration and BetFirst's small-probe path; not benchmark measurements." width="1000">
-</p>
-
-## The behavior
-
-<p align="center">
-  <img src="./assets/decision-flow.svg" alt="BetFirst decision policy: spot a possible bet, cap its downside, run the probe, then win or cut loss." width="1000">
-</p>
-
-**SPOT → CAP → BET → WIN / CUT LOSS.** When there is no actual need to change anything, **ABSTAIN**. A bet is an early diagnostic shortcut, **not** a permission to guess the fix.
-
-Typical opportunities: isolate an FFmpeg argument using a tiny file, test a serializer against one synthetic payload, reproduce a CLI failure with a one-command fixture, or check a narrow build hypothesis.
-
-### When NOT to bet
-
-Bad bets: unbounded testing, destructive Git cleanup, overlapping uncommitted work, production mutations, credentials, remote side effects, and experiments without objective signals. These go through normal analysis instead.
-
-If the task is already satisfied, **ABSTAIN** rather than changing code to manufacture an experiment. A good Skill should know when it has nothing useful to add.
-
-## Install and use
-
-BetFirst lives in this repository's existing Skill catalog. Install it once through **either** Claude's plugin mechanism **or** a portable Agent Skills installation; avoid loading two copies of the same Skill.
-
-### Claude Code — plugin (existing repository distribution)
-
-```text
-/plugin marketplace add tc3oliver/skills
-/plugin install tc3oliver-skills
-```
-
-Run `/tc3oliver-skills:betfirst` explicitly, or ask Claude to use BetFirst while implementing a task. The Skill is also eligible for automatic discovery from its description. It does **not** auto-run a separate background agent or add extra hooks.
-
-### Portable installation (Claude Code; also discoverable by Pi)
+**Claude Code — portable Skill**
 
 ```bash
 npx skills add tc3oliver/skills --skill betfirst -g -a claude-code -y
 ```
 
-For Pi, ensure the complete `betfirst/` directory containing `SKILL.md` is installed in a skills directory discovered by your Pi version (commonly `~/.pi/agent/skills/betfirst/` or `~/.agents/skills/betfirst/`). Invoke `/skill:betfirst`. The portable Skill has no Claude-specific commands in its body.
-
-**Choose one Claude installation route** (plugin or Agent Skills CLI) to avoid duplicate entries. Pi and Claude load the same portable `SKILL.md`; there is no runtime-specific fork.
-
-### Sample task prompt
+Then ask your agent:
 
 ```text
-Use BetFirst while fixing the FFmpeg subtitle failure.
-If a cheap reversible test can eliminate extensive investigation,
-take it; if it fails, cut the loss and diagnose normally.
-Preserve my existing changes and complete normal final validation.
+Use BetFirst to fix this issue. If one cheap, reversible probe could
+resolve the uncertainty, try it first. If not, work normally.
+Preserve my changes and run the required final checks.
 ```
 
-BetFirst is a policy for *how* to explore within a coding task. It is compatible with the existing `diagnosing-bugs` Skill: use BET to find a faster reproducible feedback loop, not to skip that Skill's diagnosis or regression requirements. It never overrides the repository's acceptance criteria or Definition of Done.
+Prefer Claude Code plugins? Use `/plugin marketplace add tc3oliver/skills`, then `/plugin install tc3oliver-skills` and invoke `/tc3oliver-skills:betfirst`. **Choose one installation method**, not both.
 
-## Why could this work?
+## What changes?
 
-An agent pays for reasoning, file reads, long tool outputs, tool latency, and repeated tests. More investigation is useful **only when the value of the additional information exceeds its cost**. A bounded, objective probe can buy that information more cheaply than broad exploration.
+<p align="center">
+  <img src="./assets/probe-loop.gif" width="760" alt="Illustrative animation: broad exploration checks many steps while BetFirst tries a bounded probe, learns, then verifies. Not a recording or a performance benchmark.">
+</p>
 
-This is grounded in **rational metareasoning** (the value of computation) and related work on **cost-aware exploration**. A 2026 coding-agent study also documents avoidable tool and workflow costs, including reductions from carefully designed Skills. These findings motivate BetFirst; they do **not** prove that BetFirst itself is faster.
+<sub>Illustrative animation of a possible workflow, **not a real Agent trace or measured speedup**. [View static comparison](./assets/before-after.svg).</sub>
 
-The core expected-saving model for **one** resource is:
+Instead of always reading another ten files, the agent asks one question:
+
+> **Can a tiny experiment rule out the expensive wrong path?**
+
+| Situation | BetFirst's move |
+| --- | --- |
+| A cheap, safe test can distinguish competing explanations | **BET** — run it with a clear stop condition |
+| The test is risky, ambiguous, or more expensive than just doing the work | **NORMAL** — continue standard development |
+| The behavior already satisfies the request | **ABSTAIN** — leave correct code alone |
+| The bet fails or becomes inconclusive | **CUT LOSS** — keep the evidence, stop probing, proceed normally |
+
+### Example: a subtitle path bug
+
+*Illustrative scenario, not a claimed benchmark run.*
 
 ```text
-E[saved] = p * S - (1 - p) * L - H
-break-even p > (L + H) / (S + L)
+Problem     Subtitle rendering breaks for Windows drive paths.
+Hypothesis  The drive-colon escaping is wrong.
+Probe       Try one representative path with the smallest filter call.
+Observe     Reproduced: the colon needs escaping.
+Fix         Change only the path transformation, then run full validation.
 ```
 
-- `p`: measured (not invented) success probability in a comparable task class.
-- `S`: resource saved by a successful bet versus normal execution.
-- `L`: additional loss on failure, **including safe cleanup and fallback**.
-- `H`: overhead of invoking/deciding under the betting policy.
+The upside is less wasted investigation. The rule is equally important when **not** to bet: never gamble with production writes, credentials, destructive commands, or a test that cannot be bounded.
 
-For illustration **only**, if success saves 9 minutes, failure loses 1 minute, and policy overhead is included in those measurements, break-even success probability is **10%**. Time and tokens must be evaluated **separately**; a faster run can still use more tokens or cost more money.
+## How it works
 
-In actual operation the model should **not** fabricate `p`, estimate every action numerically, or spend more tokens calculating whether to bet than the probe would cost. BetFirst uses low-overhead qualitative gating first; calibration can follow from real measurements.
+**SPOT → CAP → BET → WIN / CUT LOSS.**
 
-### Relevant sources
+**SPOT** a concrete uncertainty. **CAP** the possible time and rollback cost. **BET** with one safe, falsifiable probe. **WIN** only with evidence and final tests; otherwise **CUT LOSS** and return to NORMAL. A probe does not replace root-cause analysis or the Definition of Done.
 
-- Russell & Wefald, *Principles of Metareasoning* (1991): https://doi.org/10.1016/0004-3702(91)90015-C
-- *Calibrate-Then-Act: Cost-Aware Exploration in LLM Agents* (2026): https://arxiv.org/abs/2602.16699
-- *Analyzing and Mitigating Cost-Inefficient Behaviors in Coding Agents* (2026): https://arxiv.org/abs/2609.30725
-- Matt Pocock, *writing-for-agents* (guidance on compact leading words, context pointers and non-redundant instructions): https://github.com/mattpocock/skills/tree/main/skills/productivity/writing-for-agents
+[See the complete decision flow →](./assets/decision-flow.svg) · [Understand the reasoning →](./docs/WHY_BETFIRST.md)
 
-BetFirst's wording and policy are original to this repository; these works are references, not copied Skill implementations.
+## Fits your existing agent workflow
 
-## When it wins, when it loses
+**Claude Code.** Install through the plugin or the Agent Skills CLI above. Invoke it explicitly, or let compatible discovery select it when relevant.
 
-| Example | Outcome | Expected action |
-| --- | --- | --- |
-| FFmpeg path escaping with tiny fixture | **WIN candidate** | Probe, fix only if evidence is decisive, then test the real renderer |
-| TTS resample probe fails to change the artifact | **CUT LOSS** | Stop after the first disproven hypothesis; preserve observation |
-| Shared production database needs mutation | **NORMAL** | Never speculate against irreversible state |
-| Acceptance criteria already satisfied | **ABSTAIN** | Do not change working code to create a bet |
-| Dirty worktree overlaps candidate edit | **NORMAL / read-only probe** | Never destroy user changes |
+**Pi.** Put the complete `betfirst/` directory where Pi discovers Skills (for example `~/.pi/agent/skills/betfirst/`), and invoke `/skill:betfirst`. The core `SKILL.md` does not contain Claude-only runtime commands.
 
-See [decision examples](references/examples.md) for precise conditions and failure signals.
+**Other Skill-compatible agents.** Read the portable `SKILL.md` as an agent instruction; actual automatic discovery depends on your agent. BetFirst does not need Backlog, Claude Team Kit, or any specific task manager.
 
-## Evidence and evaluation
+## Early evidence. Full results, not just the wins.
 
-**The Skill is not a telemetry collector.** Routine coding should not pay for extra logging or worktrees. Benchmarking should use independent session telemetry and acceptance tests.
+A small local Qwen/oMLX study found that BetFirst was **slower on three simple tasks**; on **two diagnostic tasks repeated three times**, it used **33.8% less wall time** and **38.0% fewer gross tokens** than Efficiency-only, with both arms passing 6/6. These **exploratory observations are not general speedup or causal claims**.
 
-The included [evaluation protocol](evals/README.md), [qualitative cases](evals/cases.json), and stdlib [CSV analyzer](scripts/analyze_runs.py) support:
+The larger **12-task / 108-session Evaluation v3** is the final preregistered release study; **results are pending**, and positive or negative outcomes will be published.
 
-1. `baseline`: the original agent without BetFirst.
-2. `efficiency`: basic concise/no-redundant-work rules.
-3. `betfirst`: the same efficiency rules plus the betting decision policy.
+[Full experimental history →](./experiments/EXPERIMENT_HISTORY.md) · [v3 protocol →](./experiments/V3_PROTOCOL.md)
 
-Use identical tasks and clean start commits, matched repetitions, independent success checks, and real wall-clock plus token/cache/API-cost measurements. Include failed tasks and all fallback overhead. No invented usage and no success-only cherry-picking.
+## Go deeper
 
-```bash
-python3 -m unittest discover -s betfirst/tests
-python3 betfirst/scripts/analyze_runs.py path/to/measured-runs.csv
-```
+[Decision examples](./references/examples.md) · [Evaluation method](./evals/README.md) · [Source Skill](./SKILL.md) · [Changelog](./CHANGELOG.md)
 
-The analyzer reports paired time, gross-token and USD-cost savings, with `null` for incomplete telemetry. It is **not** a benchmark runner and does not claim any results until real run data are provided.
+Have a reproducible case where an agent explores too much—or bets when it shouldn't? Open an issue with the task, expected behavior and observed outcome. **Spend less on uncertainty, never less on correctness.**
 
-## Roadmap
-
-- **v0.1:** portable policy, bounded failure, qualitative cases, repeatable analysis protocol.
-- **v0.2 (this Skill):** read-only-first probes, bounded stoppable bets and recognizing useful refutations. The [uncontrolled field log](evals/field-notes/signalforge-video.md) (20 bets, one project, no control) has **five unresolved timing discrepancies**: reported durations total 1,355 s versus timestamp spans totaling 1,594 s. The [auditor](scripts/summarize_bet_log.py) exposes both without calling either verified cost. See the [changelog](CHANGELOG.md).
-- **v0.2 launch study (now):** [Evaluation v3](experiments/V3_PROTOCOL.md), 12 fresh task clusters × 3 arms × 3 repeats = 108 planned real model sessions; **single preregistered release gate, no mandatory v4**. New results are not available yet.
-- **Later development (optional, NOT a release blocker):** improve selective Bet routing or cross-model validity only after reviewing published successes *and* regressions; do not change v0.2 during v3.
-
-## Share and contribute
-
-**Find an unexpectedly expensive coding-agent investigation?** Bring a reproducible task with its original repository state, acceptance tests and actual usage logs. Reports of **false bets**, **missed bets**, and **failed stop-losses** are especially valuable. See [evals/README.md](evals/README.md) for the controlled comparison method.
-
-> **The ambition:** Spend less on uncertainty, not less on correctness.
-
-## License
-
-MIT, under the repository's license.
+MIT License.
