@@ -39,6 +39,19 @@ def compute(run_dir:Path, suite_path:Path, *, bootstrap=2000)->dict:
             raise ValueError("fixture was changed after experiment: "+tid)
     if manifest.get("claude_tool_profile")!="diagnostic":
         raise ValueError("v3 publication requires one frozen diagnostic tool profile")
+    if manifest.get("skill_sha256")!=_sha(HERE.parent/"SKILL.md"):
+        raise ValueError("frozen BetFirst Skill SHA mismatch")
+    from run import TOOL_PROFILES
+    if manifest.get("claude_allowed_tools")!=list(TOOL_PROFILES["diagnostic"]):
+        raise ValueError("Claude tool policy differs from preregistration")
+    if manifest.get("claude_max_turns")!=30 or manifest.get("timeout")!=600:
+        raise ValueError("turn/timeout budget differs from preregistration")
+    if manifest.get("seed")!=20261011:
+        raise ValueError("run order seed differs from preregistration")
+    if manifest.get("claude_launcher")!="omlx" or manifest.get("model")!="Qwen3.8-27B-oQ4e-mtp":
+        raise ValueError("model/launcher differs from preregistration")
+    if len(manifest.get("run_order",[]))!=108 or len(set(manifest["run_order"]))!=108:
+        raise ValueError("incomplete original randomized run plan")
 
     with (run_dir/"measured-runs.csv").open(encoding="utf-8",newline="") as f:
         rows=list(csv.DictReader(f))
@@ -51,6 +64,9 @@ def compute(run_dir:Path, suite_path:Path, *, bootstrap=2000)->dict:
             raise ValueError("unexpected or duplicate run: "+str(key))
         if row["passed"] not in ("true","false") or row.get("code_accepted") not in ("true","false") or row.get("session_success") not in ("true","false"):
             raise ValueError("invalid correctness outcome: "+str(key))
+        if (row["passed"]=="true")!=(
+            row["code_accepted"]=="true" and row["session_success"]=="true"):
+            raise ValueError("inconsistent code/session/pass grading: "+str(key))
         try:
             elapsed=float(row["elapsed_seconds"])
             tokens=[int(row[x]) for x in ("input_tokens","output_tokens","cache_read_tokens","cache_write_tokens")]
@@ -69,6 +85,8 @@ def compute(run_dir:Path, suite_path:Path, *, bootstrap=2000)->dict:
         }
     expected={(tid,rep,arm) for tid in tasks for rep in (1,2,3) for arm in ARMS}
     if set(observed)!=expected:raise ValueError("missing task/replicate/arm combinations")
+    if set(manifest["run_order"])!={f"{tid}-r{rep}-{arm}" for tid,rep,arm in expected}:
+        raise ValueError("run plan does not match complete task matrix")
     arm_stats={}
     for arm in ARMS:
         group=[observed[(tid,rep,arm)] for tid in tasks for rep in (1,2,3)]
