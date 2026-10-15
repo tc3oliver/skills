@@ -1,0 +1,23 @@
+{
+  "suite_sha256": "e45fbf9c5979e87b04b5d5d0c8e8a246e7557c3767138cbe8134b84225d35cf4",
+  "skill_sha256": "e2147f6e412b02107333d7956c2a7e19b5119bb329adefbb6797106614e7ff8e",
+  "seed": 20261015,
+  "model": "claude-opus-5-5",
+  "claude_code": "2.1.300 (Claude Code)",
+  "order": [
+    "t2-lean-lemma-A-r1",
+    "t3-mathlib-names-B-r1",
+    "t1-statement-gap-B-r1",
+    "t1-statement-gap-A-r2",
+    "t2-lean-lemma-A-r2",
+    "t3-mathlib-names-A-r1",
+    "t2-lean-lemma-B-r1",
+    "t1-statement-gap-A-r1",
+    "t3-mathlib-names-A-r2",
+    "t2-lean-lemma-B-r2",
+    "t3-mathlib-names-B-r2",
+    "t1-statement-gap-B-r2"
+  ],
+  "started": "2026-10-15T06:08:24Z",
+  "dry_run": false
+}

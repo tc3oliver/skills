@@ -26,6 +26,15 @@ Twelve newly authored coding tasks and 108 real sessions are planned. As committ
 
 Two held-out synthetic-task Muse studies, 54 and 72 sessions, were completed. See [release report](./V04_RELEASE_RESULTS.md) for PASS rates, matched comparisons, ambiguous cases, and missing telemetry. The earlier v3 protocol remains historical and is not misrepresented as newly run.
 
+## Math-research workload (2026-10-15)
+
+First non-coding workload: a theorem-prover research campaign plus 12 controlled Claude Code
+sessions (3 math-engineering tasks × BetFirst v0.4 / no-Skill control × 2 reps). 12/12 PASS;
+v0.4 routed NORMAL 6/6 and never fired a BET; it was slower on 3/3 tasks (about +5% wall and
++5–11% tokens, excluding a cold-start outlier) because of the injected Skill text and route
+self-report. The one research BET did not change its decision. No Skill change proposed. See
+[math-research report](./math-research/README.md).
+
 ## Limitations retained across versions
 
 Tasks and repeated sessions must not be conflated. Host load, warm/cold behavior, permission profiles, model stochasticity and coding-agent state may confound timing. SDK tool-use events are not validated BET events. External oracles are not a malicious-agent sandbox. No independent third-party task corpus or cross-model study has been performed.

@@ -1,0 +1,55 @@
+{
+ "tasks": [
+  {
+   "id": "t1-statement-gap",
+   "fixture": "fixtures/t1-statement-gap",
+   "oracle": "oracles/t1_statement_gap.py",
+   "prompt": "This directory holds the catalog record for problem JSP-001061 (catalog-JSP-001061.md), the Lean Comparator target ComparatorChallenges/PinnedDistances.lean, and the Lean sources OAI/Geometry/PinnedDistances/. Which requirement of the catalog's stated problem does the Comparator target (theorem `main`) not literally cover, and does the Lean source in this directory already bridge that gap? If it does, name the exact file and theorem. Write a concise answer to ANSWER.md (Markdown). Do not modify any other file.",
+   "allowed_tools": [
+    "Read",
+    "Write",
+    "Edit",
+    "Glob",
+    "Grep"
+   ],
+   "timeout_s": 600,
+   "max_turns": 30
+  },
+  {
+   "id": "t2-lean-lemma",
+   "fixture": "fixtures/t2-lean-lemma",
+   "oracle": "oracles/t2_lean_lemma.py",
+   "prompt": "Fiber.lean contains theorem `fiber_bound` with a `sorry`. Prove it in place without changing the import line or the theorem statement, and without sorry, admit, new axioms or native_decide. Check it by running exactly this command from the current directory: `lake +leanprover/lean4:v4.34.1 -d {LEAN_PROJECT} env lean Fiber.lean` (Mathlib is pinned in that project; do not copy or build it). The proof is done only when that command prints no error and no sorry warning.",
+   "allowed_tools": [
+    "Read",
+    "Write",
+    "Edit",
+    "Glob",
+    "Grep",
+    "Bash(lake +leanprover/lean4:v4.34.1 -d {LEAN_PROJECT} env lean:*)"
+   ],
+   "timeout_s": 900,
+   "max_turns": 40,
+   "oracle_timeout_s": 900
+  },
+  {
+   "id": "t3-mathlib-names",
+   "fixture": "fixtures/t3-mathlib-names",
+   "oracle": "oracles/t3_mathlib_names.py",
+   "prompt": "Find the exact Mathlib declaration name (at the pinned Mathlib; search its source under {LEAN_PROJECT}/.lake/packages/mathlib or test with `#check` in a scratch .lean file run via `lake +leanprover/lean4:v4.34.1 -d {LEAN_PROJECT} env lean FILE.lean`) that proves each statement below, where `open Filter Topology` is in scope and `exact NAME` must close it. Write NAMES.txt with one line per fact in the form `N: fully.qualified.name`.\n1. ∀ {α β : Type} [DecidableEq β] {s : Finset α} {t : α → Finset β}, (s.biUnion t).card ≤ s.sum (fun a => (t a).card)\n2. ∀ {x : ℝ}, 0 < x → ∀ (y z : ℝ), x ^ (y + z) = x ^ y * x ^ z\n3. ∀ {f g : ℕ → ℝ}, (∀ᶠ n in atTop, 0 ≤ f n) → (∀ᶠ n in atTop, f n ≤ g n) → Tendsto g atTop (𝓝 0) → Tendsto f atTop (𝓝 0)\n4. Tendsto (fun n : ℕ => (n : ℝ)) atTop atTop\n5. ∀ {y : ℝ}, 0 < y → Tendsto (fun x : ℝ => x ^ (-y)) atTop (𝓝 0)",
+   "allowed_tools": [
+    "Read",
+    "Write",
+    "Edit",
+    "Glob",
+    "Grep",
+    "Bash(lake +leanprover/lean4:v4.34.1 -d {LEAN_PROJECT} env lean:*)",
+    "Bash(rg:*)",
+    "Bash(grep:*)"
+   ],
+   "timeout_s": 900,
+   "max_turns": 40,
+   "oracle_timeout_s": 900
+  }
+ ]
+}

@@ -1,0 +1,38 @@
+runs=12  PASS=12
+
+arm A (betfirst-v0.4): PASS 6/6  routes={'NORMAL': 6}
+  wall_time_ms: mean 39863.0 / median 42497.0 (n=6)
+  tool_calls: mean 8.0 / median 9.0 (n=6)
+  task_tool_calls: mean 7.0 / median 8.0 (n=6)
+  output_tokens: mean 3237.7 / median 3466.0 (n=6)
+  gross_tokens: mean 184790.5 / median 200312.0 (n=6)
+  num_turns: mean 9.0 / median 10.0 (n=6)
+
+arm B (control): PASS 6/6  routes={'n/a': 6}
+  wall_time_ms: mean 33302.7 / median 35613.5 (n=6)
+  tool_calls: mean 7.3 / median 7.0 (n=6)
+  task_tool_calls: mean 7.3 / median 7.0 (n=6)
+  output_tokens: mean 2921.8 / median 3112.0 (n=6)
+  gross_tokens: mean 169864.7 / median 185851.0 (n=6)
+  num_turns: mean 8.3 / median 8.0 (n=6)
+
+paired by task (mean of reps; A minus B):
+  t1-statement-gap | wall_time_ms 49636 vs 47732 (+1903, +4.0%) | tool_calls 10 vs 12 (-2, -12.5%) | task_tool_calls 10 vs 12 (-2, -20.8%) | gross_tokens 282802 vs 255598 (+27204, +10.6%)
+  t2-lean-lemma | wall_time_ms 32538 vs 16562 (+15976, +96.5%) | tool_calls 4 vs 3 (+1, +33.3%) | task_tool_calls 3 vs 3 (+0, +0.0%) | gross_tokens 71258 vs 68146 (+3112, +4.6%)
+  t3-mathlib-names | wall_time_ms 37416 vs 35614 (+1802, +5.1%) | tool_calls 10 vs 7 (+2, +35.7%) | task_tool_calls 8 vs 7 (+2, +21.4%) | gross_tokens 200312 vs 185851 (+14461, +7.8%)
+
+A faster on 0/3 tasks (mean wall); mean relative wall change +35.2% (descriptive only)
+
+per run:
+  t1-statement-gap-A-r1      PASS NORMAL wall= 56197 tools=12 route_writes=1 gross_tok=321631
+  t1-statement-gap-A-r2      PASS NORMAL wall= 43074 tools=9 route_writes=1 gross_tok=243973
+  t1-statement-gap-B-r1      PASS n/a    wall= 42943 tools=11 route_writes=0 gross_tok=217682
+  t1-statement-gap-B-r2      PASS n/a    wall= 52522 tools=13 route_writes=0 gross_tok=293513
+  t2-lean-lemma-A-r1         PASS NORMAL wall= 47518 tools=4 route_writes=1 gross_tok=71509
+  t2-lean-lemma-A-r2         PASS NORMAL wall= 17558 tools=4 route_writes=1 gross_tok=71006
+  t2-lean-lemma-B-r1         PASS n/a    wall= 18157 tools=3 route_writes=0 gross_tok=68144
+  t2-lean-lemma-B-r2         PASS n/a    wall= 14967 tools=3 route_writes=0 gross_tok=68147
+  t3-mathlib-names-A-r1      PASS NORMAL wall= 32911 tools=10 route_writes=1 gross_tok=165644
+  t3-mathlib-names-A-r2      PASS NORMAL wall= 41920 tools=9 route_writes=1 gross_tok=234980
+  t3-mathlib-names-B-r1      PASS n/a    wall= 42017 tools=9 route_writes=0 gross_tok=187979
+  t3-mathlib-names-B-r2      PASS n/a    wall= 29210 tools=5 route_writes=0 gross_tok=183723

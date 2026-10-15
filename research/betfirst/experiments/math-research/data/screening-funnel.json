@@ -1,0 +1,29 @@
+{
+  "date": "2026-10-15",
+  "source_pins": {"TheJustinSunPrize/awards": "fd8fa66abb4e21df828fdebc25298e9ad75521bd", "openai/math": "1581d4cbdd69a0faf34b2089614fe2a814316a6a"},
+  "solved_lean_no": {
+    "rows": 294,
+    "S1_math": {"complete": 271, "partial_or_scope_risk": 21, "unclear": 2},
+    "S2_existing_formalization": {"complete_lean_exists": 281, "partial_or_claimed": 13, "none_found": 0},
+    "S3_math_date": {"on_or_after_2026_01_01": 31, "earlier": 250, "unknown": 13},
+    "S4_earlier_lean_contributor": {"yes": 281, "claimed_unverified": 5, "none_credible": 8},
+    "S5_survivor_feasibility": {"feasible": 0, "hard": 5, "infeasible": 8},
+    "agent_wall_time_ms": 1370737, "agent_tool_calls": 107, "agent_total_tokens": 223632,
+    "note": "S1/S3 by keyword and reference-year heuristics; 'Lean exists' not built or statement-matched"
+  },
+  "open": {
+    "rows": 629,
+    "O1_mapped_to_erdos": 433, "unmapped": 195,
+    "final_classes": {"open_confirmed": 383, "open_checkable": 29, "dropped_lean_exists": 14, "infeasible": 5, "suspect_unverified": 2, "dropped_pre_cutoff": 1, "unmapped": 195},
+    "recent_solution_check_changed_rows": 6,
+    "agent_wall_time_ms_first_pass": 369000,
+    "note": "row-to-Erdős mapping heuristic, ~91% precise on a 94-anchor hold-out; jig.so/gist check found results the erdosproblems status had not yet reflected"
+  },
+  "deep_scouts": [
+    {"jsp": "JSP-000244", "erdos": 287, "route": "NORMAL", "bets": 0, "verdict": "drop"},
+    {"jsp": "JSP-000691", "erdos": 835, "route": "NORMAL", "bets": 0, "verdict": "park"},
+    {"jsp": "JSP-000258", "erdos": 307, "route": "NORMAL", "bets": 0, "verdict": "park"},
+    {"jsp": "JSP-000372", "erdos": 458, "route": "NORMAL", "bets": 0, "verdict": "drop"},
+    {"jsp": "JSP-000395", "erdos": 488, "route": "BET", "bets": 1, "probe_compute_ms_agent_reported": 8000, "bet_changed_decision": false, "verdict": "drop: Lean-verified counterexample already public 2026-09-05 (found by reading the newest paper, not by the probe)"}
+  ]
+}
