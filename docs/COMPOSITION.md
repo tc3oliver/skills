@@ -27,13 +27,15 @@ Backlog, BetFirst and [Claude Team Kit (CTK)](https://github.com/tc3oliver/claud
 
 ## Optional handoff — no new schema
 
-If a BL-ID and team intent coexist, the lead should retrieve that task through the installed Backlog Skill/CLI **if available**. Read only Task ID, Goal, Acceptance Criteria, References, dependencies, status and concise Handoff. Do not guess an installed Skill path, copy an entire task directory, or silently initialize a backlog from a bare BL-ID.
+If one or more BL-IDs and team intent coexist, the lead should retrieve each task through the installed Backlog Skill/CLI **if available**. Read only Task ID, Goal, Acceptance Criteria, References, dependencies, status and concise Handoff. Do not guess an installed Skill path, copy an entire task directory, or silently initialize a backlog from a bare BL-ID.
 
 - `todo` with satisfied dependencies: the lead may start the persistent task only **after** CTK preflight, when actual work begins. If the requested team cannot run, leave the BL state unchanged.
 - `doing`: reconcile current repository state with Handoff and continue without calling `start` again.
 - `inbox`, `blocked`, `done` or `cancelled`: do not execute it without resolving that state.
 - Task unavailable: do not fabricate its contents; request its Goal and AC before executing. CTK itself still works independently when a complete ordinary goal is supplied.
 - CTK Team unavailable/disabled: do not claim a team was used, silently create ordinary subagents, or force a fallback. Follow CTK's preflight and user's requested execution mode.
+
+With several BL tasks (only on explicit request), each keeps its own file scope, state and evidence; tasks whose files overlap are sequenced, not run at once, and each closes on its own verification.
 
 CTK decomposes the verified goal into its own temporary task list. Workers receive pointers, file scope and checks; they **never** mutate the BL task. BetFirst experiments remain bounded and send only relevant observations to the worker/lead, not a parallel task state machine.
 

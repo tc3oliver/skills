@@ -16,7 +16,7 @@ Or install the existing repository Claude Code plugin. For Pi, copy the complete
 
 ## Usage
 
-In a coding agent: `/backlog add "Build SSO login"`, `/backlog next`, `/backlog do BL-...`, or `/backlog status` (invocation syntax varies by agent).
+In a coding agent: `/backlog add "Build SSO login"`, `/backlog next`, `/backlog do BL-...` (or several IDs at once, run in parallel with CTK), or `/backlog status` (invocation syntax varies by agent).
 
 First use creates `.backlog/` after an explicit `init`. The CLI itself can be used without a coding agent:
 
