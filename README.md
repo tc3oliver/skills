@@ -53,6 +53,7 @@ Backlog is a lightweight persistence CLI, not a background orchestration service
 /backlog add "Build OAuth login"
 /backlog next
 /backlog do BL-7E18C75F3D31A0B2
+/backlog do BL-7E18C75F3D31A0B2 BL-0A1B2C3D4E5F6071   # several, explicitly; parallel with CTK
 /backlog status
 ```
 

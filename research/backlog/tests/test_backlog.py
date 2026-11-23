@@ -55,6 +55,19 @@ class BacklogTests(unittest.TestCase):
         self.call('note', item, '--text', 'Next: tests. Files: src/main.py')
         self.assertIn('Next: tests', self.call('show', item)['markdown'])
 
+    def test_parallel_tasks_are_claimed_and_closed_independently(self):
+        # The Skill's explicit parallel mode relies on several tasks being
+        # `doing` at once, each closed with its own evidence.
+        first, second = self.task('first'), self.task('second')
+        self.call('start', first)
+        self.call('start', second)
+        self.assertEqual(self.call('status')['counts']['doing'], 2)
+        self.call('check', first, 1)
+        self.call('close', first, '--evidence', 'unit test passed')
+        self.assertEqual(self.call('show', second)['task']['status'], 'doing')
+        counts = self.call('status')['counts']
+        self.assertEqual((counts['doing'], counts['done']), (1, 1))
+
     def test_dependency_and_close(self):
         first = self.task('first')
         second = self.task('second', '--depends', first)

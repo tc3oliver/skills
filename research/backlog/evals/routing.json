@@ -6,6 +6,9 @@
   {"prompt":"What backlog items are ready?", "activate_backlog":true, "action":"next"},
   {"prompt":"Continue BL-7E18C75F3D31A0B2", "activate_backlog":true, "action":"show"},
   {"prompt":"Use CTK to finish BL-7E18C75F3D31A0B2", "activate_backlog":true, "action":"show_then_ctk"},
+  {"prompt":"Use CTK to run BL-7E18C75F3D31A0B2 and BL-0A1B2C3D4E5F6071 in parallel", "activate_backlog":true, "action":"show_each_then_ctk"},
+  {"prompt":"Run the ready backlog tasks in parallel", "activate_backlog":true, "action":"next_then_ctk"},
   {"prompt":"Review the latest changes", "activate_backlog":false},
-  {"prompt":"What did we leave unfinished in the backlog?", "activate_backlog":true, "action":"status"}
+  {"prompt":"What did we leave unfinished in the backlog?", "activate_backlog":true, "action":"status"},
+  {"prompt":"Finish BL-7E18C75F3D31A0B2", "activate_backlog":true, "action":"show_one_no_auto_next"}
 ]

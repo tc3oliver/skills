@@ -20,6 +20,7 @@ npx skills add tc3oliver/skills --skill backlog
 /backlog add "新增 SSO 登入"
 /backlog next
 /backlog do BL-7E18C75F3D31A0B2
+/backlog do BL-7E18C75F3D31A0B2 BL-0A1B2C3D4E5F6071   # 明確指定多個，用 CTK 並行
 /backlog status
 ```
 
